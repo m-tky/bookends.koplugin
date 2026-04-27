@@ -421,6 +421,49 @@ function LibraryModal:_renderPagination(content_width)
     return HorizontalGroup:new{ align = "center", first, gap, prev, gap, pageinfo, gap, nxt, gap, last }
 end
 
+function LibraryModal:_renderFooter(content_width)
+    local Button = require("ui/widget/button")
+    local Font = require("ui/font")
+    local HorizontalGroup = require("ui/widget/horizontalgroup")
+    local LineWidget = require("ui/widget/linewidget")
+
+    local actions = self.config.footer_actions or {}
+    local btns = {}
+    for _i, action in ipairs(actions) do
+        local enabled = true
+        if action.enabled_when then enabled = action.enabled_when() end
+        table.insert(btns, Button:new{
+            text = action.label,
+            face = Font:getFace("cfont", 16),
+            bold = action.primary == true,
+            bordersize = 0,
+            radius = 0,
+            callback = function() if enabled then action.on_tap() end end,
+            enabled = enabled,
+        })
+    end
+
+    if #btns == 0 then return nil end
+
+    if #btns == 1 then
+        return btns[1]
+    end
+
+    local hg = HorizontalGroup:new{ align = "center" }
+    local btn_width = math.floor(content_width / #btns)
+    for i, btn in ipairs(btns) do
+        btn.width = btn_width
+        if i > 1 then
+            table.insert(hg, LineWidget:new{
+                background = Blitbuffer.COLOR_DARK_GRAY,
+                dimen = Geom:new{ w = Size.line.thin, h = Device.screen:scaleBySize(28) },
+            })
+        end
+        table.insert(hg, btn)
+    end
+    return hg
+end
+
 function LibraryModal:refresh()
     -- Rebuild the inner content. Called on tab change, chip tap, search submit,
     -- page change. Avoids rebuilding the modal frame itself (which would
