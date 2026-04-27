@@ -370,9 +370,12 @@ function IconsLibrary:show(on_select)
         end,
         on_search_submit = function(query) state.search_query = query end,
         cells_per_page = function(content_w)
-            local target = Screen:scaleBySize(290)
+            -- Match LibraryModal._renderGridArea's target_cell_w so cells_per_page
+            -- and cols agree (widget uses scaleBySize(220) for 4-col layout on
+            -- PW5 content width). 4 rows × 4 cols = 16 cells per page.
+            local target = Screen:scaleBySize(220)
             local cols = math.max(3, math.floor(content_w / target))
-            return cols * 4    -- 4 rows of cells
+            return cols * 4
         end,
         cell_renderer = IconsLibrary._renderCell,
         cell_long_tap = IconsLibrary._showCellTooltip,

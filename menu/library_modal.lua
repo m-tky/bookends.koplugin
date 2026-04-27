@@ -714,12 +714,16 @@ function LibraryModal:_renderPagination(content_width)
     end
 
     -- Single-page lists (incl. empty / cold-gallery / single-page-fits-all)
-    -- hide the chevrons + dividers and reserve equivalent space, so the modal
-    -- stays the same total height regardless of pagination state.
+    -- hide the chevrons + top divider but keep the BOTTOM divider so the
+    -- footer (Close/Manage/Install) still has a separator line above it.
+    -- Reserve equivalent total height so the modal stays the same size.
     if total_pages <= 1 then
         local nav_h = page_nav:getSize().h
-        local placeholder_h = 2 * Size.line.thin + 2 * MARGIN + nav_h
-        return VerticalSpan:new{ width = placeholder_h }
+        return VerticalGroup:new{
+            align = "left",
+            VerticalSpan:new{ width = Size.line.thin + MARGIN + nav_h + MARGIN },
+            divider(),
+        }
     end
 
     -- Pagination: divider above + MARGIN breathing room + chevron row + MARGIN
