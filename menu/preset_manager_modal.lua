@@ -165,30 +165,49 @@ end
 
 --- Sorted item list for whichever tab is active. Returns {} when the gallery
 --- is not yet loaded so callers get a consistent empty list without branching.
+--- Applies the current_search filter when set. Annotates gallery entries with
+--- _installed so renderPresetCard doesn't have to re-read preset files per card.
 local function currentItemList(self)
+    local LibraryModal = require("menu.library_modal")
+    local entries
     if self.tab == "local" then
-        return sortedLocalPresets(self.bookends, self.my_sort)
-    end
-    if not self.gallery_index or not self.gallery_index.presets then return {} end
-    if self.gallery_loading or self.gallery_error then return {} end
-    local entries = {}
-    for _i, e in ipairs(self.gallery_index.presets) do entries[#entries + 1] = e end
-    if self.gallery_sort == "popular" and type(self.gallery_counts) == "table" then
-        local counts = self.gallery_counts
-        table.sort(entries, function(a, b)
-            local ca = counts[a.slug or ""] or 0
-            local cb = counts[b.slug or ""] or 0
-            if ca ~= cb then return ca > cb end
-            local da, db = a.added or "", b.added or ""
-            if da ~= db then return da > db end
-            return (a.name or "") < (b.name or "")
-        end)
+        entries = sortedLocalPresets(self.bookends, self.my_sort)
     else
-        table.sort(entries, function(a, b)
-            local da, db = a.added or "", b.added or ""
-            if da ~= db then return da > db end
-            return (a.name or "") < (b.name or "")
-        end)
+        if not self.gallery_index or not self.gallery_index.presets then return {} end
+        if self.gallery_loading or self.gallery_error then return {} end
+        entries = {}
+        for _i, e in ipairs(self.gallery_index.presets) do entries[#entries + 1] = e end
+        if self.gallery_sort == "popular" and type(self.gallery_counts) == "table" then
+            local counts = self.gallery_counts
+            table.sort(entries, function(a, b)
+                local ca = counts[a.slug or ""] or 0
+                local cb = counts[b.slug or ""] or 0
+                if ca ~= cb then return ca > cb end
+                local da, db = a.added or "", b.added or ""
+                if da ~= db then return da > db end
+                return (a.name or "") < (b.name or "")
+            end)
+        else
+            table.sort(entries, function(a, b)
+                local da, db = a.added or "", b.added or ""
+                if da ~= db then return da > db end
+                return (a.name or "") < (b.name or "")
+            end)
+        end
+        -- Annotate installed-state once per call so per-card render doesn't
+        -- re-read the preset directory on every paint.
+        local local_names = {}
+        for _i, p in ipairs(self.bookends:readPresetFiles()) do local_names[p.name] = true end
+        for _i, e in ipairs(entries) do e._installed = local_names[e.name] == true end
+    end
+    if self.current_search and #self.current_search >= 2 then
+        local filtered = {}
+        for _i, item in ipairs(entries) do
+            if LibraryModal._matchesQuery(item.name, self.current_search) then
+                filtered[#filtered + 1] = item
+            end
+        end
+        return filtered
     end
     return entries
 end
@@ -284,8 +303,6 @@ local function renderPresetCard(self, item, slot_dimen)
         })
     else
         -- Gallery tab
-        local local_names = {}
-        for _i, p in ipairs(self.bookends:readPresetFiles()) do local_names[p.name] = true end
         local is_selected = self.previewing and self.previewing.kind == "gallery"
             and self.previewing.entry and self.previewing.entry.slug == item.slug
         local captured = item
@@ -296,7 +313,7 @@ local function renderPresetCard(self, item, slot_dimen)
             has_colour  = item.has_colour or false,
             on_preview  = function() PresetManagerModal._previewGallery(self, captured) end,
             is_selected = is_selected,
-            installed   = local_names[item.name] == true,
+            installed   = item._installed == true,
         })
     end
 
@@ -310,7 +327,6 @@ end
 --- Build the LibraryModal config table for the preset manager.
 --- Called once from show(); self must already have all state fields set.
 local function buildPresetLibraryConfig(self)
-    local LibraryModal = require("menu.library_modal")
     return {
         title = _("Preset library"),
         tabs = {
@@ -358,32 +374,8 @@ local function buildPresetLibraryConfig(self)
             self.rebuild()
         end,
         rows_per_page = 5,
-        item_count = function()
-            local list = currentItemList(self)
-            if self.current_search then
-                local filtered = {}
-                for _i, item in ipairs(list) do
-                    if LibraryModal._matchesQuery(item.name, self.current_search) then
-                        filtered[#filtered + 1] = item
-                    end
-                end
-                return #filtered
-            end
-            return #list
-        end,
-        item_at = function(idx)
-            local list = currentItemList(self)
-            if self.current_search then
-                local filtered = {}
-                for _i, item in ipairs(list) do
-                    if LibraryModal._matchesQuery(item.name, self.current_search) then
-                        filtered[#filtered + 1] = item
-                    end
-                end
-                return filtered[idx]
-            end
-            return list[idx]
-        end,
+        item_count = function() return #currentItemList(self) end,
+        item_at = function(idx) return currentItemList(self)[idx] end,
         row_renderer = function(item, dimen)
             return renderPresetCard(self, item, dimen)
         end,
@@ -477,6 +469,11 @@ function PresetManagerModal.show(bookends)
     self.rebuild = function()
         UIManager:nextTick(function()
             if self.modal_widget and self.modal_widget.refresh then
+                -- Domain owns sort/tab page logic (e.g. activePresetPage on
+                -- sort change); LibraryModal owns chevron-driven page changes
+                -- within a sort. Sync domain → LibraryModal here so a domain
+                -- self.page write actually takes effect on the next refresh.
+                self.modal_widget.page = self.page
                 self.modal_widget:refresh()
             else
                 PresetManagerModal._rebuild(self)
@@ -549,6 +546,9 @@ function PresetManagerModal.show(bookends)
     self.setTab = function(tab)
         if self.tab ~= tab then
             self.tab = tab
+            -- Drop search state across tabs so a query typed on one tab doesn't
+            -- silently filter the other tab when the user switches.
+            self.current_search = nil
             -- When returning to My presets, jump to the page with the active
             -- preset (same reason as on initial show). Gallery has no active
             -- concept, so it resets to page 1.
