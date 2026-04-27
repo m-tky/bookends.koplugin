@@ -203,14 +203,22 @@ function LibraryModal:_onTabSelect(tab_key)
     -- Default chip on the new tab is its first chip (or "all")
     local chips = self.config.chip_strip and self.config.chip_strip(self.active_tab) or {}
     self.active_chip = chips[1] and chips[1].key or nil
+    -- The search placeholder may differ per tab. Release the persisted
+    -- InputText so _renderSearchInput rebuilds it with the new hint.
+    if self._search_input then
+        if self._search_input:isKeyboardVisible() then
+            self._search_input:onCloseKeyboard()
+        end
+        self._search_input = nil
+    end
     if self.config.on_tab_change then self.config.on_tab_change(tab_key) end
     self:refresh()
 end
 
 function LibraryModal:_renderSearchInput(content_width)
     local Button = require("ui/widget/button")
+    local Font = require("ui/font")
     local HorizontalGroup = require("ui/widget/horizontalgroup")
-    local InputText = require("ui/widget/inputtext")
     local Screen = Device.screen
 
     local placeholder = self.config.search_placeholder
@@ -226,24 +234,40 @@ function LibraryModal:_renderSearchInput(content_width)
     local clear_btn_w  = Screen:scaleBySize(36)
     local gap = Screen:scaleBySize(6)
     local input_w = content_width - search_btn_w - clear_btn_w - 2 * gap
-    local input_h = Screen:scaleBySize(40)
 
-    -- Captured upvalue so the button callbacks can call :getText() without
-    -- going through self (avoids a stale reference if the widget is rebuilt).
-    local input
-    input = InputText:new{
-        text    = self.search_query or "",
-        hint    = placeholder,
-        parent  = self,       -- required so InputText can schedule setDirty on the modal
-        width   = input_w,
-        height  = input_h,
-        scroll  = false,
-        focused = false,      -- start unfocused; keyboard appears on first tap
-        enter_callback = function()
-            self:_onSearchSubmit(input:getText())
-        end,
-    }
+    -- Persist the InputText across refreshes so the keyboard's reference to
+    -- it stays valid. Rebuilding it on every refresh leaves the keyboard
+    -- pointing at a destroyed widget, which crashes on the next keystroke.
+    if not self._search_input then
+        local InputText = require("ui/widget/inputtext")
+        self._search_input = InputText:new{
+            text    = self.search_query or "",
+            hint    = placeholder,
+            parent  = self,
+            width   = input_w,
+            -- Smaller face + tighter chrome so the input row matches the
+            -- Search/× button heights (~40px). InputText's height param is
+            -- the inner text area; padding/margin/border are added on top,
+            -- so we shrink all three to keep the outer size in range.
+            face    = Font:getFace("cfont", 16),
+            padding = Size.padding.small,
+            margin  = 0,
+            scroll  = false,
+            focused = false,
+            enter_callback = function()
+                self:_onSearchSubmit(self._search_input:getText())
+            end,
+        }
+    else
+        -- Re-sync text if the query changed externally (e.g. tab switch resets
+        -- search_query to nil, which we represent as empty string in the widget).
+        local desired = self.search_query or ""
+        if self._search_input:getText() ~= desired then
+            self._search_input:setText(desired)
+        end
+    end
 
+    -- Buttons can be rebuilt fresh; they hold no keyboard lifecycle state.
     local search_btn = Button:new{
         text       = _("Search"),
         bordersize = Size.border.thin,
@@ -251,7 +275,7 @@ function LibraryModal:_renderSearchInput(content_width)
         padding    = btn_pad,
         width      = search_btn_w,
         callback   = function()
-            self:_onSearchSubmit(input:getText())
+            self:_onSearchSubmit(self._search_input:getText())
         end,
     }
 
@@ -264,14 +288,19 @@ function LibraryModal:_renderSearchInput(content_width)
         padding    = btn_pad,
         width      = clear_btn_w,
         callback   = function()
-            input:setText("")
+            -- Dismiss the keyboard before refresh so it doesn't linger
+            -- attached to no visible input after the body is rebuilt.
+            if self._search_input:isKeyboardVisible() then
+                self._search_input:onCloseKeyboard()
+            end
+            self._search_input:setText("")
             self:_onSearchSubmit("")
         end,
     }
 
     return HorizontalGroup:new{
         align = "center",
-        input,
+        self._search_input,
         HorizontalSpan:new{ width = gap },
         search_btn,
         HorizontalSpan:new{ width = gap },
