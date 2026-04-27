@@ -231,7 +231,13 @@ local function currentItemList(self)
     if self.current_search and #self.current_search >= 2 then
         local filtered = {}
         for _i, item in ipairs(entries) do
-            if LibraryModal._matchesQuery(item.name, self.current_search) then
+            -- Search across name AND author. Local presets nest author
+            -- inside item.preset; gallery entries have it flat. Build a
+            -- single haystack so multi-term AND match (e.g. "stock kobo"
+            -- or "minimal mido") works across both fields.
+            local author = (item.preset and item.preset.author) or item.author or ""
+            local haystack = (item.name or "") .. " " .. author
+            if LibraryModal._matchesQuery(haystack, self.current_search) then
                 filtered[#filtered + 1] = item
             end
         end
@@ -423,15 +429,25 @@ local function buildPresetLibraryConfig(self)
         end,
         search_placeholder = function(active_tab)
             if active_tab == "local" then
-                return _("Search my presets by name…")
+                return _("Search my presets by name or author…")
             else
-                return _("Search gallery presets by name…")
+                return _("Search gallery presets by name or author…")
             end
         end,
         on_search_submit = function(query)
             self.current_search = query
             self.page = 1
-            self.rebuild()
+            -- Submitting a search on the cold gallery tab kicks off the
+            -- gallery fetch. Without this, the search would just hit an
+            -- empty list (currentItemList returns {} until gallery_index
+            -- is populated). The fetch's completion callback re-renders,
+            -- at which point the search filter applies to the loaded data.
+            if self.tab == "gallery" and not self.gallery_loading
+                    and galleryIsStale(self) then
+                self.refreshGallery()
+            else
+                self.rebuild()
+            end
         end,
         rows_per_page = 5,
         item_count = function() return #currentItemList(self) end,
