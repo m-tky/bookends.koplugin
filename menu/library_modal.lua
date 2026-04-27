@@ -292,7 +292,10 @@ function LibraryModal:_renderSearchInput(content_width)
         and self.config.search_placeholder(self.active_tab)
         or _("Search…")
 
-    local btn_face = Font:getFace("cfont", 16)
+    -- Button labels match the tab pill font (cfont/14) so the row reads as
+    -- one family. The input itself stays at cfont/16 for typing legibility.
+    local btn_face = Font:getFace("cfont", 14)
+    local input_face = Font:getFace("cfont", 16)
     local btn_pad_h = Screen:scaleBySize(12)
     local gap = Screen:scaleBySize(6)
     -- InputText wraps its TextWidget in a FrameContainer with bordersize +
@@ -338,7 +341,7 @@ function LibraryModal:_renderSearchInput(content_width)
             hint       = placeholder,
             parent     = self,
             width      = input_w,
-            face       = btn_face,
+            face       = input_face,
             bordersize = input_border,
             padding    = input_padding,
             margin     = 0,
