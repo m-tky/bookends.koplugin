@@ -163,18 +163,46 @@ local function galleryIsStale(self)
     return (os.time() - self.gallery_last_refresh_time) >= GALLERY_STALE_SECONDS
 end
 
+--- Cache-invalidation key: any state change that affects the item list changes this.
+local function _cacheKey(self)
+    return table.concat({
+        self.tab or "",
+        self.my_sort or "",
+        self.gallery_sort or "",
+        self.current_search or "",
+        tostring(self.gallery_loading),
+        tostring(self.gallery_error),
+        self.gallery_index and "idx" or "no",
+        self.gallery_counts and "ctn" or "noctn",
+    }, "|")
+end
+
 --- Sorted item list for whichever tab is active. Returns {} when the gallery
 --- is not yet loaded so callers get a consistent empty list without branching.
 --- Applies the current_search filter when set. Annotates gallery entries with
 --- _installed so renderPresetCard doesn't have to re-read preset files per card.
+--- Memoized by _cacheKey so multiple calls per refresh cycle don't repeat the
+--- sort + file-read work (item_count and item_at each call this).
 local function currentItemList(self)
+    local key = _cacheKey(self)
+    if self._items_cache_key == key and self._items_cache then
+        return self._items_cache
+    end
     local LibraryModal = require("menu.library_modal")
     local entries
     if self.tab == "local" then
         entries = sortedLocalPresets(self.bookends, self.my_sort)
     else
-        if not self.gallery_index or not self.gallery_index.presets then return {} end
-        if self.gallery_loading or self.gallery_error then return {} end
+        if not self.gallery_index or not self.gallery_index.presets then
+            self._items_cache_key = key
+            self._items_cache = {}
+            return self._items_cache
+        end
+        if self.gallery_loading or self.gallery_error then
+            self._items_cache_key = key
+            self._items_cache = {}
+            return self._items_cache
+        end
         entries = {}
         for _i, e in ipairs(self.gallery_index.presets) do entries[#entries + 1] = e end
         if self.gallery_sort == "popular" and type(self.gallery_counts) == "table" then
@@ -207,9 +235,11 @@ local function currentItemList(self)
                 filtered[#filtered + 1] = item
             end
         end
-        return filtered
+        entries = filtered
     end
-    return entries
+    self._items_cache = entries
+    self._items_cache_key = key
+    return self._items_cache
 end
 
 --- Empty-state help panel for the Gallery tab. Rendered when gallery_index is
