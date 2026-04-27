@@ -29,6 +29,12 @@ local MARGIN = Device.screen:scaleBySize(10)
 local LibraryModal = InputContainer:extend{
     name = "library_modal",
     config = nil,           -- domain config table (see spec)
+    -- KOReader's UIManager:sendEvent only dispatches gestures to the topmost
+    -- non-toast widget by default; when the on-screen keyboard is shown it
+    -- becomes the top widget and our modal stops receiving taps. Marking the
+    -- modal is_always_active opts it into the secondary dispatch loop so taps
+    -- that fall through the keyboard reach our onTapDismissKeyboard handler.
+    is_always_active = true,
     -- runtime state
     active_tab = nil,       -- key of active tab, or nil if no tabs
     active_chip = nil,      -- key of active chip, or nil
@@ -289,7 +295,9 @@ function LibraryModal:_renderSearchInput(content_width)
                                    fgcolor = Blitbuffer.COLOR_BLACK }
         return tw, tw:getSize().w + 2 * btn_pad_h + 2 * Size.border.thin
     end
-    local clear_label, clear_btn_w = measureLabel("×")
+    -- ✕ (U+2715, MULTIPLICATION X) reads as a deliberate close/clear glyph,
+    -- where × (U+00D7, MULTIPLICATION SIGN) reads as math typography.
+    local clear_label, clear_btn_w = measureLabel("\xE2\x9C\x95")
     local input_w = content_width - clear_btn_w - gap - input_overhead
 
     -- Persist the InputText across refreshes so the keyboard's reference to
@@ -316,6 +324,19 @@ function LibraryModal:_renderSearchInput(content_width)
                 self:_onSearchSubmit(q)
             end,
         }
+        -- InputText sets self.focused = true inside onTapTextBox AFTER calling
+        -- onShowKeyboard, so the keyboard's repaint pass renders with focused
+        -- still false (thin border). The focus-state border only refreshes on
+        -- the next paint trigger (e.g. first keystroke). Wrap onTapTextBox to
+        -- explicitly mark the input dirty after focus flips, so the thicker
+        -- focused border appears the moment the keyboard pops up.
+        local input = self._search_input
+        local orig_onTapTextBox = input.onTapTextBox
+        input.onTapTextBox = function(this, arg, ges)
+            local r = orig_onTapTextBox(this, arg, ges)
+            UIManager:setDirty(self, "ui")
+            return r
+        end
     else
         local desired = self.search_query or ""
         if self._search_input:getText() ~= desired then
