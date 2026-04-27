@@ -249,6 +249,191 @@ local function galleryHelpPanel(self, width, row_height, left_pad)
     }
 end
 
+--- Render a single preset card widget to return to LibraryModal as a row.
+--- Delegates to _addRow by wrapping a temporary VerticalGroup and extracting
+--- the first (and only) logical card, since _addRow also inserts a gap span.
+--- This keeps Phase 1 behavioural parity without duplicating card layout code.
+local function renderPresetCard(self, item, slot_dimen)
+    local card_height = Screen:scaleBySize(64)
+    local row_height = card_height
+    local font_size = 18
+    local baseline = math.floor(row_height * 0.65)
+    local left_pad = Size.padding.large
+
+    local is_local = self.tab == "local"
+    local vg_tmp = VerticalGroup:new{ align = "left" }
+
+    if is_local then
+        local selected_key
+        if self.previewing and self.previewing.kind == "local" then
+            selected_key = self.previewing.filename
+        else
+            selected_key = self.bookends:getActivePresetFilename()
+        end
+        local has_colour = PresetManager.hasColour(item.preset) or false
+        PresetManagerModal._addRow(self, vg_tmp, slot_dimen.w, row_height, font_size, baseline, left_pad, {
+            display      = item.name,
+            description  = item.preset and item.preset.description,
+            author       = item.preset and item.preset.author,
+            star_key     = item.filename,
+            has_colour   = has_colour,
+            on_preview   = function() PresetManagerModal._previewLocal(self, item) end,
+            on_hold      = function() PresetManagerModal._openOverflow(self, item) end,
+            is_selected  = (selected_key == item.filename),
+            is_virtual   = item.is_virtual or false,
+        })
+    else
+        -- Gallery tab
+        local local_names = {}
+        for _i, p in ipairs(self.bookends:readPresetFiles()) do local_names[p.name] = true end
+        local is_selected = self.previewing and self.previewing.kind == "gallery"
+            and self.previewing.entry and self.previewing.entry.slug == item.slug
+        local captured = item
+        PresetManagerModal._addRow(self, vg_tmp, slot_dimen.w, row_height, font_size, baseline, left_pad, {
+            display     = item.name,
+            description = item.description,
+            author      = item.author,
+            has_colour  = item.has_colour or false,
+            on_preview  = function() PresetManagerModal._previewGallery(self, captured) end,
+            is_selected = is_selected,
+            installed   = local_names[item.name] == true,
+        })
+    end
+
+    -- _addRow inserts card then a gap VerticalSpan into vg_tmp; return the
+    -- card (index 1) wrapped in a VerticalGroup so LibraryModal gets a widget.
+    -- The gap is intentionally dropped — LibraryModal manages inter-row spacing.
+    local card_widget = vg_tmp[1]
+    return card_widget
+end
+
+--- Build the LibraryModal config table for the preset manager.
+--- Called once from show(); self must already have all state fields set.
+local function buildPresetLibraryConfig(self)
+    local LibraryModal = require("menu.library_modal")
+    return {
+        title = _("Preset library"),
+        tabs = {
+            { key = "local",   label = _("My presets") },
+            { key = "gallery", label = _("Gallery") },
+        },
+        on_tab_change = function(tab_key)
+            -- LibraryModal calls refresh() after on_tab_change; setTab also
+            -- calls rebuild(). Accept the double-refresh for Phase 1 simplicity.
+            self.setTab(tab_key)
+        end,
+        chip_strip = function(active_tab)
+            if active_tab == "local" then
+                return {
+                    { key = "latest",  label = _("Latest"),  is_active = self.my_sort == "latest" },
+                    { key = "starred", label = _("Starred"), is_active = self.my_sort == "starred" },
+                }
+            else
+                -- Cold gallery state (never engaged) shows neither chip active
+                -- so the user's first tap carries an unambiguous "load this" intent.
+                local gallery_engaged = self.gallery_loading or self.gallery_index or self.gallery_error
+                return {
+                    { key = "latest",  label = _("Latest"),  is_active = gallery_engaged and self.gallery_sort == "latest" },
+                    { key = "popular", label = _("Popular"), is_active = gallery_engaged and self.gallery_sort == "popular" },
+                }
+            end
+        end,
+        on_chip_tap = function(chip_key)
+            if self.tab == "local" then
+                self.setMySort(chip_key)
+            else
+                self.setGallerySort(chip_key)
+            end
+        end,
+        search_placeholder = function(active_tab)
+            if active_tab == "local" then
+                return _("Search my presets by name…")
+            else
+                return _("Search gallery presets by name…")
+            end
+        end,
+        on_search_submit = function(query)
+            self.current_search = query
+            self.page = 1
+            self.rebuild()
+        end,
+        rows_per_page = 5,
+        item_count = function()
+            local list = currentItemList(self)
+            if self.current_search then
+                local filtered = {}
+                for _i, item in ipairs(list) do
+                    if LibraryModal._matchesQuery(item.name, self.current_search) then
+                        filtered[#filtered + 1] = item
+                    end
+                end
+                return #filtered
+            end
+            return #list
+        end,
+        item_at = function(idx)
+            local list = currentItemList(self)
+            if self.current_search then
+                local filtered = {}
+                for _i, item in ipairs(list) do
+                    if LibraryModal._matchesQuery(item.name, self.current_search) then
+                        filtered[#filtered + 1] = item
+                    end
+                end
+                return filtered[idx]
+            end
+            return list[idx]
+        end,
+        row_renderer = function(item, dimen)
+            return renderPresetCard(self, item, dimen)
+        end,
+        empty_state = function(w, h)
+            if self.tab == "gallery" and not self.gallery_index then
+                -- Pass a reasonable left_pad so the help panel's text margins
+                -- look correct; galleryHelpPanel uses it to inset text_width.
+                return galleryHelpPanel(self, w, h, Size.padding.large)
+            end
+            return nil
+        end,
+        footer_actions = {
+            {
+                key   = "close",
+                label = _("Close"),
+                on_tap = function() self.close(true) end,
+            },
+            {
+                key   = "manage",
+                label = _("Manage…"),
+                on_tap = function()
+                    if not self.previewing then return end
+                    -- Convert self.previewing to the preset_entry shape _openOverflow expects.
+                    if self.previewing.kind == "local" then
+                        local presets = self.bookends:readPresetFiles()
+                        for _i, p in ipairs(presets) do
+                            if p.filename == self.previewing.filename then
+                                PresetManagerModal._openOverflow(self, p)
+                                return
+                            end
+                        end
+                    end
+                end,
+                enabled_when = function() return self.previewing ~= nil and self.previewing.kind == "local" end,
+            },
+            {
+                key      = "install",
+                label    = _("Install"),
+                label_func = function()
+                    return (self.previewing and self.previewing.kind == "local")
+                        and _("Apply") or _("Install")
+                end,
+                on_tap   = function() self.applyCurrent() end,
+                primary  = true,
+                enabled_when = function() return self.previewing ~= nil end,
+            },
+        },
+    }
+end
+
 --- Open the manager modal. Single entry point from menu / gesture.
 function PresetManagerModal.show(bookends)
     local self = {
@@ -275,6 +460,9 @@ function PresetManagerModal.show(bookends)
         -- network fetch when the cached data is older than this threshold,
         -- absent, or flagged as failed. Otherwise it just re-sorts locally.
         gallery_last_refresh_time = nil,
+        -- Active search query from the LibraryModal search bar; nil means no
+        -- filter applied. Reset to nil on tab change.
+        current_search = nil,
     }
 
     -- Snapshot the complete overlay state via the same pipeline used to save a
@@ -287,7 +475,13 @@ function PresetManagerModal.show(bookends)
     -- nextTick lets any pending dialog dismissal flush before we re-open the modal,
     -- avoiding visual glitches where the dialog's close races the modal's rebuild.
     self.rebuild = function()
-        UIManager:nextTick(function() PresetManagerModal._rebuild(self) end)
+        UIManager:nextTick(function()
+            if self.modal_widget and self.modal_widget.refresh then
+                self.modal_widget:refresh()
+            else
+                PresetManagerModal._rebuild(self)
+            end
+        end)
     end
     -- Initial synchronous build on show
     self.rebuildSync = function() PresetManagerModal._rebuild(self) end
@@ -380,7 +574,26 @@ function PresetManagerModal.show(bookends)
     self.applyCurrent = function() PresetManagerModal._applyCurrent(self) end
     self.toggleStar = function(key) PresetManagerModal._toggleStar(self, key) end
 
-    self.rebuildSync()
+    -- Open at the page containing the active preset so it's immediately visible
+    -- without the user having to page forward. Must be set before LibraryModal
+    -- :init() runs because the config's item_count/item_at are called at refresh
+    -- time, but page is also read by LibraryModal directly via self.page on the
+    -- widget — so we stash it on the domain self and let the config's item_count
+    -- drive pagination through LibraryModal's own self.page field (which starts
+    -- at 1). We sync it via on_search_submit / setMySort / setTab.
+    -- NOTE: LibraryModal owns its own self.page counter. The domain self.page is
+    -- used by _rebuild (legacy path) and by config callbacks that directly set
+    -- self.page then call rebuild(). LibraryModal's pagination state is fully
+    -- separate. The active-preset jump is achieved by pre-computing the page and
+    -- injecting it into LibraryModal after :new{} but before UIManager:show.
+    local LibraryModal = require("menu.library_modal")
+    local config = buildPresetLibraryConfig(self)
+    local lm = LibraryModal:new{ config = config }
+    -- Jump to the page containing the active preset on first open.
+    lm.page = activePresetPage(bookends, "latest")
+    self.modal_widget = lm
+    UIManager:show(lm)
+    UIManager:setDirty("all", "flashui")
 end
 
 function PresetManagerModal._close(self, restore)

@@ -471,8 +471,11 @@ function LibraryModal:_renderFooter(content_width)
     for _i, action in ipairs(actions) do
         local enabled = true
         if action.enabled_when then enabled = action.enabled_when() end
+        -- Dynamic label needed for Apply/Install switching in preset modal;
+        -- label_func() takes precedence over the static label fallback.
+        local btn_text = action.label_func and action.label_func() or action.label
         table.insert(btns, Button:new{
-            text = action.label,
+            text = btn_text,
             face = Font:getFace("cfont", 16),
             bold = action.primary == true,
             bordersize = 0,
