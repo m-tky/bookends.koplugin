@@ -471,11 +471,17 @@ local function buildPresetLibraryConfig(self)
                 }
             else
                 -- Cold gallery state (never engaged) shows neither chip active
-                -- so the user's first tap carries an unambiguous "load this" intent.
-                local gallery_engaged = self.gallery_loading or self.gallery_index or self.gallery_error
+                -- so the user's first tap carries an unambiguous "load this"
+                -- intent. is_active must be an explicit true/false (not nil)
+                -- so LibraryModal's chip-strip honors the config flag rather
+                -- than falling back to widget-tracked active_chip.
+                local engaged = (self.gallery_loading or self.gallery_index ~= nil
+                    or self.gallery_error ~= nil) and true or false
                 return {
-                    { key = "latest",  label = _("Latest"),  is_active = gallery_engaged and self.gallery_sort == "latest" },
-                    { key = "popular", label = _("Popular"), is_active = gallery_engaged and self.gallery_sort == "popular" },
+                    { key = "latest",  label = _("Latest"),
+                      is_active = engaged and self.gallery_sort == "latest" or false },
+                    { key = "popular", label = _("Popular"),
+                      is_active = engaged and self.gallery_sort == "popular" or false },
                 }
             end
         end,
