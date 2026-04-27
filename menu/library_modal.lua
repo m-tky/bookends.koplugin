@@ -69,7 +69,9 @@ function LibraryModal:_buildFrame()
     self.frame = FrameContainer:new{
         bordersize = Size.border.window,
         padding = 0,
-        padding_top = self.content_pad,
+        -- Top padding is supplied by _renderTitleBar's internal span so the
+        -- separator line can extend edge-to-edge without a left/right inset.
+        padding_top = 0,
         padding_bottom = self.content_pad,
         padding_left = self.content_pad,
         padding_right = self.content_pad,
@@ -85,12 +87,15 @@ function LibraryModal:_buildFrame()
     self:refresh()
 end
 
-function LibraryModal:_renderTitleBar(content_width)
+function LibraryModal:_renderTitleBar(content_width, modal_w)
     local Font = require("ui/font")
     local HorizontalGroup = require("ui/widget/horizontalgroup")
     local LeftContainer = require("ui/widget/container/leftcontainer")
     local LineWidget = require("ui/widget/linewidget")
     local TextWidget = require("ui/widget/textwidget")
+    local Screen = Device.screen
+    -- Equal top/bottom padding so the title text reads as vertically centred.
+    local bar_pad = Screen:scaleBySize(8)
 
     local title_w = TextWidget:new{
         text = self.config.title,
@@ -118,12 +123,15 @@ function LibraryModal:_renderTitleBar(content_width)
         right_widget,
     }
 
+    -- Separator runs the full frame width (modal_w) so it spans edge-to-edge,
+    -- ignoring the frame's content_pad side insets.
     return VerticalGroup:new{
+        VerticalSpan:new{ width = bar_pad },
         row,
-        VerticalSpan:new{ width = Size.span.vertical_default },
+        VerticalSpan:new{ width = bar_pad },
         LineWidget:new{
             background = Blitbuffer.COLOR_BLACK,
-            dimen = Geom:new{ w = content_width, h = Size.line.thin },
+            dimen = Geom:new{ w = modal_w, h = Size.line.thin },
         },
     }
 end
@@ -526,12 +534,15 @@ end
 
 function LibraryModal:refresh()
     local cw = self.content_w
-    local title = self:_renderTitleBar(cw)
+    -- modal_w is passed so _renderTitleBar can draw an edge-to-edge separator.
+    local title = self:_renderTitleBar(cw, self.modal_w)
     local search = self:_renderSearchInput(cw)
     local chips = self:_renderChipStrip(cw)
     local pagination = self:_renderPagination(cw)
     local footer = self:_renderFooter(cw)
-    local body_height = self.modal_h - 2 * self.content_pad
+    -- Top padding is now inside the title bar; only bottom content_pad remains
+    -- as frame overhead. Subtract all rendered widget heights.
+    local body_height = self.modal_h - self.content_pad
         - title:getSize().h
         - search:getSize().h
         - (chips and chips:getSize().h or 0)
