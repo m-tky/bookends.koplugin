@@ -213,12 +213,9 @@ local function currentItemList(self)
 end
 
 --- Empty-state help panel for the Gallery tab. Rendered when gallery_index is
---- nil or has no presets. Sized to match the populated layout height so the
---- modal doesn't resize when data arrives.
-local function galleryHelpPanel(self, width, row_height, left_pad)
-    local card_slot_h = Screen:scaleBySize(64) + Screen:scaleBySize(8)
-    local pagination_area_h = 2 * Size.span.vertical_default + Size.line.thin + row_height
-    local help_h = card_slot_h * 5
+--- nil or has no presets. Sized to exactly area_height so the modal chrome
+--- stays the same height as when cards are present.
+local function galleryHelpPanel(self, width, area_height, left_pad)
     -- Wider side margins than the card layout so the help panel reads as
     -- content, not a list. Body text stays pure black on e-ink — dark-grey
     -- is reserved for labels/chrome, not for reading content.
@@ -259,12 +256,10 @@ local function galleryHelpPanel(self, width, row_height, left_pad)
         VerticalSpan:new{ width = Screen:scaleBySize(22) },
         cta,
     }
-    return VerticalGroup:new{
-        CenterContainer:new{
-            dimen = Geom:new{ w = width, h = help_h },
-            help_group,
-        },
-        VerticalSpan:new{ width = pagination_area_h },
+    -- CenterContainer sizes itself to exactly area_height — no trailing span needed.
+    return CenterContainer:new{
+        dimen = Geom:new{ w = width, h = area_height },
+        help_group,
     }
 end
 
