@@ -413,10 +413,10 @@ end
 
 function LibraryModal:_renderPagination(content_width)
     local Button = require("ui/widget/button")
-    local Font = require("ui/font")
     local HorizontalGroup = require("ui/widget/horizontalgroup")
-    local TextWidget = require("ui/widget/textwidget")
+    local LineWidget = require("ui/widget/linewidget")
     local T = require("ffi/util").template
+    local Screen = Device.screen
 
     local total = self.config.item_count and self.config.item_count() or 0
     local per_page = self.config.rows_per_page
@@ -424,34 +424,57 @@ function LibraryModal:_renderPagination(content_width)
         or 1
     local total_pages = math.max(1, math.ceil(total / per_page))
 
-    local function chev(label, callback, enabled)
+    local chev_size = Screen:scaleBySize(32)
+    -- show_parent is required for icon buttons to resolve their icon atlas path.
+    local function chev(icon_name, enabled, cb)
         return Button:new{
-            text = label,
-            text_func = nil,
-            bordersize = 0,
-            radius = 0,
-            padding = Device.screen:scaleBySize(8),
-            face = Font:getFace("cfont", 16),
-            callback = enabled and callback or function() end,
-            enabled = enabled,
+            icon = icon_name, icon_width = chev_size, icon_height = chev_size,
+            bordersize = 0, enabled = enabled,
+            callback = enabled and cb or function() end,
+            show_parent = self,
         }
     end
-    local function gap()
-        -- KOReader requires a fresh widget instance per slot; sharing one alias
-        -- across multiple HorizontalGroup positions corrupts paint geometry.
-        return HorizontalSpan:new{ width = Device.screen:scaleBySize(20) }
-    end
+    -- Fresh span per slot — sharing one widget across HGroup positions
+    -- corrupts paint geometry.
+    local pn_span = Screen:scaleBySize(32)
+    local function gap() return HorizontalSpan:new{ width = pn_span } end
 
-    local first = chev("\xE2\x80\xB9\xE2\x80\xB9", function() self.page = 1; self:refresh() end, self.page > 1)
-    local prev  = chev("\xE2\x80\xB9", function() self.page = self.page - 1; self:refresh() end, self.page > 1)
-    local pageinfo = TextWidget:new{
-        text = T(_("Page %1 of %2"), self.page, total_pages),
-        face = Font:getFace("cfont", 14),
+    local page_nav = HorizontalGroup:new{
+        align = "center",
+        chev("chevron.first", self.page > 1,          function() self.page = 1;              self:refresh() end),
+        gap(),
+        chev("chevron.left",  self.page > 1,          function() self.page = self.page - 1;  self:refresh() end),
+        gap(),
+        Button:new{
+            text = T(_("Page %1 of %2"), self.page, total_pages),
+            text_font_size = 15,
+            bordersize = 0,
+            callback = function() end,
+            show_parent = self,
+        },
+        gap(),
+        chev("chevron.right", self.page < total_pages, function() self.page = self.page + 1; self:refresh() end),
+        gap(),
+        chev("chevron.last",  self.page < total_pages, function() self.page = total_pages;   self:refresh() end),
     }
-    local nxt = chev("\xE2\x80\xBA", function() self.page = self.page + 1; self:refresh() end, self.page < total_pages)
-    local last = chev("\xE2\x80\xBA\xE2\x80\xBA", function() self.page = total_pages; self:refresh() end, self.page < total_pages)
 
-    return HorizontalGroup:new{ align = "center", first, gap(), prev, gap(), pageinfo, gap(), nxt, gap(), last }
+    local divider = CenterContainer:new{
+        dimen = Geom:new{ w = content_width, h = Size.line.thin },
+        LineWidget:new{
+            background = Blitbuffer.COLOR_DARK_GRAY,
+            dimen = Geom:new{ w = content_width - 2 * Size.padding.default, h = Size.line.thin },
+        },
+    }
+
+    return VerticalGroup:new{
+        align = "left",
+        divider,
+        VerticalSpan:new{ width = Size.span.vertical_default },
+        CenterContainer:new{
+            dimen = Geom:new{ w = content_width, h = page_nav:getSize().h },
+            page_nav,
+        },
+    }
 end
 
 function LibraryModal:_renderFooter(content_width)
