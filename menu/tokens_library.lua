@@ -10,7 +10,9 @@ local Geom = require("ui/geometry")
 local LeftContainer = require("ui/widget/container/leftcontainer")
 local LibraryModal = require("menu.library_modal")
 local Size = require("ui/size")
+local Tokens = require("bookends_tokens")
 local UIManager = require("ui/uimanager")
+local Utils = require("bookends_utils")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
 local _ = require("bookends_i18n").gettext
@@ -197,15 +199,31 @@ function TokensLibrary._currentItems(active_chip, search_query)
     return items
 end
 
+--- Per-render document context for live token expansion. pcall'd so any
+--- nil-deref or missing API on the Bookends instance just disables
+--- expansion rather than crashing the modal open.
+local function buildDocContext(bookends)
+    if not bookends then return nil end
+    local ok, ctx = pcall(function()
+        if not bookends.ui then return nil end
+        return {
+            ui              = bookends.ui,
+            session_elapsed = bookends:getSessionElapsed(),
+            session_pages   = bookends:getSessionPages(),
+            tick_mult       = bookends.settings:readSetting(
+                "tick_width_multiplier", bookends.DEFAULT_TICK_WIDTH_MULTIPLIER),
+            stats_cache     = {},
+        }
+    end)
+    return ok and ctx or nil
+end
+
 --- Render a single token / conditional row as a card. Two-line:
 ---   Line 1 (bold): description
----   Line 2:        for conditionals: expression; for tokens: %token literal;
+---   Line 2:        for conditionals: expression; for tokens: '%token → live'
+---                  (or just the literal if expansion fails or no ctx);
 ---                  for snippets: full template.
---- Live token expansion ('%page_num → 217') is deliberately omitted for now —
---- it requires a doc context that the Bookends instance only sometimes
---- exposes consistently across surfaces, and we'd rather show stable static
---- text than risk a runtime nil-deref while the user's typing.
-function TokensLibrary._renderRow(item, slot_dimen)
+function TokensLibrary._renderRow(item, slot_dimen, doc_ctx)
     local Font = require("ui/font")
     local TextWidget = require("ui/widget/textwidget")
     local InputContainer = require("ui/widget/container/inputcontainer")
@@ -221,7 +239,28 @@ function TokensLibrary._renderRow(item, slot_dimen)
         fgcolor = Blitbuffer.COLOR_BLACK,
         max_width = content_w,
     }
-    local line2_text = item.expression or item.token or ""
+
+    local line2_text
+    if item.expression then
+        line2_text = item.expression
+    elseif item.is_snippet then
+        line2_text = item.token
+    else
+        local expansion = ""
+        if doc_ctx and item.token then
+            -- Tokens.expand can throw on edge cases (eg %datetime{format} with
+            -- bad format spec, or stats tokens before SQLite is ready) — pcall
+            -- so a single bad token doesn't take the whole list down.
+            local ok, val = pcall(Tokens.expand, item.token, doc_ctx.ui,
+                doc_ctx.session_elapsed, doc_ctx.session_pages,
+                nil, doc_ctx.tick_mult, nil, nil,
+                { stats_cache = doc_ctx.stats_cache })
+            if ok and val and val ~= "" and val ~= item.token then
+                expansion = " \xE2\x86\x92 " .. Utils.truncateUtf8(val, 25)
+            end
+        end
+        line2_text = (item.token or "") .. expansion
+    end
     local line2 = TextWidget:new{
         text = line2_text,
         face = Font:getFace("cfont", 13),
@@ -265,6 +304,10 @@ end
 function TokensLibrary:show(bookends, on_select)
     self.bookends = bookends
     local state = { active_chip = "all", search_query = nil }
+    -- Doc context built once at modal-open. Live-token expansions in row 2
+    -- reference this; if buildDocContext returned nil (e.g. ui not ready),
+    -- _renderRow falls back to showing the raw token literal.
+    local doc_ctx = buildDocContext(bookends)
     local self_ref = self
 
     local config = {
@@ -299,7 +342,7 @@ function TokensLibrary:show(bookends, on_select)
         item_count = function() return #TokensLibrary._currentItems(state.active_chip, state.search_query) end,
         item_at = function(idx) return TokensLibrary._currentItems(state.active_chip, state.search_query)[idx] end,
         row_renderer = function(item, dimen)
-            local row = TokensLibrary._renderRow(item, dimen)
+            local row = TokensLibrary._renderRow(item, dimen, doc_ctx)
             -- Bind the tap inside the row_renderer closure rather than via a
             -- generic config.on_item_tap hook — the row's InputContainer is
             -- already gesture-ranged in _renderRow, we just need to attach
