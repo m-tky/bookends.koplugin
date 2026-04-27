@@ -19,6 +19,9 @@ local VerticalSpan = require("ui/widget/verticalspan")
 local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("bookends_i18n").gettext
 
+-- Uniform gap applied everywhere below the title bar separator.
+local MARGIN = Device.screen:scaleBySize(10)
+
 local LibraryModal = WidgetContainer:extend{
     name = "library_modal",
     config = nil,           -- domain config table (see spec)
@@ -63,7 +66,7 @@ function LibraryModal:_buildFrame()
     local Screen = Device.screen
     self.modal_w = math.floor(Screen:getWidth() * 0.9)
     self.modal_h = math.floor(Screen:getHeight() * 0.85)
-    self.content_pad = Screen:scaleBySize(16)
+    self.content_pad = MARGIN
     self.content_w = self.modal_w - 2 * self.content_pad
 
     self.frame = FrameContainer:new{
@@ -72,9 +75,9 @@ function LibraryModal:_buildFrame()
         -- Top padding is supplied by _renderTitleBar's internal span so the
         -- separator line can extend edge-to-edge without a left/right inset.
         padding_top = 0,
-        padding_bottom = self.content_pad,
-        padding_left = self.content_pad,
-        padding_right = self.content_pad,
+        padding_bottom = MARGIN,
+        padding_left = MARGIN,
+        padding_right = MARGIN,
         margin = 0,
         radius = Screen:scaleBySize(8),
         background = Blitbuffer.COLOR_WHITE,
@@ -128,12 +131,13 @@ function LibraryModal:_renderTitleBar(content_width, modal_w)
     }
 
     -- Separator runs the full frame width (modal_w) so it spans edge-to-edge,
-    -- ignoring the frame's content_pad side insets.
+    -- ignoring the frame's content_pad side insets. Thicker than line.thin so
+    -- the separator reads as a deliberate structural divider, not a hairline.
     return VerticalGroup:new{
         row,
         LineWidget:new{
             background = Blitbuffer.COLOR_BLACK,
-            dimen = Geom:new{ w = modal_w, h = Size.line.thin },
+            dimen = Geom:new{ w = modal_w, h = Device.screen:scaleBySize(3) },
         },
     }
 end
@@ -156,22 +160,22 @@ function LibraryModal:_renderTabSegments(title_bar_h)
         local tw = TextWidget:new{
             text = label, face = Font:getFace("cfont", 14), bold = is_active, fgcolor = fg,
         }
-        -- No vertical padding — vertical centering is handled by the outer
-        -- CenterContainer so the segment fills the full title bar height.
+        local pill_w = tw:getSize().w + 2 * seg_pad_h
+        -- FrameContainer is sized to the full title-bar height so the active
+        -- pill's fill reaches from the modal's top edge to the separator line.
         local fc = FrameContainer:new{
-            bordersize = 0, padding = 0,
+            bordersize = is_active and 0 or Size.border.thin,
+            padding = 0,
             padding_left = seg_pad_h, padding_right = seg_pad_h,
             padding_top = 0, padding_bottom = 0,
-            margin = 0, background = bg, tw,
+            margin = 0, background = bg,
+            dimen = Geom:new{ w = pill_w, h = title_bar_h },
+            CenterContainer:new{
+                dimen = Geom:new{ w = pill_w - 2 * seg_pad_h, h = title_bar_h },
+                tw,
+            },
         }
-        local fc_w = fc:getSize().w
-        -- CenterContainer gives each segment the full title bar height so it
-        -- touches the separator line below and the modal's top edge above.
-        local cc = CenterContainer:new{
-            dimen = Geom:new{ w = fc_w, h = title_bar_h },
-            fc,
-        }
-        local ic = InputContainer:new{ dimen = Geom:new{ w = fc_w, h = title_bar_h }, cc }
+        local ic = InputContainer:new{ dimen = Geom:new{ w = pill_w, h = title_bar_h }, fc }
         ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
         ic.onTapSelect = function() on_tap(); return true end
         return ic
@@ -286,7 +290,7 @@ function LibraryModal:_renderChipStrip(content_width)
     local pad_v = Screen:scaleBySize(4)
     -- Zero gap so chips butt together into a segmented-control strip.
     local chip_gap = 0
-    local row_gap = Screen:scaleBySize(6)
+    local row_gap = MARGIN
 
     local function buildChip(chip)
         local is_active = chip.key == self.active_chip
@@ -364,11 +368,15 @@ function LibraryModal:_renderListArea(content_width, area_height)
     local start_idx = (self.page - 1) * rows_per_page + 1
     local end_idx = math.min(start_idx + rows_per_page - 1, total)
 
-    local row_height = area_height / rows_per_page
+    -- Each row slot = card height; gaps between rows are MARGIN. The total area
+    -- is divided so (rows * slot + (rows-1) * MARGIN) == area_height.
+    local row_height = math.floor(
+        (area_height - (rows_per_page - 1) * MARGIN) / rows_per_page)
     local vg = VerticalGroup:new{ align = "left" }
     for idx = start_idx, end_idx do
         local item = self.config.item_at(idx)
         if item then
+            if #vg > 0 then table.insert(vg, VerticalSpan:new{ width = MARGIN }) end
             local slot_dimen = Geom:new{ w = content_width, h = row_height }
             table.insert(vg, self.config.row_renderer(item, slot_dimen))
         end
@@ -376,10 +384,14 @@ function LibraryModal:_renderListArea(content_width, area_height)
     local rendered = end_idx - start_idx + 1
     if rendered < rows_per_page then
         for _i = rendered + 1, rows_per_page do
+            table.insert(vg, VerticalSpan:new{ width = MARGIN })
             table.insert(vg, VerticalSpan:new{ width = row_height })
         end
     end
-    return vg
+    return CenterContainer:new{
+        dimen = Geom:new{ w = content_width, h = area_height },
+        vg,
+    }
 end
 
 function LibraryModal:_renderGridArea(content_width, area_height)
@@ -391,8 +403,9 @@ function LibraryModal:_renderGridArea(content_width, area_height)
     local target_cell_w = Device.screen:scaleBySize(290)
     local cols = math.max(3, math.floor(content_width / target_cell_w))
     local rows = math.ceil(cells_per_page / cols)
+    -- Cell height divides the area after subtracting inter-row MARGIN gaps.
     local cell_w = math.floor(content_width / cols)
-    local cell_h = math.floor(area_height / rows)
+    local cell_h = math.floor((area_height - (rows - 1) * MARGIN) / rows)
 
     local start_idx = (self.page - 1) * cells_per_page + 1
     local end_idx = math.min(start_idx + cells_per_page - 1, total)
@@ -421,14 +434,21 @@ function LibraryModal:_renderGridArea(content_width, area_height)
             table.insert(hg, cell_widget)
             in_row = in_row + 1
             if in_row >= cols then
+                if #vg > 0 then table.insert(vg, VerticalSpan:new{ width = MARGIN }) end
                 table.insert(vg, hg)
                 hg = HorizontalGroup:new{ align = "top" }
                 in_row = 0
             end
         end
     end
-    if in_row > 0 then table.insert(vg, hg) end
-    return vg
+    if in_row > 0 then
+        if #vg > 0 then table.insert(vg, VerticalSpan:new{ width = MARGIN }) end
+        table.insert(vg, hg)
+    end
+    return CenterContainer:new{
+        dimen = Geom:new{ w = content_width, h = area_height },
+        vg,
+    }
 end
 
 function LibraryModal:_renderPagination(content_width)
@@ -489,7 +509,6 @@ function LibraryModal:_renderPagination(content_width)
     return VerticalGroup:new{
         align = "left",
         divider,
-        VerticalSpan:new{ width = Size.span.vertical_default },
         CenterContainer:new{
             dimen = Geom:new{ w = content_width, h = page_nav:getSize().h },
             page_nav,
@@ -552,44 +571,55 @@ function LibraryModal:refresh()
     local chips = self:_renderChipStrip(cw)
     local pagination = self:_renderPagination(cw)
     local footer = self:_renderFooter(cw)
-    -- Top padding is now inside the title bar; only bottom content_pad remains
-    -- as frame overhead. Subtract all rendered widget heights.
-    local body_height = self.modal_h - self.content_pad
+
+    -- Count MARGIN gaps between sections below the title bar.
+    -- Baseline (no chips, no footer): title↔search + search↔area + area↔pagination = 3.
+    local n_gaps = 3
+    if chips then n_gaps = n_gaps + 1 end   -- search↔chips↔area replaces search↔area (one extra)
+    if footer then n_gaps = n_gaps + 1 end   -- pagination↔footer
+
+    -- area_height is what's left after chrome and all margins. Constant across
+    -- tab states so the modal never changes size.
+    local area_height = self.modal_h
+        - MARGIN                               -- frame padding_bottom
         - title:getSize().h
         - search:getSize().h
         - (chips and chips:getSize().h or 0)
         - pagination:getSize().h
         - (footer and footer:getSize().h or 0)
-        - 6 * Size.span.vertical_default
+        - n_gaps * MARGIN
 
     local result_area
     if self.config.cell_renderer then
-        result_area = self:_renderGridArea(cw, body_height)
+        result_area = self:_renderGridArea(cw, area_height)
     else
-        result_area = self:_renderListArea(cw, body_height)
+        result_area = self:_renderListArea(cw, area_height)
     end
 
     local body = VerticalGroup:new{
         align = "left",
         title,
-        VerticalSpan:new{ width = Size.span.vertical_default },
+        VerticalSpan:new{ width = MARGIN },
         search,
-        VerticalSpan:new{ width = Size.span.vertical_default },
+        VerticalSpan:new{ width = MARGIN },
     }
     if chips then
         table.insert(body, chips)
-        table.insert(body, VerticalSpan:new{ width = Size.span.vertical_default })
+        table.insert(body, VerticalSpan:new{ width = MARGIN })
     end
     table.insert(body, result_area)
-    table.insert(body, VerticalSpan:new{ width = Size.span.vertical_default })
+    table.insert(body, VerticalSpan:new{ width = MARGIN })
     table.insert(body, pagination)
     if footer then
-        table.insert(body, VerticalSpan:new{ width = Size.span.vertical_default })
+        table.insert(body, VerticalSpan:new{ width = MARGIN })
         table.insert(body, footer)
     end
 
     self.frame[1] = body
-    UIManager:setDirty(self, "ui")
+    -- Use nil (whole screen) rather than self to guarantee the previous frame is
+    -- fully erased when switching tabs. Self-bounded dirty rects can leave ghost
+    -- paint from the previous state if any widget shrank.
+    UIManager:setDirty(nil, "ui")
 end
 
 return LibraryModal
