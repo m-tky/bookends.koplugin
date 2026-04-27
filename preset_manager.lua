@@ -182,9 +182,52 @@ function PresetManager.attach(Bookends)
     function Bookends:presetDir()
         if not self._preset_dir then
             local DataStorage = require("datastorage")
-            self._preset_dir = DataStorage:getSettingsDir() .. "/bookends_presets"
+            -- Resolve to absolute via getFullDataDir(), which expands "."
+            -- to lfs.currentdir(). Kobo's launcher runs without KO_HOME, so
+            -- DataStorage falls back to "." — caching the relative path
+            -- means a later cwd shift would break every preset file lookup.
+            local data_dir = DataStorage:getFullDataDir() or DataStorage:getDataDir()
+            self._preset_dir = data_dir .. "/settings/bookends_presets"
         end
         return self._preset_dir
+    end
+
+    -- Remove `filename` from the preset_cycle setting if present.
+    -- Used by deletePresetFile and renamePresetFile so any cycle entries
+    -- referring to a now-gone file are pruned at the source — preventing
+    -- the "first cycle works, every subsequent fails" symptom that caused
+    -- issue #31, where a stale `preset_cycle` entry pointed at a deleted
+    -- preset file.
+    local function pruneFromCycle(self_bookends, filename)
+        if not filename then return end
+        local cycle = self_bookends.settings:readSetting("preset_cycle") or {}
+        local changed = false
+        for i = #cycle, 1, -1 do
+            if cycle[i] == filename then
+                table.remove(cycle, i)
+                changed = true
+            end
+        end
+        if changed then
+            self_bookends.settings:saveSetting("preset_cycle", cycle)
+        end
+    end
+
+    -- Replace `old_filename` with `new_filename` in preset_cycle (in place,
+    -- preserving cycle position). No-op if old_filename isn't present.
+    local function renameInCycle(self_bookends, old_filename, new_filename)
+        if not old_filename or not new_filename or old_filename == new_filename then return end
+        local cycle = self_bookends.settings:readSetting("preset_cycle") or {}
+        local changed = false
+        for i, entry in ipairs(cycle) do
+            if entry == old_filename then
+                cycle[i] = new_filename
+                changed = true
+            end
+        end
+        if changed then
+            self_bookends.settings:saveSetting("preset_cycle", cycle)
+        end
     end
 
     function Bookends:sanitizePresetFilename(name)
@@ -263,6 +306,7 @@ function PresetManager.attach(Bookends)
     function Bookends:deletePresetFile(filename)
         local path = self:presetDir() .. "/" .. filename
         os.remove(path)
+        pruneFromCycle(self, filename)
     end
 
     function Bookends:renamePresetFile(old_filename, new_name)
@@ -276,6 +320,7 @@ function PresetManager.attach(Bookends)
 
         if new_filename ~= old_filename then
             os.remove(old_path)
+            renameInCycle(self, old_filename, new_filename)
         end
 
         return new_filename

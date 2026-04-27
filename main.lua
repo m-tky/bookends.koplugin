@@ -525,10 +525,20 @@ function Bookends:onCycleBookendsPreset()
     -- Strip any legacy "_empty" sentinel from the cycle. It used to mean
     -- "cycle to a blank overlay" but we've removed that concept — users who
     -- want a blank state can create an empty preset instead.
+    -- Also self-heal stale entries pointing at preset files that no longer
+    -- exist (issue #31): a Replace-from-Gallery, an external rename, or a
+    -- legacy code path that didn't prune the cycle on delete can leave a
+    -- filename in the list with no file behind it, which would trip every
+    -- subsequent cycle on a parse error. Drop those silently.
+    local lfs = require("libs/libkoreader-lfs")
+    local dir = self:presetDir()
     local cycle_raw = self.settings:readSetting("preset_cycle") or {}
     local cycle = {}
     for _, entry in ipairs(cycle_raw) do
-        if entry ~= "_empty" then cycle[#cycle + 1] = entry end
+        if entry ~= "_empty"
+            and lfs.attributes(dir .. "/" .. entry, "mode") == "file" then
+            cycle[#cycle + 1] = entry
+        end
     end
     if #cycle ~= #cycle_raw then
         self.settings:saveSetting("preset_cycle", cycle)
