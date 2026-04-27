@@ -83,13 +83,26 @@ function LibraryModal:init()
     self:_buildFrame()
 end
 
-function LibraryModal:onTapDismissKeyboard(_arg, _ges)
+function LibraryModal:onTapDismissKeyboard(_arg, ges)
+    -- This handler only fires for taps that no deeper widget consumed (per
+    -- WidgetContainer's propagateEvent). For child-consumed taps (chip/tab/
+    -- button/tile/keyboard-key) the deeper handler runs and dismisses the
+    -- keyboard explicitly via _dismissKeyboard / withKeyboardDismiss / the
+    -- search row's button callbacks. This catches the empty-modal-area case.
+    --
+    -- We also gate dismissal on the tap being OUTSIDE the keyboard's bounds
+    -- so that taps on keyboard keys (which propagate up uncomsumed in some
+    -- KOReader gesture paths) don't accidentally dismiss the keyboard before
+    -- the user's keystroke registers. Pattern lifted from bookends_line_editor.
     if self._search_input and self._search_input.isKeyboardVisible
             and self._search_input:isKeyboardVisible() then
-        self._search_input:onCloseKeyboard()
-        return true  -- consume; user re-taps to actuate the underlying widget
+        local kb = self._search_input.keyboard
+        if kb and kb.dimen and ges and ges.pos
+                and ges.pos:notIntersectWith(kb.dimen) then
+            self._search_input:onCloseKeyboard()
+        end
     end
-    return false
+    return false  -- don't consume; the user's tap already missed any deeper handler
 end
 
 function LibraryModal:_buildFrame()
@@ -267,16 +280,17 @@ function LibraryModal:_renderSearchInput(content_width)
     local input_padding = Size.padding.default
     local input_overhead = 2 * (Size.border.inputtext + input_padding)
 
-    -- Pre-measure the button labels so we can size the input first and then
-    -- build buttons whose outer height matches the input's.
+    -- Pre-measure the × clear button label so we can size the input first
+    -- and then build the button whose outer height matches the input's.
+    -- Search-on-Enter is wired via the InputText's enter_callback, so an
+    -- explicit Search button would be redundant.
     local function measureLabel(label)
         local tw = TextWidget:new{ text = label, face = btn_face,
                                    fgcolor = Blitbuffer.COLOR_BLACK }
         return tw, tw:getSize().w + 2 * btn_pad_h + 2 * Size.border.thin
     end
-    local search_label, search_btn_w = measureLabel(_("Search"))
-    local clear_label,  clear_btn_w  = measureLabel("×")
-    local input_w = content_width - search_btn_w - clear_btn_w - 2 * gap - input_overhead
+    local clear_label, clear_btn_w = measureLabel("×")
+    local input_w = content_width - clear_btn_w - gap - input_overhead
 
     -- Persist the InputText across refreshes so the keyboard's reference to
     -- it stays valid. Rebuilding it on every refresh leaves the keyboard
@@ -340,11 +354,6 @@ function LibraryModal:_renderSearchInput(content_width)
             self._search_input:onCloseKeyboard()
         end
     end
-    local search_btn = chipButton(search_label, search_btn_w, function()
-        local q = self._search_input and self._search_input:getText() or ""
-        dismissKeyboard()
-        self:_onSearchSubmit(q)
-    end)
     local clear_btn = chipButton(clear_label, clear_btn_w, function()
         dismissKeyboard()
         if self._search_input then self._search_input:setText("") end
@@ -354,8 +363,6 @@ function LibraryModal:_renderSearchInput(content_width)
     return HorizontalGroup:new{
         align = "center",
         self._search_input,
-        HorizontalSpan:new{ width = gap },
-        search_btn,
         HorizontalSpan:new{ width = gap },
         clear_btn,
     }
