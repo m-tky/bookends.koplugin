@@ -48,9 +48,29 @@ function LibraryModal:init()
 end
 
 function LibraryModal:_buildFrame()
-    -- Frame-level dimensions match the existing preset modal's modal dimensions
-    -- (90% of screen width, content-driven height up to 85% screen height).
-    -- Implementation populates self[1] via :refresh().
+    local Screen = Device.screen
+    self.modal_w = math.floor(Screen:getWidth() * 0.9)
+    self.modal_h = math.floor(Screen:getHeight() * 0.85)
+    self.content_pad = Screen:scaleBySize(16)
+    self.content_w = self.modal_w - 2 * self.content_pad
+
+    self.frame = FrameContainer:new{
+        bordersize = Size.border.window,
+        padding = 0,
+        padding_top = self.content_pad,
+        padding_bottom = self.content_pad,
+        padding_left = self.content_pad,
+        padding_right = self.content_pad,
+        margin = 0,
+        radius = Screen:scaleBySize(8),
+        background = Blitbuffer.COLOR_WHITE,
+        VerticalGroup:new{ align = "left" },
+    }
+    self[1] = CenterContainer:new{
+        dimen = Geom:new{ w = Screen:getWidth(), h = Screen:getHeight() },
+        self.frame,
+    }
+    self:refresh()
 end
 
 function LibraryModal:_renderTitleBar(content_width)
@@ -465,9 +485,48 @@ function LibraryModal:_renderFooter(content_width)
 end
 
 function LibraryModal:refresh()
-    -- Rebuild the inner content. Called on tab change, chip tap, search submit,
-    -- page change. Avoids rebuilding the modal frame itself (which would
-    -- re-trigger :init in some paint cycles).
+    local cw = self.content_w
+    local title = self:_renderTitleBar(cw)
+    local search = self:_renderSearchInput(cw)
+    local chips = self:_renderChipStrip(cw)
+    local pagination = self:_renderPagination(cw)
+    local footer = self:_renderFooter(cw)
+    local body_height = self.modal_h - 2 * self.content_pad
+        - title:getSize().h
+        - search:getSize().h
+        - (chips and chips:getSize().h or 0)
+        - pagination:getSize().h
+        - (footer and footer:getSize().h or 0)
+        - 6 * Size.span.vertical_default
+
+    local result_area
+    if self.config.cell_renderer then
+        result_area = self:_renderGridArea(cw, body_height)
+    else
+        result_area = self:_renderListArea(cw, body_height)
+    end
+
+    local body = VerticalGroup:new{
+        align = "left",
+        title,
+        VerticalSpan:new{ width = Size.span.vertical_default },
+        search,
+        VerticalSpan:new{ width = Size.span.vertical_default },
+    }
+    if chips then
+        table.insert(body, chips)
+        table.insert(body, VerticalSpan:new{ width = Size.span.vertical_default })
+    end
+    table.insert(body, result_area)
+    table.insert(body, VerticalSpan:new{ width = Size.span.vertical_default })
+    table.insert(body, pagination)
+    if footer then
+        table.insert(body, VerticalSpan:new{ width = Size.span.vertical_default })
+        table.insert(body, footer)
+    end
+
+    self.frame[1] = body
+    UIManager:setDirty(self, "ui")
 end
 
 return LibraryModal
