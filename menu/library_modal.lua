@@ -10,19 +10,23 @@ local CenterContainer = require("ui/widget/container/centercontainer")
 local Device = require("device")
 local FrameContainer = require("ui/widget/container/framecontainer")
 local Geom = require("ui/geometry")
+local GestureRange = require("ui/gesturerange")
 local HorizontalSpan = require("ui/widget/horizontalspan")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local Size = require("ui/size")
 local UIManager = require("ui/uimanager")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
-local WidgetContainer = require("ui/widget/container/widgetcontainer")
 local _ = require("bookends_i18n").gettext
 
 -- Uniform gap applied everywhere below the title bar separator.
 local MARGIN = Device.screen:scaleBySize(10)
 
-local LibraryModal = WidgetContainer:extend{
+-- Extend InputContainer (rather than WidgetContainer) so we can register a
+-- modal-level tap handler that dismisses the on-screen keyboard. Child
+-- gestures (button/chip/tile taps) still get first crack via WidgetContainer's
+-- propagateEvent; our handler only fires on uncaught taps.
+local LibraryModal = InputContainer:extend{
     name = "library_modal",
     config = nil,           -- domain config table (see spec)
     -- runtime state
@@ -58,8 +62,34 @@ function LibraryModal:init()
     if not self.active_chip and chips[1] then
         self.active_chip = chips[1].key
     end
+    -- Modal-wide tap fallback: if a tap isn't consumed by a child widget AND
+    -- the keyboard is up, dismiss the keyboard. Children's TapSelect handlers
+    -- run first via WidgetContainer.propagateEvent; this only fires for taps
+    -- that fall through (e.g. on empty modal area or when InputText has
+    -- focused-state precedence over downstream widgets).
+    self.ges_events = {
+        TapDismissKeyboard = {
+            GestureRange:new{
+                ges = "tap",
+                range = Geom:new{
+                    x = 0, y = 0,
+                    w = Device.screen:getWidth(),
+                    h = Device.screen:getHeight(),
+                },
+            },
+        },
+    }
     -- Build the modal frame on init; populated lazily via :refresh()
     self:_buildFrame()
+end
+
+function LibraryModal:onTapDismissKeyboard(_arg, _ges)
+    if self._search_input and self._search_input.isKeyboardVisible
+            and self._search_input:isKeyboardVisible() then
+        self._search_input:onCloseKeyboard()
+        return true  -- consume; user re-taps to actuate the underlying widget
+    end
+    return false
 end
 
 function LibraryModal:_buildFrame()

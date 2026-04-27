@@ -17,7 +17,8 @@ package.loaded["device"] = { screen = setmetatable({}, {
 }) }
 package.loaded["ui/widget/container/framecontainer"] = stub_meta
 package.loaded["ui/geometry"] = { new = function(_, t) return t end }
-package.loaded["ui/widget/container/inputcontainer"] = stub_meta
+package.loaded["ui/widget/container/inputcontainer"] = setmetatable({ extend = function(_, t) return t end }, { __index = stub_meta })
+package.loaded["ui/gesturerange"] = { new = function(_, t) return t end }
 package.loaded["ui/size"] = setmetatable({}, {
     __index = function()
         return setmetatable({}, {
