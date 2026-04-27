@@ -243,6 +243,12 @@ local function currentItemList(self)
         end
         entries = filtered
     end
+    -- Append a synthetic "+ New blank preset" tile at the end of the local
+    -- list as a discoverable affordance for creating a fresh preset. Skip
+    -- it when search is active so the tile doesn't clutter filtered results.
+    if self.tab == "local" and not self.current_search then
+        entries[#entries + 1] = { is_virtual = true, name = _("+ New blank preset") }
+    end
     self._items_cache = entries
     self._items_cache_key = key
     return self._items_cache
@@ -325,24 +331,37 @@ local function renderPresetCard(self, item, slot_dimen)
     local vg_tmp = VerticalGroup:new{ align = "left" }
 
     if is_local then
-        local selected_key
-        if self.previewing and self.previewing.kind == "local" then
-            selected_key = self.previewing.filename
+        local opts
+        if item.is_virtual then
+            -- Synthetic "+ New blank preset" tile: bypass _previewLocal
+            -- (no preset to load) and route the tap to _createBlankPreset.
+            -- _addRow's is_virtual branch handles the centered-italic
+            -- placeholder styling.
+            opts = {
+                display    = item.name,
+                is_virtual = true,
+                on_preview = withKeyboardDismiss(function() PresetManagerModal._createBlankPreset(self) end),
+            }
         else
-            selected_key = self.bookends:getActivePresetFilename()
+            local selected_key
+            if self.previewing and self.previewing.kind == "local" then
+                selected_key = self.previewing.filename
+            else
+                selected_key = self.bookends:getActivePresetFilename()
+            end
+            local has_colour = PresetManager.hasColour(item.preset) or false
+            opts = {
+                display      = item.name,
+                description  = item.preset and item.preset.description,
+                author       = item.preset and item.preset.author,
+                star_key     = item.filename,
+                has_colour   = has_colour,
+                on_preview   = withKeyboardDismiss(function() PresetManagerModal._previewLocal(self, item) end),
+                on_hold      = withKeyboardDismiss(function() PresetManagerModal._openOverflow(self, item) end),
+                is_selected  = (selected_key == item.filename),
+            }
         end
-        local has_colour = PresetManager.hasColour(item.preset) or false
-        PresetManagerModal._addRow(self, vg_tmp, slot_dimen.w, row_height, font_size, baseline, left_pad, {
-            display      = item.name,
-            description  = item.preset and item.preset.description,
-            author       = item.preset and item.preset.author,
-            star_key     = item.filename,
-            has_colour   = has_colour,
-            on_preview   = withKeyboardDismiss(function() PresetManagerModal._previewLocal(self, item) end),
-            on_hold      = withKeyboardDismiss(function() PresetManagerModal._openOverflow(self, item) end),
-            is_selected  = (selected_key == item.filename),
-            is_virtual   = item.is_virtual or false,
-        })
+        PresetManagerModal._addRow(self, vg_tmp, slot_dimen.w, row_height, font_size, baseline, left_pad, opts)
     else
         -- Gallery tab: highlighted if currently previewed, or if the gallery
         -- entry's name matches the active local preset (mirrors local-tab
