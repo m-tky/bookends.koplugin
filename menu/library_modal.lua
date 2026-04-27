@@ -332,6 +332,55 @@ function LibraryModal:_renderListArea(content_width, area_height)
     return vg
 end
 
+function LibraryModal:_renderGridArea(content_width, area_height)
+    local cells_per_page = self.config.cells_per_page(content_width)
+    local total = self.config.item_count and self.config.item_count() or 0
+    local total_pages = math.max(1, math.ceil(total / cells_per_page))
+    if self.page > total_pages then self.page = total_pages end
+
+    local target_cell_w = Device.screen:scaleBySize(290)
+    local cols = math.max(3, math.floor(content_width / target_cell_w))
+    local rows = math.ceil(cells_per_page / cols)
+    local cell_w = math.floor(content_width / cols)
+    local cell_h = math.floor(area_height / rows)
+
+    local start_idx = (self.page - 1) * cells_per_page + 1
+    local end_idx = math.min(start_idx + cells_per_page - 1, total)
+
+    local HorizontalGroup = require("ui/widget/horizontalgroup")
+    local vg = VerticalGroup:new{ align = "left" }
+    local hg = HorizontalGroup:new{ align = "top" }
+    local in_row = 0
+    for idx = start_idx, end_idx do
+        local item = self.config.item_at(idx)
+        if item then
+            local cell_dimen = Geom:new{ w = cell_w, h = cell_h }
+            local cell_widget = self.config.cell_renderer(item, cell_dimen)
+            if self.config.cell_long_tap then
+                local GestureRange = require("ui/gesturerange")
+                local ic = InputContainer:new{
+                    dimen = Geom:new{ w = cell_w, h = cell_h },
+                    cell_widget,
+                }
+                ic.ges_events = {
+                    Hold = { GestureRange:new{ ges = "hold", range = ic.dimen } },
+                }
+                ic.onHold = function() self.config.cell_long_tap(item); return true end
+                cell_widget = ic
+            end
+            table.insert(hg, cell_widget)
+            in_row = in_row + 1
+            if in_row >= cols then
+                table.insert(vg, hg)
+                hg = HorizontalGroup:new{ align = "top" }
+                in_row = 0
+            end
+        end
+    end
+    if in_row > 0 then table.insert(vg, hg) end
+    return vg
+end
+
 function LibraryModal:refresh()
     -- Rebuild the inner content. Called on tab change, chip tap, search submit,
     -- page change. Avoids rebuilding the modal frame itself (which would
