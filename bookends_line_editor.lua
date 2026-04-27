@@ -348,7 +348,8 @@ function LineEditor.attach(Bookends)
                     text = _("Tokens"),
                     callback = function()
                         format_dialog:onCloseKeyboard()
-                        self:showTokenPicker(function(token)
+                        local TokensLibrary = require("menu.tokens_library")
+                        TokensLibrary:show(self, function(token)
                             format_dialog:addTextToInput(token)
                         end)
                     end,
