@@ -310,10 +310,12 @@ function LibraryModal:_renderSearchInput(content_width)
     end
 
     -- Match the buttons' outer height to the InputText's so the row reads
-    -- as one unit. CenterContainer expands the FrameContainer to row_h
-    -- without affecting the text's vertical centring inside.
+    -- as one unit. FrameContainer.getSize adds 2*bordersize to its inner
+    -- content size, so we shrink the inner CenterContainer.dimen.h by that
+    -- amount to keep the button's outer rendered height == row_h.
     local row_h = self._search_input:getSize().h
     local function chipButton(tw, btn_w, on_tap)
+        local inner_h = row_h - 2 * Size.border.thin
         local fc = FrameContainer:new{
             bordersize = Size.border.thin,
             padding = 0,
@@ -321,9 +323,8 @@ function LibraryModal:_renderSearchInput(content_width)
             padding_top = 0, padding_bottom = 0,
             margin = 0, radius = 0,
             background = Blitbuffer.COLOR_WHITE,
-            dimen = Geom:new{ w = btn_w, h = row_h },
             CenterContainer:new{
-                dimen = Geom:new{ w = btn_w - 2 * btn_pad_h - 2 * Size.border.thin, h = row_h },
+                dimen = Geom:new{ w = btn_w - 2 * btn_pad_h - 2 * Size.border.thin, h = inner_h },
                 tw,
             },
         }
@@ -606,13 +607,11 @@ function LibraryModal:_renderPagination(content_width)
 
     local function divider()
         -- Fresh widget per slot; sharing one across paint positions corrupts
-        -- KOReader's geometry calculations.
-        return CenterContainer:new{
+        -- KOReader's geometry calculations. Line spans the full content_width
+        -- so its endpoints align with the card rows above and below.
+        return LineWidget:new{
+            background = Blitbuffer.COLOR_DARK_GRAY,
             dimen = Geom:new{ w = content_width, h = Size.line.thin },
-            LineWidget:new{
-                background = Blitbuffer.COLOR_DARK_GRAY,
-                dimen = Geom:new{ w = content_width - 2 * Size.padding.default, h = Size.line.thin },
-            },
         }
     end
 
