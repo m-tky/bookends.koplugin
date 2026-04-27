@@ -369,14 +369,8 @@ function IconsLibrary:show(on_select)
             return T(_("Search %1 icons by name…"), tostring(#names))
         end,
         on_search_submit = function(query) state.search_query = query end,
-        cells_per_page = function(content_w)
-            -- Match LibraryModal._renderGridArea's target_cell_w so cells_per_page
-            -- and cols agree (widget uses scaleBySize(220) for 4-col layout on
-            -- PW5 content width). 4 rows × 4 cols = 16 cells per page.
-            local target = Screen:scaleBySize(220)
-            local cols = math.max(3, math.floor(content_w / target))
-            return cols * 4
-        end,
+        grid_cols = 4,
+        cells_per_page = function() return 4 * 4 end,    -- 4 cols × 4 rows
         cell_renderer = IconsLibrary._renderCell,
         cell_long_tap = IconsLibrary._showCellTooltip,
         on_cell_tap = function(item)

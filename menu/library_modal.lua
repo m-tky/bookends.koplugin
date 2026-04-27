@@ -583,10 +583,17 @@ function LibraryModal:_renderGridArea(content_width, area_height)
     local total_pages = math.max(1, math.ceil(total / cells_per_page))
     if self.page > total_pages then self.page = total_pages end
 
-    -- Target cell width: 220px scaled gives 4 columns at the modal's content
-    -- width (~1050px on PW5). Floor at 3 columns for narrower devices.
-    local target_cell_w = Device.screen:scaleBySize(220)
-    local cols = math.max(3, math.floor(content_width / target_cell_w))
+    -- Cols: prefer explicit config.grid_cols (avoids the scaleBySize-driven
+    -- heuristic, which gets fooled by KOReader's display scale factor and
+    -- silently drops to 3 cols when the caller wanted 4). Fall back to a
+    -- target-width heuristic for callers that don't declare cols.
+    local cols
+    if self.config.grid_cols then
+        cols = self.config.grid_cols
+    else
+        local target_cell_w = Device.screen:scaleBySize(220)
+        cols = math.max(3, math.floor(content_width / target_cell_w))
+    end
     local rows = math.ceil(cells_per_page / cols)
     -- Cell height divides the area after subtracting inter-row MARGIN gaps.
     local cell_w = math.floor(content_width / cols)
