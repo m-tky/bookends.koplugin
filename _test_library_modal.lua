@@ -31,6 +31,9 @@ package.loaded["ui/widget/verticalspan"] = stub_meta
 package.loaded["ui/widget/horizontalspan"] = stub_meta
 package.loaded["ui/widget/container/widgetcontainer"] = { extend = function(_, t) return t end }
 package.loaded["bookends_i18n"] = { gettext = function(s) return s end }
+package.loaded["ui/widget/inputtext"] = stub_meta
+package.loaded["ui/widget/button"] = stub_meta
+package.loaded["ui/widget/horizontalgroup"] = stub_meta
 
 local pass, fail = 0, 0
 local function eq(a, b, msg) if a == b then pass = pass + 1 else fail = fail + 1; print(("FAIL %s: expected %q got %q"):format(msg or "", tostring(b), tostring(a))) end end

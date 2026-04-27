@@ -164,10 +164,11 @@ function LibraryModal:_renderTabSegments(title_bar_h)
             text = label, face = Font:getFace("cfont", 14), bold = is_active, fgcolor = fg,
         }
         local pill_w = tw:getSize().w + 2 * seg_pad_h
-        -- FrameContainer is sized to the full title-bar height so the active
-        -- pill's fill reaches from the modal's top edge to the separator line.
+        -- No border on either state — the active fill alone signals selection,
+        -- which reads cleaner than a black-bordered inactive pill next to a
+        -- black-filled active pill.
         local fc = FrameContainer:new{
-            bordersize = is_active and 0 or Size.border.thin,
+            bordersize = 0,
             padding = 0,
             padding_left = seg_pad_h, padding_right = seg_pad_h,
             padding_top = 0, padding_bottom = 0,
@@ -207,65 +208,75 @@ function LibraryModal:_onTabSelect(tab_key)
 end
 
 function LibraryModal:_renderSearchInput(content_width)
-    local Font = require("ui/font")
-    local TextWidget = require("ui/widget/textwidget")
+    local Button = require("ui/widget/button")
+    local HorizontalGroup = require("ui/widget/horizontalgroup")
+    local InputText = require("ui/widget/inputtext")
     local Screen = Device.screen
+
     local placeholder = self.config.search_placeholder
         and self.config.search_placeholder(self.active_tab)
         or _("Search…")
-    local label_text = self.search_query or placeholder
-    local label_color = self.search_query and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_DARK_GRAY
-    local label = TextWidget:new{
-        text = label_text,
-        face = Font:getFace("cfont", 16),
-        fgcolor = label_color,
+
+    -- Compute button widths first so InputText gets what remains.
+    local btn_pad = Screen:scaleBySize(8)
+    local btn_radius = Screen:scaleBySize(4)
+    -- Fixed widths derived from the scale factor rather than measuring text,
+    -- so the layout is stable across locales without a two-pass measure.
+    local search_btn_w = Screen:scaleBySize(80)
+    local clear_btn_w  = Screen:scaleBySize(36)
+    local gap = Screen:scaleBySize(6)
+    local input_w = content_width - search_btn_w - clear_btn_w - 2 * gap
+    local input_h = Screen:scaleBySize(40)
+
+    -- Captured upvalue so the button callbacks can call :getText() without
+    -- going through self (avoids a stale reference if the widget is rebuilt).
+    local input
+    input = InputText:new{
+        text    = self.search_query or "",
+        hint    = placeholder,
+        parent  = self,       -- required so InputText can schedule setDirty on the modal
+        width   = input_w,
+        height  = input_h,
+        scroll  = false,
+        focused = false,      -- start unfocused; keyboard appears on first tap
+        enter_callback = function()
+            self:_onSearchSubmit(input:getText())
+        end,
     }
 
-    local pad_h = Screen:scaleBySize(12)
-    local pad_v = Screen:scaleBySize(8)
-    local inner_h = label:getSize().h + 2 * pad_v
-    local frame = FrameContainer:new{
+    local search_btn = Button:new{
+        text       = _("Search"),
         bordersize = Size.border.thin,
-        padding = 0,
-        padding_left = pad_h, padding_right = pad_h,
-        padding_top = pad_v, padding_bottom = pad_v,
-        margin = 0,
-        radius = Screen:scaleBySize(4),
-        background = Blitbuffer.COLOR_WHITE,
-        dimen = Geom:new{ w = content_width, h = inner_h },
-        label,
+        radius     = btn_radius,
+        padding    = btn_pad,
+        width      = search_btn_w,
+        callback   = function()
+            self:_onSearchSubmit(input:getText())
+        end,
     }
 
-    local ic = InputContainer:new{
-        dimen = Geom:new{ w = content_width, h = inner_h },
-        frame,
+    -- × is always visible as a "reset to browse" affordance, not a clear-text
+    -- affordance, so it does not toggle based on whether there is text.
+    local clear_btn = Button:new{
+        text       = "×",
+        bordersize = Size.border.thin,
+        radius     = btn_radius,
+        padding    = btn_pad,
+        width      = clear_btn_w,
+        callback   = function()
+            input:setText("")
+            self:_onSearchSubmit("")
+        end,
     }
-    local GestureRange = require("ui/gesturerange")
-    ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
-    ic.onTapSelect = function() self:_openSearchDialog(); return true end
-    return ic
-end
 
-function LibraryModal:_openSearchDialog()
-    local InputDialog = require("ui/widget/inputdialog")
-    local placeholder = self.config.search_placeholder
-        and self.config.search_placeholder(self.active_tab) or _("Search…")
-    local dlg
-    dlg = InputDialog:new{
-        title = placeholder,
-        input = self.search_query or "",
-        input_type = "text",
-        buttons = {{
-            { text = _("Cancel"), id = "cancel", callback = function() UIManager:close(dlg) end },
-            { text = _("Search"), id = "search", is_enter_default = true, callback = function()
-                local q = dlg:getInputText()
-                UIManager:close(dlg)
-                self:_onSearchSubmit(q)
-            end },
-        }},
+    return HorizontalGroup:new{
+        align = "center",
+        input,
+        HorizontalSpan:new{ width = gap },
+        search_btn,
+        HorizontalSpan:new{ width = gap },
+        clear_btn,
     }
-    UIManager:show(dlg)
-    dlg:onShowKeyboard()
 end
 
 function LibraryModal:_onSearchSubmit(q)
@@ -375,13 +386,12 @@ function LibraryModal:_renderListArea(content_width, area_height)
     local start_idx = (self.page - 1) * rows_per_page + 1
     local end_idx = math.min(start_idx + rows_per_page - 1, total)
 
-    -- Stack: MARGIN top + (rows × card + (rows-1) × MARGIN inter) + MARGIN bottom.
-    -- row_height divides the content height evenly so cards anchor top-with-margin
-    -- rather than centering and leaving uneven space top/bottom.
+    -- Stack: rows × card + (rows-1) × MARGIN inter-row gap, no top/bottom inset.
+    -- The MARGIN above the first card and below the last card is supplied by
+    -- refresh()'s inter-section gap so the spacing matches the search box's.
     local row_height = math.floor(
-        (area_height - 2 * MARGIN - (rows_per_page - 1) * MARGIN) / rows_per_page)
+        (area_height - (rows_per_page - 1) * MARGIN) / rows_per_page)
     local vg = VerticalGroup:new{ align = "left" }
-    table.insert(vg, VerticalSpan:new{ width = MARGIN })  -- top inset
     for idx = start_idx, end_idx do
         local item = self.config.item_at(idx)
         if item then
@@ -397,8 +407,6 @@ function LibraryModal:_renderListArea(content_width, area_height)
             table.insert(vg, VerticalSpan:new{ width = row_height })
         end
     end
-    table.insert(vg, VerticalSpan:new{ width = MARGIN })  -- bottom inset
-    -- Pin to area_height so the modal stays a fixed total size across states.
     return CenterContainer:new{
         dimen = Geom:new{ w = content_width, h = area_height },
         vg,
@@ -509,21 +517,31 @@ function LibraryModal:_renderPagination(content_width)
         chev("chevron.last",  self.page < total_pages, function() self.page = total_pages;   self:refresh() end),
     }
 
-    local divider = CenterContainer:new{
-        dimen = Geom:new{ w = content_width, h = Size.line.thin },
-        LineWidget:new{
-            background = Blitbuffer.COLOR_DARK_GRAY,
-            dimen = Geom:new{ w = content_width - 2 * Size.padding.default, h = Size.line.thin },
-        },
-    }
+    local function divider()
+        -- Fresh widget per slot; sharing one across paint positions corrupts
+        -- KOReader's geometry calculations.
+        return CenterContainer:new{
+            dimen = Geom:new{ w = content_width, h = Size.line.thin },
+            LineWidget:new{
+                background = Blitbuffer.COLOR_DARK_GRAY,
+                dimen = Geom:new{ w = content_width - 2 * Size.padding.default, h = Size.line.thin },
+            },
+        }
+    end
 
+    -- Pagination: divider above + MARGIN breathing room + chevron row + MARGIN
+    -- + divider below. The lower divider visually separates the pagination
+    -- from the footer action buttons.
     return VerticalGroup:new{
         align = "left",
-        divider,
+        divider(),
+        VerticalSpan:new{ width = MARGIN },
         CenterContainer:new{
             dimen = Geom:new{ w = content_width, h = page_nav:getSize().h },
             page_nav,
         },
+        VerticalSpan:new{ width = MARGIN },
+        divider(),
     }
 end
 
@@ -591,9 +609,10 @@ function LibraryModal:refresh()
     -- exactly rows_per_page cards plus inter/outer MARGIN gaps.
     local rows_per_page = self.config.rows_per_page or 5
     local intrinsic_card_h = Screen:scaleBySize(64)
+    -- area_height = card stack + inter-row gaps. The MARGIN above the first
+    -- card and below the last card is the refresh() inter-section gap.
     local area_height = rows_per_page * intrinsic_card_h
-        + (rows_per_page - 1) * MARGIN  -- gaps between rows
-        + 2 * MARGIN                     -- top + bottom inset
+        + (rows_per_page - 1) * MARGIN
 
     -- Frame's padding_left/right are 0 so the title bar separator runs edge-
     -- to-edge. Each non-title section is padded with HorizontalSpan(MARGIN)
