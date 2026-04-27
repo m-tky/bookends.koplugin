@@ -237,36 +237,49 @@ local function utf8FromCodepoint(cp)
     end
 end
 
+-- One-time cell projection of the full Nerd Font names list. The conversion
+-- (utf8FromCodepoint + suffix extraction) is identical across All view and
+-- search results, so we build the cells table once on first access and reuse
+-- it for the rest of the session.
+local _all_cells = nil
+local function getAllNerdFontCells()
+    if _all_cells then return _all_cells end
+    local names = loadNerdFontNames()
+    _all_cells = {}
+    for _i, entry in ipairs(names) do
+        _all_cells[#_all_cells + 1] = {
+            glyph = utf8FromCodepoint(entry.code),
+            label = IconsLibrary._suffixOf(entry.name),
+            canonical = entry.name,
+            code = entry.code,
+            insert_value = utf8FromCodepoint(entry.code),
+        }
+    end
+    return _all_cells
+end
+
 -- Build the visible item list for the current chip + search state.
 local function currentItemList(state)
-    local items
     if state.search_query and #state.search_query >= 2 then
-        local names = loadNerdFontNames()
-        items = {}
-        for _i, entry in ipairs(names) do
-            if LibraryModal._matchesQuery(entry.name, state.search_query) then
-                items[#items + 1] = {
-                    glyph = utf8FromCodepoint(entry.code),
-                    label = IconsLibrary._suffixOf(entry.name),
-                    canonical = entry.name,
-                    code = entry.code,
-                    insert_value = utf8FromCodepoint(entry.code),
-                }
+        -- Search across the full Nerd Font index; cap at 200 to keep
+        -- pagination sensible. Reuse the cached cell projections.
+        local cells = getAllNerdFontCells()
+        local items = {}
+        for _i, cell in ipairs(cells) do
+            if LibraryModal._matchesQuery(cell.canonical, state.search_query) then
+                items[#items + 1] = cell
                 if #items >= 200 then break end
             end
         end
-    elseif state.active_chip == "all" or not state.active_chip then
-        items = {}
-        for _i, chip in ipairs(CHIPS) do
-            if chip.key ~= "all" then
-                local list = IconsLibrary.CURATED_BY_CHIP[chip.key] or {}
-                for _j, e in ipairs(list) do items[#items + 1] = e end
-            end
-        end
-    else
-        items = IconsLibrary.CURATED_BY_CHIP[state.active_chip] or {}
+        return items
     end
-    return items
+    if state.active_chip == "all" or not state.active_chip then
+        -- All: the entire Nerd Font index (~3,400 entries) for free browsing,
+        -- alphabetised which incidentally groups by source set (cod-, fa-,
+        -- mdi-, etc.). Curated category chips show smaller hand-picked lists.
+        return getAllNerdFontCells()
+    end
+    return IconsLibrary.CURATED_BY_CHIP[state.active_chip] or {}
 end
 
 -- Render a single icon cell: glyph centred large, label below.
