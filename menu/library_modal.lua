@@ -221,6 +221,83 @@ function LibraryModal:_onSearchSubmit(q)
     self:refresh()
 end
 
+function LibraryModal:_renderChipStrip(content_width)
+    local Font = require("ui/font")
+    local GestureRange = require("ui/gesturerange")
+    local HorizontalGroup = require("ui/widget/horizontalgroup")
+    local HorizontalSpan = require("ui/widget/horizontalspan")
+    local TextWidget = require("ui/widget/textwidget")
+    local Screen = Device.screen
+
+    if not self.config.chip_strip then return nil end
+    local chips = self.config.chip_strip(self.active_tab)
+    if not chips or #chips == 0 then return nil end
+
+    local pad_h = Screen:scaleBySize(10)
+    local pad_v = Screen:scaleBySize(4)
+    local chip_gap = Screen:scaleBySize(6)
+    local row_gap = Screen:scaleBySize(6)
+
+    local function buildChip(chip)
+        local is_active = chip.key == self.active_chip
+        local fg = is_active and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK
+        local bg = is_active and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE
+        local tw = TextWidget:new{
+            text = chip.label, face = Font:getFace("cfont", 13), bold = is_active, fgcolor = fg,
+        }
+        local fc = FrameContainer:new{
+            bordersize = is_active and 0 or Size.border.thin,
+            padding = 0,
+            padding_left = pad_h, padding_right = pad_h,
+            padding_top = pad_v, padding_bottom = pad_v,
+            margin = 0, background = bg, radius = Screen:scaleBySize(12),
+            tw,
+        }
+        local ic = InputContainer:new{ dimen = Geom:new{ w = fc:getSize().w, h = fc:getSize().h }, fc }
+        ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
+        ic.onTapSelect = function() self:_onChipTap(chip.key); return true end
+        return ic
+    end
+
+    local rows = {}
+    local current_row = HorizontalGroup:new{ align = "center" }
+    local current_w = 0
+    for i, chip in ipairs(chips) do
+        local cw = buildChip(chip)
+        local cw_w = cw:getSize().w
+        local needed = (i == 1) and cw_w or (current_w + chip_gap + cw_w)
+        if needed > content_width and #current_row > 0 then
+            table.insert(rows, current_row)
+            current_row = HorizontalGroup:new{ align = "center", cw }
+            current_w = cw_w
+        else
+            if i > 1 and current_w > 0 then
+                table.insert(current_row, HorizontalSpan:new{ width = chip_gap })
+                current_w = current_w + chip_gap
+            end
+            table.insert(current_row, cw)
+            current_w = current_w + cw_w
+        end
+        if #rows >= 2 then break end
+    end
+    table.insert(rows, current_row)
+
+    local vg = VerticalGroup:new{ align = "left" }
+    for i, row in ipairs(rows) do
+        if i > 1 then table.insert(vg, VerticalSpan:new{ width = row_gap }) end
+        table.insert(vg, row)
+    end
+    return vg
+end
+
+function LibraryModal:_onChipTap(chip_key)
+    if self.active_chip == chip_key then return end
+    self.active_chip = chip_key
+    self.page = 1
+    if self.config.on_chip_tap then self.config.on_chip_tap(chip_key) end
+    self:refresh()
+end
+
 function LibraryModal:refresh()
     -- Rebuild the inner content. Called on tab change, chip tap, search submit,
     -- page change. Avoids rebuilding the modal frame itself (which would
