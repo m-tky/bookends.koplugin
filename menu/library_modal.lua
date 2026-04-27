@@ -284,7 +284,8 @@ function LibraryModal:_renderChipStrip(content_width)
 
     local pad_h = Screen:scaleBySize(10)
     local pad_v = Screen:scaleBySize(4)
-    local chip_gap = Screen:scaleBySize(6)
+    -- Zero gap so chips butt together into a segmented-control strip.
+    local chip_gap = 0
     local row_gap = Screen:scaleBySize(6)
 
     local function buildChip(chip)
@@ -299,7 +300,8 @@ function LibraryModal:_renderChipStrip(content_width)
             padding = 0,
             padding_left = pad_h, padding_right = pad_h,
             padding_top = pad_v, padding_bottom = pad_v,
-            margin = 0, background = bg, radius = Screen:scaleBySize(12),
+            -- Match tile card radius so chips feel part of the same design language.
+            margin = 0, background = bg, radius = Screen:scaleBySize(4),
             tw,
         }
         local ic = InputContainer:new{ dimen = Geom:new{ w = fc:getSize().w, h = fc:getSize().h }, fc }
