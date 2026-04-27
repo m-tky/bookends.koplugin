@@ -124,20 +124,30 @@ local STATE_ALIAS = {
 -- add the in-memory mem_read_pages / mem_read_time counters on top —
 -- those track skip-aware reads since the last flush. Together they reflect
 -- what the user has actually read this session, with no extra disk writes.
-function Tokens._readStatsBookSession(ui)
+function Tokens._readStatsBookSession(ui, cache)
+    if cache and cache.session ~= nil then
+        if cache.session == false then return nil end
+        return cache.session
+    end
     if not ui or not ui.statistics or type(ui.statistics.getCurrentBookStats) ~= "function" then
+        if cache then cache.session = false end
         return nil
     end
     local ok, dur, pages = pcall(function()
         return ui.statistics:getCurrentBookStats()
     end)
-    if not ok then return nil end
+    if not ok then
+        if cache then cache.session = false end
+        return nil
+    end
     local mem_pages = tonumber(ui.statistics.mem_read_pages) or 0
     local mem_time = tonumber(ui.statistics.mem_read_time) or 0
-    return {
+    local result = {
         duration = (tonumber(dur) or 0) + mem_time,
         pages    = (tonumber(pages) or 0) + mem_pages,
     }
+    if cache then cache.session = result end
+    return result
 end
 
 -- Read pages/duration for everything read today across all books from
@@ -150,20 +160,30 @@ end
 -- single-book reading sessions the math is exact; for multi-book sessions
 -- it can slightly over-count if the previous book's deltas haven't flushed
 -- — small and bounded, and still better than reporting frozen counts.
-function Tokens._readStatsToday(ui)
+function Tokens._readStatsToday(ui, cache)
+    if cache and cache.today ~= nil then
+        if cache.today == false then return nil end
+        return cache.today
+    end
     if not ui or not ui.statistics or type(ui.statistics.getTodayBookStats) ~= "function" then
+        if cache then cache.today = false end
         return nil
     end
     local ok, dur, pages = pcall(function()
         return ui.statistics:getTodayBookStats()
     end)
-    if not ok then return nil end
+    if not ok then
+        if cache then cache.today = false end
+        return nil
+    end
     local mem_pages = tonumber(ui.statistics.mem_read_pages) or 0
     local mem_time = tonumber(ui.statistics.mem_read_time) or 0
-    return {
+    local result = {
         duration = (tonumber(dur) or 0) + mem_time,
         pages    = (tonumber(pages) or 0) + mem_pages,
     }
+    if cache then cache.today = result end
+    return result
 end
 
 -- Cache of book-first-open timestamps keyed by ReaderStatistics' id_curr_book.
@@ -573,7 +593,7 @@ end
 --- Build a state table of raw values for conditional evaluation.
 --- If paint_ctx is provided and already has a cached state, returns it
 --- (shared across all expand() calls within one paint cycle).
-function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, paint_ctx)
+function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, paint_ctx, stats_cache)
     if paint_ctx and paint_ctx._condition_state then
         return paint_ctx._condition_state
     end
@@ -767,7 +787,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     -- Session (prefer ReaderStatistics' skip-aware values; fall back to
     -- our wall-clock measurement and max-page counter when stats is disabled).
     do
-        local stats_session = Tokens._readStatsBookSession(ui)
+        local stats_session = Tokens._readStatsBookSession(ui, stats_cache)
         if stats_session then
             state.session = math.floor(stats_session.duration / 60)
             state.session_pages = math.max(0, stats_session.pages)
@@ -782,7 +802,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     -- pages_today is an integer; time_today is integer minutes (raw seconds
     -- get formatted at render time).
     do
-        local stats_today = Tokens._readStatsToday(ui)
+        local stats_today = Tokens._readStatsToday(ui, stats_cache)
         if stats_today then
             state.pages_today = math.max(0, stats_today.pages)
             state.time_today = math.floor(stats_today.duration / 60)
@@ -953,6 +973,12 @@ end
 
 function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, preview_mode, tick_width_multiplier, symbol_color, paint_ctx, opts)
     opts = opts or {}
+    -- Optional caller-supplied cache for SQL-backed stats reads. Lets a caller
+    -- iterating many tokens (e.g. the token picker building its catalog
+    -- preview) share the result of getCurrentBookStats / getTodayBookStats
+    -- across calls instead of re-querying SQLite per token. When omitted,
+    -- helpers fall through to fresh reads, matching pre-cache behaviour.
+    local stats_cache = opts.stats_cache
     -- Fast path: no tokens or conditionals
     if not format_str:find("%%") and not format_str:find("%[if:") then
         return format_str
@@ -970,7 +996,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     -- buildConditionState will reuse paint_ctx._condition_state if present,
     -- so multiple lines with [if:...] in the same paint share one build.
     if not preview_mode and format_str:find("%[if:") then
-        local state = Tokens.buildConditionState(ui, session_elapsed, session_pages_read, paint_ctx)
+        local state = Tokens.buildConditionState(ui, session_elapsed, session_pages_read, paint_ctx, stats_cache)
         format_str = processConditionals(format_str, state)
         -- After stripping false branches, check if anything remains to expand
         if not format_str:find("%%") then
@@ -1341,7 +1367,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     -- bookends' own max-page counter when stats is disabled or absent).
     local session_pages
     do
-        local stats_session = Tokens._readStatsBookSession(ui)
+        local stats_session = Tokens._readStatsBookSession(ui, stats_cache)
         if stats_session then
             session_pages = math.max(0, stats_session.pages)
         else
@@ -1423,7 +1449,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     -- duration_format (Settings → Device → Time and date).
     local session_time = ""
     if needs("session_time") then
-        local stats_session = Tokens._readStatsBookSession(ui)
+        local stats_session = Tokens._readStatsBookSession(ui, stats_cache)
         local secs
         if stats_session then
             secs = stats_session.duration or 0
@@ -1441,7 +1467,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local pages_today_str = ""
     local time_today_str = ""
     if needs("pages_today", "time_today") then
-        local stats_today = Tokens._readStatsToday(ui)
+        local stats_today = Tokens._readStatsToday(ui, stats_cache)
         local today_pages = (stats_today and tonumber(stats_today.pages)) or 0
         local today_dur   = (stats_today and tonumber(stats_today.duration)) or 0
         if needs("pages_today") then

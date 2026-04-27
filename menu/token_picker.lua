@@ -149,6 +149,13 @@ Bookends.CONDITIONAL_CATALOG = {
 function Bookends:buildTokenItems(catalog, on_select)
     local session_elapsed = self:getSessionElapsed()
     local session_pages = self:getSessionPages()
+    -- Share one stats cache across the whole catalog iteration. Without it,
+    -- v5.6 stats-backed tokens (%pages_today, %session_time, etc.) re-run
+    -- the same SQLite query for every catalog row — which on Kindle storage
+    -- adds seconds to the picker open. The cache scope is exactly this
+    -- buildTokenItems call so external callers see no behaviour change.
+    local stats_cache = {}
+    local tick_mult = self.settings:readSetting("tick_width_multiplier", self.DEFAULT_TICK_WIDTH_MULTIPLIER)
     local items = {}
     for _, category in ipairs(catalog) do
         local label = category[1]
@@ -164,7 +171,7 @@ function Bookends:buildTokenItems(catalog, on_select)
             local current = ""
             if self.ui then
                 local expanded = Tokens.expand(token, self.ui, session_elapsed, session_pages,
-                    nil, self.settings:readSetting("tick_width_multiplier", self.DEFAULT_TICK_WIDTH_MULTIPLIER))
+                    nil, tick_mult, nil, nil, { stats_cache = stats_cache })
                 if expanded and expanded ~= "" and expanded ~= token then
                     -- Hard cap: Menu's `mandatory` column is sized for
                     -- bounded metadata (file size, page number) — overflow
