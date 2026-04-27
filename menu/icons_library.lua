@@ -332,7 +332,25 @@ function IconsLibrary:show(on_select)
             end
             return out
         end,
-        on_chip_tap = function(chip_key) state.active_chip = chip_key end,
+        on_chip_tap = function(chip_key)
+            state.active_chip = chip_key
+            -- Tapping a category chip while a search is active doesn't make
+            -- sense (the chips filter the curated catalogue, search hits the
+            -- full Nerd Font index — there's no overlap). Clear the search
+            -- across all three layers — the icons-state, the modal-level
+            -- search_query (which gets re-applied to the InputText on next
+            -- refresh), and the InputText's own text — so the chip-filtered
+            -- curated view becomes the consistent visible state.
+            if state.search_query then
+                state.search_query = nil
+                if self_ref.modal then
+                    self_ref.modal.search_query = nil
+                    if self_ref.modal._search_input then
+                        self_ref.modal._search_input:setText("")
+                    end
+                end
+            end
+        end,
         search_placeholder = function()
             local names = loadNerdFontNames()
             return T(_("Search %1 icons by name…"), tostring(#names))

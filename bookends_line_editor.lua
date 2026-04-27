@@ -336,7 +336,7 @@ function LineEditor.attach(Bookends)
                     end,
                 },
                 {
-                    text = _("Symbols"),
+                    text = _("Icons"),
                     callback = function()
                         format_dialog:onCloseKeyboard()
                         IconsLibrary:show(function(value)

@@ -469,8 +469,14 @@ function LibraryModal:_renderChipStrip(content_width)
         local tw = TextWidget:new{
             text = chip.label, face = Font:getFace("cfont", 13), bold = is_active, fgcolor = fg,
         }
+        -- Border thickness stays constant across active/inactive so the chip
+        -- widths don't shift when selection changes (avoids the "jiggle" of
+        -- adjacent chips contracting/expanding by ~3px on tap). Active chip
+        -- uses black border colour which merges into its black fill, so the
+        -- border is invisible there but still occupies the same space.
         local fc = FrameContainer:new{
-            bordersize = is_active and 0 or Size.border.thin,
+            bordersize = Size.border.thin,
+            color = Blitbuffer.COLOR_BLACK,
             padding = 0,
             padding_left = pad_h, padding_right = pad_h,
             padding_top = pad_v, padding_bottom = pad_v,
@@ -577,7 +583,9 @@ function LibraryModal:_renderGridArea(content_width, area_height)
     local total_pages = math.max(1, math.ceil(total / cells_per_page))
     if self.page > total_pages then self.page = total_pages end
 
-    local target_cell_w = Device.screen:scaleBySize(290)
+    -- Target cell width: 220px scaled gives 4 columns at the modal's content
+    -- width (~1050px on PW5). Floor at 3 columns for narrower devices.
+    local target_cell_w = Device.screen:scaleBySize(220)
     local cols = math.max(3, math.floor(content_width / target_cell_w))
     local rows = math.ceil(cells_per_page / cols)
     -- Cell height divides the area after subtracting inter-row MARGIN gaps.
