@@ -773,7 +773,10 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
     local star_width = Screen:scaleBySize(40)
     local star_gap = Screen:scaleBySize(6)
     local inner_pad = Screen:scaleBySize(12)
-    local card_outer_w = width - 2 * left_pad - star_gap - star_width
+    -- Row fills the full slot width: [card][gap][star_column]. The card's
+    -- left edge sits flush with the slot's left edge so it lines up with
+    -- the search box / chip strip / pagination divider above and below.
+    local card_outer_w = width - star_gap - star_width
     local content_w = card_outer_w - 2 * inner_pad - 2 * Size.border.thin
 
     -- Secondary text colour: DARK_GRAY on WHITE is fine; on LIGHT_GRAY
@@ -934,7 +937,6 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
 
     table.insert(vg, HorizontalGroup:new{
         align = "center",
-        HorizontalSpan:new{ width = left_pad },
         card,
         HorizontalSpan:new{ width = star_gap },
         accent_ic,

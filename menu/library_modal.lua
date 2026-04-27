@@ -226,56 +226,20 @@ function LibraryModal:_renderSearchInput(content_width)
         and self.config.search_placeholder(self.active_tab)
         or _("Search…")
 
-    -- Buttons are styled like the chip strip (Latest/Starred): a TextWidget
-    -- inside a thin-bordered FrameContainer with square corners. Same
-    -- cfont/16 face as the input text so the row reads as one unit.
     local btn_face = Font:getFace("cfont", 16)
     local btn_pad_h = Screen:scaleBySize(12)
-    local btn_pad_v = Screen:scaleBySize(6)
-
-    local function chipButton(label, on_tap)
-        local tw = TextWidget:new{
-            text = label, face = btn_face, fgcolor = Blitbuffer.COLOR_BLACK,
-        }
-        local fc = FrameContainer:new{
-            bordersize = Size.border.thin,
-            padding = 0,
-            padding_left = btn_pad_h, padding_right = btn_pad_h,
-            padding_top = btn_pad_v, padding_bottom = btn_pad_v,
-            margin = 0,
-            radius = 0,
-            background = Blitbuffer.COLOR_WHITE,
-            tw,
-        }
-        local size = fc:getSize()
-        local ic = InputContainer:new{ dimen = Geom:new{ w = size.w, h = size.h }, fc }
-        ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
-        ic.onTapSelect = function() on_tap(); return true end
-        return ic
-    end
-
-    -- Build the buttons first so we can measure their widths and give the
-    -- input the leftover space. The chip-style FrameContainer is intrinsic-
-    -- sized to the text + padding, so a fresh widget per render is needed
-    -- to know the width.
-    local function dismissKeyboard()
-        if self._search_input and self._search_input.isKeyboardVisible
-                and self._search_input:isKeyboardVisible() then
-            self._search_input:onCloseKeyboard()
-        end
-    end
-    local search_btn = chipButton(_("Search"), function()
-        local q = self._search_input and self._search_input:getText() or ""
-        dismissKeyboard()
-        self:_onSearchSubmit(q)
-    end)
-    local clear_btn = chipButton("×", function()
-        dismissKeyboard()
-        if self._search_input then self._search_input:setText("") end
-        self:_onSearchSubmit("")
-    end)
     local gap = Screen:scaleBySize(6)
-    local input_w = content_width - search_btn:getSize().w - clear_btn:getSize().w - 2 * gap
+
+    -- Pre-measure the button labels so we can size the input first and then
+    -- build buttons whose outer height matches the input's.
+    local function measureLabel(label)
+        local tw = TextWidget:new{ text = label, face = btn_face,
+                                   fgcolor = Blitbuffer.COLOR_BLACK }
+        return tw, tw:getSize().w + 2 * btn_pad_h + 2 * Size.border.thin
+    end
+    local search_label, search_btn_w = measureLabel(_("Search"))
+    local clear_label,  clear_btn_w  = measureLabel("×")
+    local input_w = content_width - search_btn_w - clear_btn_w - 2 * gap
 
     -- Persist the InputText across refreshes so the keyboard's reference to
     -- it stays valid. Rebuilding it on every refresh leaves the keyboard
@@ -287,15 +251,13 @@ function LibraryModal:_renderSearchInput(content_width)
             hint    = placeholder,
             parent  = self,
             width   = input_w,
-            face    = btn_face,                 -- match the buttons' font size
+            face    = btn_face,
             padding = Size.padding.small,
             margin  = 0,
             scroll  = false,
             focused = false,
             enter_callback = function()
                 local q = self._search_input:getText()
-                -- Dismiss the keyboard on Enter; otherwise the keyboard
-                -- traps the user since pagination/footer sit beneath it.
                 if self._search_input.isKeyboardVisible
                         and self._search_input:isKeyboardVisible() then
                     self._search_input:onCloseKeyboard()
@@ -304,13 +266,52 @@ function LibraryModal:_renderSearchInput(content_width)
             end,
         }
     else
-        -- Re-sync text if the query changed externally (e.g. tab switch resets
-        -- search_query to nil, which we represent as empty string in the widget).
         local desired = self.search_query or ""
         if self._search_input:getText() ~= desired then
             self._search_input:setText(desired)
         end
     end
+
+    -- Match the buttons' outer height to the InputText's so the row reads
+    -- as one unit. CenterContainer expands the FrameContainer to row_h
+    -- without affecting the text's vertical centring inside.
+    local row_h = self._search_input:getSize().h
+    local function chipButton(tw, btn_w, on_tap)
+        local fc = FrameContainer:new{
+            bordersize = Size.border.thin,
+            padding = 0,
+            padding_left = btn_pad_h, padding_right = btn_pad_h,
+            padding_top = 0, padding_bottom = 0,
+            margin = 0, radius = 0,
+            background = Blitbuffer.COLOR_WHITE,
+            dimen = Geom:new{ w = btn_w, h = row_h },
+            CenterContainer:new{
+                dimen = Geom:new{ w = btn_w - 2 * btn_pad_h - 2 * Size.border.thin, h = row_h },
+                tw,
+            },
+        }
+        local ic = InputContainer:new{ dimen = Geom:new{ w = btn_w, h = row_h }, fc }
+        ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
+        ic.onTapSelect = function() on_tap(); return true end
+        return ic
+    end
+
+    local function dismissKeyboard()
+        if self._search_input and self._search_input.isKeyboardVisible
+                and self._search_input:isKeyboardVisible() then
+            self._search_input:onCloseKeyboard()
+        end
+    end
+    local search_btn = chipButton(search_label, search_btn_w, function()
+        local q = self._search_input and self._search_input:getText() or ""
+        dismissKeyboard()
+        self:_onSearchSubmit(q)
+    end)
+    local clear_btn = chipButton(clear_label, clear_btn_w, function()
+        dismissKeyboard()
+        if self._search_input then self._search_input:setText("") end
+        self:_onSearchSubmit("")
+    end)
 
     return HorizontalGroup:new{
         align = "center",
