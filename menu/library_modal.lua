@@ -642,6 +642,7 @@ function LibraryModal:_renderPagination(content_width)
     local total_pages = math.max(1, math.ceil(total / per_page))
 
     local chev_size = Screen:scaleBySize(32)
+
     -- show_parent is required for icon buttons to resolve their icon atlas path.
     local function chev(icon_name, enabled, cb)
         return Button:new{
@@ -683,6 +684,15 @@ function LibraryModal:_renderPagination(content_width)
             background = Blitbuffer.COLOR_DARK_GRAY,
             dimen = Geom:new{ w = content_width, h = Size.line.thin },
         }
+    end
+
+    -- Single-page lists (incl. empty / cold-gallery / single-page-fits-all)
+    -- hide the chevrons + dividers and reserve equivalent space, so the modal
+    -- stays the same total height regardless of pagination state.
+    if total_pages <= 1 then
+        local nav_h = page_nav:getSize().h
+        local placeholder_h = 2 * Size.line.thin + 2 * MARGIN + nav_h
+        return VerticalSpan:new{ width = placeholder_h }
     end
 
     -- Pagination: divider above + MARGIN breathing room + chevron row + MARGIN
