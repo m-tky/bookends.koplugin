@@ -216,24 +216,66 @@ function LibraryModal:_onTabSelect(tab_key)
 end
 
 function LibraryModal:_renderSearchInput(content_width)
-    local Button = require("ui/widget/button")
     local Font = require("ui/font")
+    local GestureRange = require("ui/gesturerange")
     local HorizontalGroup = require("ui/widget/horizontalgroup")
+    local TextWidget = require("ui/widget/textwidget")
     local Screen = Device.screen
 
     local placeholder = self.config.search_placeholder
         and self.config.search_placeholder(self.active_tab)
         or _("Search…")
 
-    -- Compute button widths first so InputText gets what remains.
-    local btn_pad = Screen:scaleBySize(8)
-    local btn_radius = Screen:scaleBySize(4)
-    -- Fixed widths derived from the scale factor rather than measuring text,
-    -- so the layout is stable across locales without a two-pass measure.
-    local search_btn_w = Screen:scaleBySize(80)
-    local clear_btn_w  = Screen:scaleBySize(36)
+    -- Buttons are styled like the chip strip (Latest/Starred): a TextWidget
+    -- inside a thin-bordered FrameContainer with square corners. Same
+    -- cfont/16 face as the input text so the row reads as one unit.
+    local btn_face = Font:getFace("cfont", 16)
+    local btn_pad_h = Screen:scaleBySize(12)
+    local btn_pad_v = Screen:scaleBySize(6)
+
+    local function chipButton(label, on_tap)
+        local tw = TextWidget:new{
+            text = label, face = btn_face, fgcolor = Blitbuffer.COLOR_BLACK,
+        }
+        local fc = FrameContainer:new{
+            bordersize = Size.border.thin,
+            padding = 0,
+            padding_left = btn_pad_h, padding_right = btn_pad_h,
+            padding_top = btn_pad_v, padding_bottom = btn_pad_v,
+            margin = 0,
+            radius = 0,
+            background = Blitbuffer.COLOR_WHITE,
+            tw,
+        }
+        local size = fc:getSize()
+        local ic = InputContainer:new{ dimen = Geom:new{ w = size.w, h = size.h }, fc }
+        ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
+        ic.onTapSelect = function() on_tap(); return true end
+        return ic
+    end
+
+    -- Build the buttons first so we can measure their widths and give the
+    -- input the leftover space. The chip-style FrameContainer is intrinsic-
+    -- sized to the text + padding, so a fresh widget per render is needed
+    -- to know the width.
+    local function dismissKeyboard()
+        if self._search_input and self._search_input.isKeyboardVisible
+                and self._search_input:isKeyboardVisible() then
+            self._search_input:onCloseKeyboard()
+        end
+    end
+    local search_btn = chipButton(_("Search"), function()
+        local q = self._search_input and self._search_input:getText() or ""
+        dismissKeyboard()
+        self:_onSearchSubmit(q)
+    end)
+    local clear_btn = chipButton("×", function()
+        dismissKeyboard()
+        if self._search_input then self._search_input:setText("") end
+        self:_onSearchSubmit("")
+    end)
     local gap = Screen:scaleBySize(6)
-    local input_w = content_width - search_btn_w - clear_btn_w - 2 * gap
+    local input_w = content_width - search_btn:getSize().w - clear_btn:getSize().w - 2 * gap
 
     -- Persist the InputText across refreshes so the keyboard's reference to
     -- it stays valid. Rebuilding it on every refresh leaves the keyboard
@@ -245,17 +287,20 @@ function LibraryModal:_renderSearchInput(content_width)
             hint    = placeholder,
             parent  = self,
             width   = input_w,
-            -- Smaller face + tighter chrome so the input row matches the
-            -- Search/× button heights (~40px). InputText's height param is
-            -- the inner text area; padding/margin/border are added on top,
-            -- so we shrink all three to keep the outer size in range.
-            face    = Font:getFace("cfont", 16),
+            face    = btn_face,                 -- match the buttons' font size
             padding = Size.padding.small,
             margin  = 0,
             scroll  = false,
             focused = false,
             enter_callback = function()
-                self:_onSearchSubmit(self._search_input:getText())
+                local q = self._search_input:getText()
+                -- Dismiss the keyboard on Enter; otherwise the keyboard
+                -- traps the user since pagination/footer sit beneath it.
+                if self._search_input.isKeyboardVisible
+                        and self._search_input:isKeyboardVisible() then
+                    self._search_input:onCloseKeyboard()
+                end
+                self:_onSearchSubmit(q)
             end,
         }
     else
@@ -266,37 +311,6 @@ function LibraryModal:_renderSearchInput(content_width)
             self._search_input:setText(desired)
         end
     end
-
-    -- Buttons can be rebuilt fresh; they hold no keyboard lifecycle state.
-    local search_btn = Button:new{
-        text       = _("Search"),
-        bordersize = Size.border.thin,
-        radius     = btn_radius,
-        padding    = btn_pad,
-        width      = search_btn_w,
-        callback   = function()
-            self:_onSearchSubmit(self._search_input:getText())
-        end,
-    }
-
-    -- × is always visible as a "reset to browse" affordance, not a clear-text
-    -- affordance, so it does not toggle based on whether there is text.
-    local clear_btn = Button:new{
-        text       = "×",
-        bordersize = Size.border.thin,
-        radius     = btn_radius,
-        padding    = btn_pad,
-        width      = clear_btn_w,
-        callback   = function()
-            -- Dismiss the keyboard before refresh so it doesn't linger
-            -- attached to no visible input after the body is rebuilt.
-            if self._search_input:isKeyboardVisible() then
-                self._search_input:onCloseKeyboard()
-            end
-            self._search_input:setText("")
-            self:_onSearchSubmit("")
-        end,
-    }
 
     return HorizontalGroup:new{
         align = "center",
@@ -394,6 +408,12 @@ end
 
 function LibraryModal:_onChipTap(chip_key)
     if self.active_chip == chip_key then return end
+    -- Dismiss the keyboard before refreshing so the user isn't trapped under
+    -- it after applying a chip filter.
+    if self._search_input and self._search_input.isKeyboardVisible
+            and self._search_input:isKeyboardVisible() then
+        self._search_input:onCloseKeyboard()
+    end
     self.active_chip = chip_key
     self.page = 1
     if self.config.on_chip_tap then self.config.on_chip_tap(chip_key) end
