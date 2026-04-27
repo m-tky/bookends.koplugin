@@ -148,6 +148,79 @@ function LibraryModal:_onTabSelect(tab_key)
     self:refresh()
 end
 
+function LibraryModal:_renderSearchInput(content_width)
+    local Font = require("ui/font")
+    local TextWidget = require("ui/widget/textwidget")
+    local Screen = Device.screen
+    local placeholder = self.config.search_placeholder
+        and self.config.search_placeholder(self.active_tab)
+        or _("Search…")
+    local label_text = self.search_query and (self.search_query) or placeholder
+    local label_color = self.search_query and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_DARK_GRAY
+    local label = TextWidget:new{
+        text = label_text,
+        face = Font:getFace("cfont", 16),
+        fgcolor = label_color,
+    }
+
+    local pad_h = Screen:scaleBySize(12)
+    local pad_v = Screen:scaleBySize(8)
+    local inner_h = label:getSize().h + 2 * pad_v
+    local frame = FrameContainer:new{
+        bordersize = Size.border.thin,
+        padding = 0,
+        padding_left = pad_h, padding_right = pad_h,
+        padding_top = pad_v, padding_bottom = pad_v,
+        margin = 0,
+        radius = Screen:scaleBySize(4),
+        background = Blitbuffer.COLOR_WHITE,
+        dimen = Geom:new{ w = content_width, h = inner_h },
+        label,
+    }
+
+    local ic = InputContainer:new{
+        dimen = Geom:new{ w = content_width, h = inner_h },
+        frame,
+    }
+    local GestureRange = require("ui/gesturerange")
+    ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
+    ic.onTapSelect = function() self:_openSearchDialog(); return true end
+    return ic
+end
+
+function LibraryModal:_openSearchDialog()
+    local InputDialog = require("ui/widget/inputdialog")
+    local placeholder = self.config.search_placeholder
+        and self.config.search_placeholder(self.active_tab) or _("Search…")
+    local dlg
+    dlg = InputDialog:new{
+        title = placeholder,
+        input = self.search_query or "",
+        input_type = "text",
+        buttons = {{
+            { text = _("Cancel"), id = "cancel", callback = function() UIManager:close(dlg) end },
+            { text = _("Search"), id = "search", is_enter_default = true, callback = function()
+                local q = dlg:getInputText()
+                UIManager:close(dlg)
+                self:_onSearchSubmit(q)
+            end },
+        }},
+    }
+    UIManager:show(dlg)
+    dlg:onShowKeyboard()
+end
+
+function LibraryModal:_onSearchSubmit(q)
+    if not q or #q < 2 then
+        self.search_query = nil
+    else
+        self.search_query = q
+    end
+    self.page = 1
+    if self.config.on_search_submit then self.config.on_search_submit(self.search_query) end
+    self:refresh()
+end
+
 function LibraryModal:refresh()
     -- Rebuild the inner content. Called on tab change, chip tap, search submit,
     -- page change. Avoids rebuilding the modal frame itself (which would
