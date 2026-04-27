@@ -304,6 +304,17 @@ local function renderPresetCard(self, item, slot_dimen)
     local baseline = math.floor(row_height * 0.65)
     local left_pad = Size.padding.large
 
+    -- Tap on a card should dismiss the on-screen keyboard if it's up,
+    -- otherwise the user is trapped behind it after previewing a preset
+    -- (the modal's pagination/footer sit beneath the keyboard).
+    local function withKeyboardDismiss(action)
+        return function()
+            local lm = self.modal_widget
+            if lm and lm._dismissKeyboard then lm:_dismissKeyboard() end
+            action()
+        end
+    end
+
     local is_local = self.tab == "local"
     local vg_tmp = VerticalGroup:new{ align = "left" }
 
@@ -321,8 +332,8 @@ local function renderPresetCard(self, item, slot_dimen)
             author       = item.preset and item.preset.author,
             star_key     = item.filename,
             has_colour   = has_colour,
-            on_preview   = function() PresetManagerModal._previewLocal(self, item) end,
-            on_hold      = function() PresetManagerModal._openOverflow(self, item) end,
+            on_preview   = withKeyboardDismiss(function() PresetManagerModal._previewLocal(self, item) end),
+            on_hold      = withKeyboardDismiss(function() PresetManagerModal._openOverflow(self, item) end),
             is_selected  = (selected_key == item.filename),
             is_virtual   = item.is_virtual or false,
         })
@@ -360,7 +371,7 @@ local function renderPresetCard(self, item, slot_dimen)
             description = item.description,
             author      = item.author,
             has_colour  = item.has_colour or false,
-            on_preview  = function() PresetManagerModal._previewGallery(self, captured) end,
+            on_preview  = withKeyboardDismiss(function() PresetManagerModal._previewGallery(self, captured) end),
             is_selected = is_selected,
             installed   = item._installed == true,
         })
