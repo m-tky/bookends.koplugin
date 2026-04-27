@@ -149,6 +149,106 @@ local function activePresetPage(bookends, mode)
     return 1
 end
 
+local GALLERY_STALE_SECONDS = 5 * 60
+
+--- True when the gallery data is absent, errored, or older than the freshness
+--- window. Extracted from the show() closure so it can be tested in isolation.
+local function galleryIsStale(self)
+    if not self.gallery_index then return true end
+    if self.gallery_error then return true end
+    if not self.gallery_last_refresh_time then return true end
+    if self.gallery_sort == "popular" and type(self.gallery_counts) ~= "table" then
+        return true
+    end
+    return (os.time() - self.gallery_last_refresh_time) >= GALLERY_STALE_SECONDS
+end
+
+--- Sorted item list for whichever tab is active. Returns {} when the gallery
+--- is not yet loaded so callers get a consistent empty list without branching.
+local function currentItemList(self)
+    if self.tab == "local" then
+        return sortedLocalPresets(self.bookends, self.my_sort)
+    end
+    if not self.gallery_index or not self.gallery_index.presets then return {} end
+    if self.gallery_loading or self.gallery_error then return {} end
+    local entries = {}
+    for _i, e in ipairs(self.gallery_index.presets) do entries[#entries + 1] = e end
+    if self.gallery_sort == "popular" and type(self.gallery_counts) == "table" then
+        local counts = self.gallery_counts
+        table.sort(entries, function(a, b)
+            local ca = counts[a.slug or ""] or 0
+            local cb = counts[b.slug or ""] or 0
+            if ca ~= cb then return ca > cb end
+            local da, db = a.added or "", b.added or ""
+            if da ~= db then return da > db end
+            return (a.name or "") < (b.name or "")
+        end)
+    else
+        table.sort(entries, function(a, b)
+            local da, db = a.added or "", b.added or ""
+            if da ~= db then return da > db end
+            return (a.name or "") < (b.name or "")
+        end)
+    end
+    return entries
+end
+
+--- Empty-state help panel for the Gallery tab. Rendered when gallery_index is
+--- nil or has no presets. Sized to match the populated layout height so the
+--- modal doesn't resize when data arrives.
+local function galleryHelpPanel(self, width, row_height, left_pad)
+    local card_slot_h = Screen:scaleBySize(64) + Screen:scaleBySize(8)
+    local pagination_area_h = 2 * Size.span.vertical_default + Size.line.thin + row_height
+    local help_h = card_slot_h * 5
+    -- Wider side margins than the card layout so the help panel reads as
+    -- content, not a list. Body text stays pure black on e-ink — dark-grey
+    -- is reserved for labels/chrome, not for reading content.
+    local text_width = width - 8 * left_pad
+    local title_widget = TextWidget:new{
+        text = _("Discover more presets"),
+        face = Font:getFace("cfont", 20),
+        bold = true,
+        fgcolor = Blitbuffer.COLOR_BLACK,
+    }
+    local intro = TextBoxWidget:new{
+        text = _("Browse presets others have shared, preview them on your own status bar, and install the ones you like. Once installed, you can edit each preset freely on the My presets tab."),
+        face = Font:getFace("cfont", 16),
+        width = text_width,
+        alignment = "center",
+        fgcolor = Blitbuffer.COLOR_BLACK,
+    }
+    local share = TextBoxWidget:new{
+        text = _("Made something worth sharing? Submit it with the Manage button while viewing one of your own presets."),
+        face = Font:getFace("cfont", 16),
+        width = text_width,
+        alignment = "center",
+        fgcolor = Blitbuffer.COLOR_BLACK,
+    }
+    local cta = TextWidget:new{
+        text = _("Tap Latest or Popular above to load the gallery."),
+        face = Font:getFace("cfont", 16),
+        bold = true,
+        fgcolor = Blitbuffer.COLOR_BLACK,
+    }
+    local help_group = VerticalGroup:new{
+        align = "center",
+        title_widget,
+        VerticalSpan:new{ width = Screen:scaleBySize(16) },
+        intro,
+        VerticalSpan:new{ width = Screen:scaleBySize(14) },
+        share,
+        VerticalSpan:new{ width = Screen:scaleBySize(22) },
+        cta,
+    }
+    return VerticalGroup:new{
+        CenterContainer:new{
+            dimen = Geom:new{ w = width, h = help_h },
+            help_group,
+        },
+        VerticalSpan:new{ width = pagination_area_h },
+    }
+end
+
 --- Open the manager modal. Single entry point from menu / gesture.
 function PresetManagerModal.show(bookends)
     local self = {
@@ -236,26 +336,13 @@ function PresetManagerModal.show(bookends)
             end)
         end)
     end
-    -- Stale when: never loaded, last attempt errored, or data is older than
-    -- the freshness window. Popular-selected-without-counts also flags stale
-    -- so tapping Popular recovers from a partial fetch where /counts failed.
-    local GALLERY_STALE_SECONDS = 5 * 60
-    local function galleryIsStale()
-        if not self.gallery_index then return true end
-        if self.gallery_error then return true end
-        if not self.gallery_last_refresh_time then return true end
-        if self.gallery_sort == "popular" and type(self.gallery_counts) ~= "table" then
-            return true
-        end
-        return (os.time() - self.gallery_last_refresh_time) >= GALLERY_STALE_SECONDS
-    end
     self.setGallerySort = function(mode)
         local mode_changed = self.gallery_sort ~= mode
         if mode_changed then
             self.gallery_sort = mode
             self.page = 1
         end
-        if not self.gallery_loading and galleryIsStale() then
+        if not self.gallery_loading and galleryIsStale(self) then
             -- Stale or absent data — refresh will rebuild twice (once to show
             -- "Refreshing…" status, once on completion). Skip the extra
             -- rebuild here to avoid visual churn.
@@ -1571,54 +1658,7 @@ function PresetManagerModal._renderGalleryRows(self, vg, width, row_height, font
     -- list would occupy. Total height matches the populated layout (5 card
     -- slots + pagination area) so the modal doesn't resize on Refresh.
     if not self.gallery_index or not self.gallery_index.presets then
-        local card_slot_h = Screen:scaleBySize(64) + Screen:scaleBySize(8)
-        local pagination_area_h = 2 * Size.span.vertical_default + Size.line.thin + row_height
-        local help_h = card_slot_h * 5
-        -- Wider side margins than the card layout so the help panel reads as
-        -- content, not a list. Body text stays pure black on e-ink — dark-grey
-        -- is reserved for labels/chrome, not for reading content.
-        local text_width = width - 8 * left_pad
-        local title_widget = TextWidget:new{
-            text = _("Discover more presets"),
-            face = Font:getFace("cfont", 20),
-            bold = true,
-            fgcolor = Blitbuffer.COLOR_BLACK,
-        }
-        local intro = TextBoxWidget:new{
-            text = _("Browse presets others have shared, preview them on your own status bar, and install the ones you like. Once installed, you can edit each preset freely on the My presets tab."),
-            face = Font:getFace("cfont", 16),
-            width = text_width,
-            alignment = "center",
-            fgcolor = Blitbuffer.COLOR_BLACK,
-        }
-        local share = TextBoxWidget:new{
-            text = _("Made something worth sharing? Submit it with the Manage button while viewing one of your own presets."),
-            face = Font:getFace("cfont", 16),
-            width = text_width,
-            alignment = "center",
-            fgcolor = Blitbuffer.COLOR_BLACK,
-        }
-        local cta = TextWidget:new{
-            text = _("Tap Latest or Popular above to load the gallery."),
-            face = Font:getFace("cfont", 16),
-            bold = true,
-            fgcolor = Blitbuffer.COLOR_BLACK,
-        }
-        local help_group = VerticalGroup:new{
-            align = "center",
-            title_widget,
-            VerticalSpan:new{ width = Screen:scaleBySize(16) },
-            intro,
-            VerticalSpan:new{ width = Screen:scaleBySize(14) },
-            share,
-            VerticalSpan:new{ width = Screen:scaleBySize(22) },
-            cta,
-        }
-        table.insert(vg, CenterContainer:new{
-            dimen = Geom:new{ w = width, h = help_h },
-            help_group,
-        })
-        table.insert(vg, VerticalSpan:new{ width = pagination_area_h })
+        table.insert(vg, galleryHelpPanel(self, width, row_height, left_pad))
         return
     end
 
