@@ -304,10 +304,10 @@ function LibraryModal:_renderSearchInput(content_width)
     -- content_width, otherwise the row pushes the modal frame wider than
     -- modal_w and asymmetric right-edge gaps appear.
     --
-    -- input_border matches the chip-style buttons' Size.border.thin so the
-    -- input box and adjacent buttons share the same border thickness.
-    -- (InputText's default Size.border.inputtext is ~3x thicker.)
-    local input_border = Size.border.thin
+    -- Input + button borders. Use Size.border.default (thicker than thin)
+    -- so the focused-black border reads as a strong outline rather than a
+    -- hairline that could pass for unfocused-gray on glance.
+    local input_border = Size.border.default
     local input_padding = Size.padding.default
     local input_overhead = 2 * (input_border + input_padding)
 
@@ -316,13 +316,15 @@ function LibraryModal:_renderSearchInput(content_width)
     -- × are kept: Enter on the keyboard ALSO submits, but tapping outside
     -- only dismisses the keyboard without submitting, so an explicit Search
     -- button is the natural way to commit a query without a keystroke.
+    -- Chip-style buttons share the input's border thickness so the row
+    -- reads as one unit. input_border is set above.
     local function measureLabel(label, opts)
         local tw = TextWidget:new{
             text = label, face = btn_face,
             fgcolor = Blitbuffer.COLOR_BLACK,
             bold = opts and opts.bold or false,
         }
-        return tw, tw:getSize().w + 2 * btn_pad_h + 2 * Size.border.thin
+        return tw, tw:getSize().w + 2 * btn_pad_h + 2 * input_border
     end
     local search_label, search_btn_w = measureLabel(_("Search"))
     -- ✕ (U+2715 MULTIPLICATION X) reads as a deliberate close/clear glyph,
@@ -383,16 +385,16 @@ function LibraryModal:_renderSearchInput(content_width)
     -- amount to keep the button's outer rendered height == row_h.
     local row_h = self._search_input:getSize().h
     local function chipButton(tw, btn_w, on_tap)
-        local inner_h = row_h - 2 * Size.border.thin
+        local inner_h = row_h - 2 * input_border
         local fc = FrameContainer:new{
-            bordersize = Size.border.thin,
+            bordersize = input_border,    -- match input border for visual unity
             padding = 0,
             padding_left = btn_pad_h, padding_right = btn_pad_h,
             padding_top = 0, padding_bottom = 0,
             margin = 0, radius = 0,
             background = Blitbuffer.COLOR_WHITE,
             CenterContainer:new{
-                dimen = Geom:new{ w = btn_w - 2 * btn_pad_h - 2 * Size.border.thin, h = inner_h },
+                dimen = Geom:new{ w = btn_w - 2 * btn_pad_h - 2 * input_border, h = inner_h },
                 tw,
             },
         }
@@ -452,7 +454,16 @@ function LibraryModal:_renderChipStrip(content_width)
     local row_gap = MARGIN
 
     local function buildChip(chip)
-        local is_active = chip.key == self.active_chip
+        -- Honor chip.is_active from the config callback when present (lets
+        -- the domain show NO chip as selected — e.g. cold gallery state
+        -- where neither Latest nor Popular has been engaged yet). Fall back
+        -- to widget-tracked active_chip when the callback omits the flag.
+        local is_active
+        if chip.is_active ~= nil then
+            is_active = chip.is_active
+        else
+            is_active = chip.key == self.active_chip
+        end
         local fg = is_active and Blitbuffer.COLOR_WHITE or Blitbuffer.COLOR_BLACK
         local bg = is_active and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_WHITE
         local tw = TextWidget:new{

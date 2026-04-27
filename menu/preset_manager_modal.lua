@@ -81,6 +81,46 @@ function ColourFlag:paintTo(bb, x, y)
     -- Thin outline so the flag keeps a silhouette against the card background.
     bb:paintBorder(x, y, self.side * 4, self.side, 1, Blitbuffer.COLOR_DARK_GRAY)
 end
+
+-- Dashed-border overlay for the synthetic "+ New blank preset" tile so it
+-- reads as a placeholder/affordance rather than another solid card. Drawn
+-- on top of the (border-less) card frame inside an OverlapGroup. Paints
+-- short rectangles around the perimeter at a fixed dash + gap stride.
+local DashedBorder = WidgetContainer:extend{
+    w_actual  = 0,
+    h_actual  = 0,
+    color     = nil,
+    dash_len  = nil,
+    gap_len   = nil,
+}
+
+function DashedBorder:getSize()
+    return Geom:new{ w = self.w_actual, h = self.h_actual }
+end
+
+function DashedBorder:paintTo(bb, x, y)
+    local color = self.color or Blitbuffer.COLOR_DARK_GRAY
+    local dash  = self.dash_len or Device.screen:scaleBySize(6)
+    local gap   = self.gap_len  or Device.screen:scaleBySize(4)
+    local stride = dash + gap
+    local w, h = self.w_actual, self.h_actual
+    local thickness = Device.screen:scaleBySize(1)
+    local cx = x
+    while cx < x + w do
+        local seg = math.min(dash, x + w - cx)
+        bb:paintRect(cx, y, seg, thickness, color)
+        bb:paintRect(cx, y + h - thickness, seg, thickness, color)
+        cx = cx + stride
+    end
+    local cy = y
+    while cy < y + h do
+        local seg = math.min(dash, y + h - cy)
+        bb:paintRect(x, cy, thickness, seg, color)
+        bb:paintRect(x + w - thickness, cy, thickness, seg, color)
+        cy = cy + stride
+    end
+end
+
 local util = require("util")
 local _ = require("bookends_i18n").gettext
 local T = require("ffi/util").template
@@ -565,9 +605,20 @@ function PresetManagerModal.show(bookends)
         -- Bust the per-render active-preset-name cache so gallery highlights
         -- reflect the current active preset after an apply or tab switch.
         self._active_preset_name = nil
+        -- Invalidate the item list cache so disk-changing operations
+        -- (delete / duplicate / rename / blank-create / install) see the
+        -- new state. The cache key only tracks in-memory sort/tab/search
+        -- toggles, not filesystem state. Within one refresh cycle the
+        -- cache is rebuilt on the first item_count call and reused by the
+        -- subsequent item_at calls (same key). The page is owned by
+        -- LibraryModal once the modal is shown — chevron taps update
+        -- lm.page directly; explicit domain-driven page jumps go through
+        -- syncPageToWidget. Don't overwrite lm.page here or chevron
+        -- navigation gets reset on every preview/star tap.
+        self._items_cache = nil
+        self._items_cache_key = nil
         UIManager:nextTick(function()
             if self.modal_widget and self.modal_widget.refresh then
-                self.modal_widget.page = self.page
                 self.modal_widget:refresh()
             end
         end)
@@ -891,12 +942,13 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
         }
     end
 
-    -- Card frame: thin border always; background fills light-gray when selected.
+    -- Card frame: solid thin border for real cards; bordersize 0 for virtual
+    -- placeholders so the dashed-border overlay below is the only outline.
     local card_bg = opts.is_selected
         and (Blitbuffer.COLOR_LIGHT_GRAY or Blitbuffer.gray(0.92))
         or Blitbuffer.COLOR_WHITE
     local card_frame = FrameContainer:new{
-        bordersize = Size.border.thin,
+        bordersize = opts.is_virtual and 0 or Size.border.thin,
         radius = Size.radius.default,
         padding = 0,
         padding_left = inner_pad,
@@ -915,7 +967,18 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
     -- top and right edges so the rounded corner isn't visually clipped.
     local card_w, card_h = card_frame:getSize().w, card_frame:getSize().h
     local card_stack
-    if opts.has_colour then
+    if opts.is_virtual then
+        -- Synthetic placeholder tile gets a dashed-border overlay instead of
+        -- the solid bordered look so it reads as an action affordance, not
+        -- another preset card.
+        card_stack = OverlapGroup:new{
+            dimen = Geom:new{ w = card_w, h = card_h },
+            allow_mirroring = false,
+            card_frame,
+            DashedBorder:new{ w_actual = card_w, h_actual = card_h,
+                              color = Blitbuffer.COLOR_DARK_GRAY },
+        }
+    elseif opts.has_colour then
         local flag_inset = Screen:scaleBySize(6)
         local flag_side = Screen:scaleBySize(8)
         local flag_w = flag_side * 4
