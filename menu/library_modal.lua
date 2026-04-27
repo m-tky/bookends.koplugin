@@ -616,10 +616,10 @@ function LibraryModal:refresh()
     end
 
     self.frame[1] = body
-    -- Use nil (whole screen) rather than self to guarantee the previous frame is
-    -- fully erased when switching tabs. Self-bounded dirty rects can leave ghost
-    -- paint from the previous state if any widget shrank.
-    UIManager:setDirty(nil, "ui")
+    -- Modal is fixed-size now, so a self-bounded dirty rect is sufficient.
+    -- Whole-screen repaints stack ~1s each on e-ink and produce visible lag
+    -- when tabs/chips fire two refreshes in quick succession.
+    UIManager:setDirty(self, "ui")
 end
 
 return LibraryModal

@@ -577,15 +577,20 @@ function PresetManagerModal.show(bookends)
             self.gallery_sort = mode
             self.page = 1
         end
+        -- LibraryModal._onChipTap already refreshes after this returns; we only
+        -- trigger an explicit rebuild for the async-fetch case (refreshGallery
+        -- updates state from a network callback that LibraryModal can't see).
         if not self.gallery_loading and galleryIsStale(self) then
-            -- Stale or absent data — refresh will rebuild twice (once to show
-            -- "Refreshing…" status, once on completion). Skip the extra
-            -- rebuild here to avoid visual churn.
             self.refreshGallery()
-        elseif mode_changed then
-            self.rebuild()
         end
-        -- Same mode tapped with fresh data → no-op.
+    end
+    -- Keep LibraryModal's internal page counter in step with the domain page
+    -- whenever a sort/tab change recomputes it. The widget's _onTabSelect /
+    -- _onChipTap both reset their local page=1 unconditionally, then call our
+    -- handler — so we have to push the corrected page value back before they
+    -- refresh.
+    local function syncPageToWidget(self)
+        if self.modal_widget then self.modal_widget.page = self.page end
     end
     self.setTab = function(tab)
         if self.tab ~= tab then
@@ -601,7 +606,7 @@ function PresetManagerModal.show(bookends)
             else
                 self.page = 1
             end
-            self.rebuild()
+            syncPageToWidget(self)
         end
     end
     self.setMySort = function(mode)
@@ -610,7 +615,7 @@ function PresetManagerModal.show(bookends)
             -- Keep the active preset in view when switching sort modes. Falls
             -- back to page 1 if filtered out (e.g. unstarred in Starred view).
             self.page = activePresetPage(self.bookends, mode)
-            self.rebuild()
+            syncPageToWidget(self)
         end
     end
     self.setPage = function(p) self.page = p; self.rebuild() end
