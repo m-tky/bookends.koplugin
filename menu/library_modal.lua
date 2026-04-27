@@ -298,6 +298,40 @@ function LibraryModal:_onChipTap(chip_key)
     self:refresh()
 end
 
+function LibraryModal:_renderListArea(content_width, area_height)
+    local rows_per_page = self.config.rows_per_page or 5
+    local total = self.config.item_count and self.config.item_count() or 0
+
+    if total == 0 and self.config.empty_state then
+        local panel = self.config.empty_state(content_width, area_height)
+        if panel then return panel end
+    end
+
+    local total_pages = math.max(1, math.ceil(total / rows_per_page))
+    if self.page > total_pages then self.page = total_pages end
+
+    local start_idx = (self.page - 1) * rows_per_page + 1
+    local end_idx = math.min(start_idx + rows_per_page - 1, total)
+
+    local row_height = area_height / rows_per_page
+    local vg = VerticalGroup:new{ align = "left" }
+    for idx = start_idx, end_idx do
+        local item = self.config.item_at(idx)
+        if item then
+            local slot_dimen = Geom:new{ w = content_width, h = row_height }
+            table.insert(vg, self.config.row_renderer(item, slot_dimen))
+        end
+    end
+    local rendered = end_idx - start_idx + 1
+    if rendered < rows_per_page then
+        local Spacer = require("ui/widget/spacer")
+        for _i = rendered + 1, rows_per_page do
+            table.insert(vg, VerticalSpan:new{ width = row_height })
+        end
+    end
+    return vg
+end
+
 function LibraryModal:refresh()
     -- Rebuild the inner content. Called on tab change, chip tap, search submit,
     -- page change. Avoids rebuilding the modal frame itself (which would
