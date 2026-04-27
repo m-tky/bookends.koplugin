@@ -630,9 +630,16 @@ function PresetManagerModal.show(bookends)
         end
     end
     self.setPage = function(p) self.page = p; self.rebuild() end
-    self.previewLocal = function(p) PresetManagerModal._previewLocal(self, p) end
-    self.applyCurrent = function() PresetManagerModal._applyCurrent(self) end
-    self.toggleStar = function(key) PresetManagerModal._toggleStar(self, key) end
+    -- Dismissal helper: star and other domain-internal taps go through this
+    -- so the keyboard doesn't trap the user behind it after they tap.
+    local function dismissModalKeyboard()
+        if self.modal_widget and self.modal_widget._dismissKeyboard then
+            self.modal_widget:_dismissKeyboard()
+        end
+    end
+    self.previewLocal = function(p) dismissModalKeyboard(); PresetManagerModal._previewLocal(self, p) end
+    self.applyCurrent = function() dismissModalKeyboard(); PresetManagerModal._applyCurrent(self) end
+    self.toggleStar = function(key) dismissModalKeyboard(); PresetManagerModal._toggleStar(self, key) end
 
     -- Open at the page containing the active preset so it's immediately visible
     -- without the user having to page forward. Must be set before LibraryModal

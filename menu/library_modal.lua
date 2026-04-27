@@ -286,19 +286,25 @@ function LibraryModal:_renderSearchInput(content_width)
     local input_padding = Size.padding.default
     local input_overhead = 2 * (Size.border.inputtext + input_padding)
 
-    -- Pre-measure the × clear button label so we can size the input first
-    -- and then build the button whose outer height matches the input's.
-    -- Search-on-Enter is wired via the InputText's enter_callback, so an
-    -- explicit Search button would be redundant.
-    local function measureLabel(label)
-        local tw = TextWidget:new{ text = label, face = btn_face,
-                                   fgcolor = Blitbuffer.COLOR_BLACK }
+    -- Pre-measure button labels so we can size the input first and then
+    -- build buttons whose outer height matches the input's. Both Search and
+    -- × are kept: Enter on the keyboard ALSO submits, but tapping outside
+    -- only dismisses the keyboard without submitting, so an explicit Search
+    -- button is the natural way to commit a query without a keystroke.
+    local function measureLabel(label, opts)
+        local tw = TextWidget:new{
+            text = label, face = btn_face,
+            fgcolor = Blitbuffer.COLOR_BLACK,
+            bold = opts and opts.bold or false,
+        }
         return tw, tw:getSize().w + 2 * btn_pad_h + 2 * Size.border.thin
     end
-    -- ✕ (U+2715, MULTIPLICATION X) reads as a deliberate close/clear glyph,
-    -- where × (U+00D7, MULTIPLICATION SIGN) reads as math typography.
-    local clear_label, clear_btn_w = measureLabel("\xE2\x9C\x95")
-    local input_w = content_width - clear_btn_w - gap - input_overhead
+    local search_label, search_btn_w = measureLabel(_("Search"))
+    -- ✕ (U+2715 MULTIPLICATION X) reads as a deliberate close/clear glyph,
+    -- where × (U+00D7 MULTIPLICATION SIGN) reads as math typography.
+    -- Bold weight balances the visual mass against the longer Search label.
+    local clear_label, clear_btn_w = measureLabel("\xE2\x9C\x95", { bold = true })
+    local input_w = content_width - search_btn_w - clear_btn_w - 2 * gap - input_overhead
 
     -- Persist the InputText across refreshes so the keyboard's reference to
     -- it stays valid. Rebuilding it on every refresh leaves the keyboard
@@ -375,6 +381,11 @@ function LibraryModal:_renderSearchInput(content_width)
             self._search_input:onCloseKeyboard()
         end
     end
+    local search_btn = chipButton(search_label, search_btn_w, function()
+        local q = self._search_input and self._search_input:getText() or ""
+        dismissKeyboard()
+        self:_onSearchSubmit(q)
+    end)
     local clear_btn = chipButton(clear_label, clear_btn_w, function()
         dismissKeyboard()
         if self._search_input then self._search_input:setText("") end
@@ -384,6 +395,8 @@ function LibraryModal:_renderSearchInput(content_width)
     return HorizontalGroup:new{
         align = "center",
         self._search_input,
+        HorizontalSpan:new{ width = gap },
+        search_btn,
         HorizontalSpan:new{ width = gap },
         clear_btn,
     }
