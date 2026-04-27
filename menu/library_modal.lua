@@ -381,6 +381,46 @@ function LibraryModal:_renderGridArea(content_width, area_height)
     return vg
 end
 
+function LibraryModal:_renderPagination(content_width)
+    local Button = require("ui/widget/button")
+    local Font = require("ui/font")
+    local HorizontalGroup = require("ui/widget/horizontalgroup")
+    local HorizontalSpan = require("ui/widget/horizontalspan")
+    local TextWidget = require("ui/widget/textwidget")
+    local T = require("ffi/util").template
+
+    local total = self.config.item_count and self.config.item_count() or 0
+    local per_page = self.config.rows_per_page
+        or (self.config.cells_per_page and self.config.cells_per_page(content_width))
+        or 1
+    local total_pages = math.max(1, math.ceil(total / per_page))
+
+    local function chev(label, callback, enabled)
+        return Button:new{
+            text = label,
+            text_func = nil,
+            bordersize = 0,
+            radius = 0,
+            padding = Device.screen:scaleBySize(8),
+            face = Font:getFace("cfont", 16),
+            callback = enabled and callback or function() end,
+            enabled = enabled,
+        }
+    end
+
+    local first = chev("\xE2\x80\xB9\xE2\x80\xB9", function() self.page = 1; self:refresh() end, self.page > 1)
+    local prev  = chev("\xE2\x80\xB9", function() self.page = self.page - 1; self:refresh() end, self.page > 1)
+    local pageinfo = TextWidget:new{
+        text = T(_("Page %1 of %2"), self.page, total_pages),
+        face = Font:getFace("cfont", 14),
+    }
+    local nxt = chev("\xE2\x80\xBA", function() self.page = self.page + 1; self:refresh() end, self.page < total_pages)
+    local last = chev("\xE2\x80\xBA\xE2\x80\xBA", function() self.page = total_pages; self:refresh() end, self.page < total_pages)
+    local gap = HorizontalSpan:new{ width = Device.screen:scaleBySize(20) }
+
+    return HorizontalGroup:new{ align = "center", first, gap, prev, gap, pageinfo, gap, nxt, gap, last }
+end
+
 function LibraryModal:refresh()
     -- Rebuild the inner content. Called on tab change, chip tap, search submit,
     -- page change. Avoids rebuilding the modal frame itself (which would
