@@ -98,8 +98,8 @@ M.TOKENS = {
     { description = _("Bookmark(s) count + label"), token = "%bookmarks Bookmark(s)", chip = "templates", is_snippet = true },
     { description = _("Highlight(s) count + label"), token = "%highlights Highlight(s)", chip = "templates", is_snippet = true },
     { description = _("Hourglass session timer + pages"), token = "\xEE\xB0\x9E %session_time \xC2\xBB %session_pages page session", chip = "templates", is_snippet = true },
-    { description = _("Sparkles 1"), token = "\xE2\x9C\xAE\xE2\x8B\x86\xCB\x9A\xEF\xBD\xA1\xF0\x96\xA6\xB9\xE2\x8B\x86\xEF\xBD\xA1\xC2\xB0\xE2\x9C\xA9", chip = "templates" },
-    { description = _("Sparkles 2"), token = "\xC2\xB0\xE2\x9D\x80\xE2\x8B\x86.\xE0\xB3\x83\xE0\xBF\x94*:\xEF\xBD\xA5", chip = "templates" },
+    { description = _("Sparkles 1"), token = "\xE2\x9C\xAE\xE2\x8B\x86\xCB\x9A\xEF\xBD\xA1\xE2\x8B\x86\xEF\xBD\xA1\xC2\xB0\xE2\x9C\xA9", chip = "templates" },
+    { description = _("Sparkles 2"), token = "\xC2\xB0\xE2\x9D\x80\xE2\x8B\x86.\xE0\xB3\x83*:\xEF\xBD\xA5", chip = "templates" },
 }
 
 M.CONDITIONALS = {
