@@ -186,7 +186,13 @@ function TokensLibrary:show(bookends, on_select)
     local config = {
         title = _("Tokens library"),
         help_title = _("Tokens & conditionals"),
-        help_text = _([[CONDITIONALS
+        help_text = _([[TOKENS
+
+Tokens are placeholders that get replaced with live data each time the preset renders. Each entry in the Book / Progress / Time / Session / Device chips is a token, written as %name. They expand inline:
+  %title — %page_num/%page_count
+  → 1984 — 12/268
+
+CONDITIONALS
 
 Wrap content in [if:condition]…[/if] to show it only when the condition is true. Add an [else]…[/if] branch for an alternative.
 
@@ -196,18 +202,16 @@ OPERATORS
   <=   at most              >=  at least
   and / or / not  · ( ) for grouping
 
+  Example:  [if:batt<20 and not charging]LOW[/if]
+
 Truthy check: a bare [if:key] tests whether the key is set, non-zero, and not "off"/"no". Useful for [if:title]…[/if], [if:author]…[/if], [if:series]…[/if].
 
-Token-reference comparison: =@token compares against another token's current value, e.g. [if:chap_title_1!=@title]…[/if] hides chapter title when it equals the book title.
+Token-reference comparison: =@token compares against another token's current value, e.g. [if:chap_title_1!=@title]…[/if] hides the chapter title when it equals the book title.
 
-COMMON STATE KEYS
-  wifi=on/off, connected=yes/no, charging=yes/no
-  batt 0–100, book_pct 0–100, chap_pct 0–100
-  light=on/off, light_pct 0–100, warmth_pct 0–100
-  night=on/off, invert=yes/no
-  page=odd/even, day=Mon..Sun, time=HH:MM, format=EPUB/PDF/…
+For the full list of conditional state keys (wifi, batt, light_pct, night, time, format, …) browse the If/else chip — every reference entry there shows the exact key and operator syntax for one condition.
 
 EXAMPLES
+
   [if:authors>1]%author, et al.[else]%author[/if]
   [if:batt<20]LOW %batt[/if]
   [if:time>=18:00 and time<18:30]6–6:30[/if]
