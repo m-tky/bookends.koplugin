@@ -491,8 +491,8 @@ const state = {
     pickerInsertCallback: null,  // for tokens-mode insert-glyph workflow
 };
 
-function activeChip() { return activeChip()ByMode[state.mode]; }
-function setActiveChip(k) { activeChip()ByMode[state.mode] = k; }
+function activeChip() { return state.activeChipByMode[state.mode]; }
+function setActiveChip(k) { state.activeChipByMode[state.mode] = k; }
 function activeCatalogue() { return state.mode === 'icons' ? state.icons : state.tokens; }
 
 // ---- Utilities ----------------------------------------------------------

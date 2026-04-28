@@ -17,17 +17,18 @@ local _ = require("bookends_i18n").gettext
 local M = {}
 
 -- Chip strip. "all" merges TOKENS + CONDITIONALS; per-category chips show
--- their tagged tokens; "ifelse" / "ifelse_examples" show conditionals.
+-- their tagged entries. "templates" gathers ready-to-use compositions —
+-- both plain-text snippets (TOKENS with is_snippet) and conditional
+-- templates (CONDITIONALS) — last in the strip.
 M.CHIPS = {
-    { key = "all",              label = _("All") },
-    { key = "book",             label = _("Book") },
-    { key = "progress",         label = _("Progress") },
-    { key = "time",             label = _("Time") },
-    { key = "session",          label = _("Session") },
-    { key = "device",           label = _("Device") },
-    { key = "snippets",         label = _("Snippets") },
-    { key = "ifelse",           label = _("If/else") },
-    { key = "ifelse_examples",  label = _("Examples") },
+    { key = "all",       label = _("All") },
+    { key = "book",      label = _("Book") },
+    { key = "progress",  label = _("Progress") },
+    { key = "time",      label = _("Time") },
+    { key = "session",   label = _("Session") },
+    { key = "device",    label = _("Device") },
+    { key = "ifelse",    label = _("If/else") },
+    { key = "templates", label = _("Templates") },
 }
 
 M.TOKENS = {
@@ -104,11 +105,11 @@ M.TOKENS = {
     { description = _("RAM used (MiB)"),                          token = "%ram",          chip = "device" },
     { description = _("Free disk space"),                         token = "%disk",         chip = "device" },
     -- Snippets (full templates rather than single tokens)
-    { description = _("Page X of Y, em-dash framed"), token = "\xE2\x80\x94 Page %page_num of %page_count \xE2\x80\x94", chip = "snippets", is_snippet = true },
-    { description = _("Title \xE2\x8B\xAE author italic"),                       token = "%title \xE2\x8B\xAE [i]%author[/i]", chip = "snippets", is_snippet = true },
-    { description = _("Bookmarks count + label"),                                token = "%bookmarks Bookmark(s)",            chip = "snippets", is_snippet = true },
-    { description = _("Highlights count + label"),                               token = "%highlights Highlight(s)",          chip = "snippets", is_snippet = true },
-    { description = _("Hourglass session timer + pages"),                        token = "\xE2\x8C\x9B %session_time \xC2\xBB %session_pages page session", chip = "snippets", is_snippet = true },
+    { description = _("Page X of Y, em-dash framed"), token = "\xE2\x80\x94 Page %page_num of %page_count \xE2\x80\x94", chip = "templates", is_snippet = true },
+    { description = _("Title \xE2\x8B\xAE author italic"),                       token = "%title \xE2\x8B\xAE [i]%author[/i]", chip = "templates", is_snippet = true },
+    { description = _("Bookmarks count + label"),                                token = "%bookmarks Bookmark(s)",            chip = "templates", is_snippet = true },
+    { description = _("Highlights count + label"),                               token = "%highlights Highlight(s)",          chip = "templates", is_snippet = true },
+    { description = _("Hourglass session timer + pages"),                        token = "\xE2\x8C\x9B %session_time \xC2\xBB %session_pages page session", chip = "templates", is_snippet = true },
 }
 
 M.CONDITIONALS = {
@@ -142,24 +143,24 @@ M.CONDITIONALS = {
     { description = _("Chapter title at depth 1/2/3"),                expression = "[if:chap_title_2]...[/if]",           chip = "ifelse" },
     { description = _("If book has 2+ authors"),                      expression = "[if:authors>1]...[/if]",              chip = "ifelse" },
     -- Examples (full templates with else branches and content)
-    { description = _("Author with et al. for multi-author"),         expression = "[if:authors>1]%author, et al.[else]%author[/if]", chip = "ifelse_examples" },
-    { description = _("Wi-Fi icon only when Wi-Fi enabled"),          expression = "[if:wifi=on]%wifi[/if]",              chip = "ifelse_examples" },
-    { description = _("Low-battery warning"),                         expression = "[if:batt<20]LOW %batt[/if]",          chip = "ifelse_examples" },
-    { description = _("Bolt when charging"),                          expression = "[if:charging=yes]\xE2\x9A\xA1[/if] %batt", chip = "ifelse_examples" },
-    { description = _("Arrow when page-turn flipped"),                expression = "[if:invert=yes]\xE2\x87\x84[/if]",    chip = "ifelse_examples" },
-    { description = _("Speed once calculated"),                       expression = "[if:speed>0]%speed pg/hr[/if]",       chip = "ifelse_examples" },
-    { description = _("Session time after start"),                    expression = "[if:session>0]%session_time[/if]",    chip = "ifelse_examples" },
-    { description = _("Odd/even variations"),                         expression = "[if:page=odd]%page_num[else]%page_num[/if]", chip = "ifelse_examples" },
-    { description = _("Near end of book"),                            expression = "[if:book_pct>90]Almost done![/if]",   chip = "ifelse_examples" },
-    { description = _("Frontlight on/off label"),                     expression = "[if:light=off]Light off[else]Light on[/if]", chip = "ifelse_examples" },
-    { description = _("Only for PDFs"),                               expression = "[if:format=PDF]%page_num / %page_count[/if]", chip = "ifelse_examples" },
-    { description = _("Late-night reading"),                          expression = "[if:time>22:00]Late night reading![/if]", chip = "ifelse_examples" },
-    { description = _("Weekends"),                                    expression = "[if:day=Sat or day=Sun]Weekend![/if]", chip = "ifelse_examples" },
-    { description = _("Time window"),                                 expression = "[if:time>=18:00 and time<18:30]6\xE2\x80\x936:30[/if]", chip = "ifelse_examples" },
-    { description = _("Non-series books"),                            expression = "[if:not series]Standalone[/if]",     chip = "ifelse_examples" },
-    { description = _("Fall back to shallower chapter"),              expression = "[if:chap_title_2]%chap_title_2[else]%chap_title_1[/if]", chip = "ifelse_examples" },
-    { description = _("Long books (20+ chapters)"),                   expression = "[if:chap_count>20]Long read[/if]",   chip = "ifelse_examples" },
-    { description = _("Chapter title only when different from book title"), expression = "%title[if:chap_title_1!=@title] \xE2\x80\xA2 %chap_title_1[/if]", chip = "ifelse_examples" },
+    { description = _("Author with et al. for multi-author"),         expression = "[if:authors>1]%author, et al.[else]%author[/if]", chip = "templates" },
+    { description = _("Wi-Fi icon only when Wi-Fi enabled"),          expression = "[if:wifi=on]%wifi[/if]",              chip = "templates" },
+    { description = _("Low-battery warning"),                         expression = "[if:batt<20]LOW %batt[/if]",          chip = "templates" },
+    { description = _("Bolt when charging"),                          expression = "[if:charging=yes]\xE2\x9A\xA1[/if] %batt", chip = "templates" },
+    { description = _("Arrow when page-turn flipped"),                expression = "[if:invert=yes]\xE2\x87\x84[/if]",    chip = "templates" },
+    { description = _("Speed once calculated"),                       expression = "[if:speed>0]%speed pg/hr[/if]",       chip = "templates" },
+    { description = _("Session time after start"),                    expression = "[if:session>0]%session_time[/if]",    chip = "templates" },
+    { description = _("Odd/even variations"),                         expression = "[if:page=odd]%page_num[else]%page_num[/if]", chip = "templates" },
+    { description = _("Near end of book"),                            expression = "[if:book_pct>90]Almost done![/if]",   chip = "templates" },
+    { description = _("Frontlight on/off label"),                     expression = "[if:light=off]Light off[else]Light on[/if]", chip = "templates" },
+    { description = _("Only for PDFs"),                               expression = "[if:format=PDF]%page_num / %page_count[/if]", chip = "templates" },
+    { description = _("Late-night reading"),                          expression = "[if:time>22:00]Late night reading![/if]", chip = "templates" },
+    { description = _("Weekends"),                                    expression = "[if:day=Sat or day=Sun]Weekend![/if]", chip = "templates" },
+    { description = _("Time window"),                                 expression = "[if:time>=18:00 and time<18:30]6\xE2\x80\x936:30[/if]", chip = "templates" },
+    { description = _("Non-series books"),                            expression = "[if:not series]Standalone[/if]",     chip = "templates" },
+    { description = _("Fall back to shallower chapter"),              expression = "[if:chap_title_2]%chap_title_2[else]%chap_title_1[/if]", chip = "templates" },
+    { description = _("Long books (20+ chapters)"),                   expression = "[if:chap_count>20]Long read[/if]",   chip = "templates" },
+    { description = _("Chapter title only when different from book title"), expression = "%title[if:chap_title_1!=@title] \xE2\x80\xA2 %chap_title_1[/if]", chip = "templates" },
 }
 
 return M

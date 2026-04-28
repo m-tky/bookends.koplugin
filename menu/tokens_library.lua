@@ -42,11 +42,10 @@ function TokensLibrary._currentItems(active_chip, search_query)
         for _i, c in ipairs(TokensLibrary.CONDITIONALS) do items[#items + 1] = c end
     else
         -- Single uniform filter — works for both regular tokens (chip in
-        -- {book, progress, time, session, device, snippets}) and
-        -- conditionals (chip in {ifelse, ifelse_examples}). The CONDITIONALS
-        -- table is split between "ifelse" (references with `...` placeholders)
-        -- and "ifelse_examples" (templates with content), so the same filter
-        -- pulls the right subset for each chip.
+        -- {book, progress, time, session, device}) and conditionals
+        -- (chip = "ifelse"). The "templates" chip merges plain-text
+        -- snippets (TOKENS with chip = "templates") and conditional
+        -- templates (CONDITIONALS with chip = "templates").
         for _i, t in ipairs(TokensLibrary.TOKENS) do
             if t.chip == active_chip then items[#items + 1] = t end
         end
