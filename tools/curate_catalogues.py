@@ -698,25 +698,30 @@ function tokenChipCount(chipKey) {
 }
 
 function isConditionalChip(chipKey) {
-    return chipKey === 'ifelse' || chipKey === 'ifelse_examples';
+    // Chips whose default new entry should be a conditional. "templates"
+    // is a mixed bag (plain snippets + if/else examples), so its "+ Add"
+    // button defaults to a regular token; a user wanting a conditional
+    // template adds via the If/else chip and re-tags chip = "templates".
+    return chipKey === 'ifelse';
 }
 
 function tokenEntriesForChip(chipKey) {
+    // Walk both lists for any chip — the runtime `_currentItems` does the
+    // same. This is what makes the merged "templates" chip pull both the
+    // plain-text snippets (TOKENS with chip="templates") and the
+    // conditional templates (CONDITIONALS with chip="templates").
     const out = [];
     if (chipKey === 'all') {
         for (const t of state.tokens.tokens) out.push({ list: 'tokens', item: t });
         for (const c of state.tokens.conditionals) out.push({ list: 'conditionals', item: c });
         return out;
     }
-    if (isConditionalChip(chipKey)) {
-        state.tokens.conditionals.forEach((c) => {
-            if (c.chip === chipKey) out.push({ list: 'conditionals', item: c });
-        });
-    } else {
-        state.tokens.tokens.forEach((t) => {
-            if (t.chip === chipKey) out.push({ list: 'tokens', item: t });
-        });
-    }
+    state.tokens.tokens.forEach((t) => {
+        if (t.chip === chipKey) out.push({ list: 'tokens', item: t });
+    });
+    state.tokens.conditionals.forEach((c) => {
+        if (c.chip === chipKey) out.push({ list: 'conditionals', item: c });
+    });
     return out;
 }
 
