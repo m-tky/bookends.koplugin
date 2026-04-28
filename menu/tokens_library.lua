@@ -134,7 +134,10 @@ function TokensLibrary._renderRow(item, slot_dimen, doc_ctx)
     local line2 = TextWidget:new{
         text = line2_text,
         face = Font:getFace("cfont", 13),
-        fgcolor = Blitbuffer.COLOR_DARK_GRAY,
+        -- COLOR_DARK_GRAY (0x88) read as too faded — bumping to GRAY_5
+        -- (0x55) for clearer contrast against white while staying
+        -- visibly subordinate to the bold-black description above.
+        fgcolor = Blitbuffer.COLOR_GRAY_5,
         max_width = content_w,
     }
 
@@ -182,6 +185,34 @@ function TokensLibrary:show(bookends, on_select)
 
     local config = {
         title = _("Tokens library"),
+        help_title = _("Tokens & conditionals"),
+        help_text = _([[CONDITIONALS
+
+Wrap content in [if:condition]…[/if] to show it only when the condition is true. Add an [else]…[/if] branch for an alternative.
+
+OPERATORS
+  =    equals               !=  not equals
+  <    less than            >   greater than
+  <=   at most              >=  at least
+  and / or / not  · ( ) for grouping
+
+Truthy check: a bare [if:key] tests whether the key is set, non-zero, and not "off"/"no". Useful for [if:title]…[/if], [if:author]…[/if], [if:series]…[/if].
+
+Token-reference comparison: =@token compares against another token's current value, e.g. [if:chap_title_1!=@title]…[/if] hides chapter title when it equals the book title.
+
+COMMON STATE KEYS
+  wifi=on/off, connected=yes/no, charging=yes/no
+  batt 0–100, book_pct 0–100, chap_pct 0–100
+  light=on/off, light_pct 0–100, warmth_pct 0–100
+  night=on/off, invert=yes/no
+  page=odd/even, day=Mon..Sun, time=HH:MM, format=EPUB/PDF/…
+
+EXAMPLES
+  [if:authors>1]%author, et al.[else]%author[/if]
+  [if:batt<20]LOW %batt[/if]
+  [if:time>=18:00 and time<18:30]6–6:30[/if]
+  [if:not series]Standalone[/if]
+]]),
         chip_strip = function()
             local out = {}
             for _i, c in ipairs(CHIPS) do

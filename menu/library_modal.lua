@@ -183,6 +183,15 @@ function LibraryModal:_renderTitleBar(content_width, modal_w)
     -- Passed to _renderTabSegments so each segment can fill the full bar height.
     local title_bar_h = title_w:getSize().h + 2 * bar_pad
 
+    -- Optional title-bar help button. Consumers (tokens library) populate
+    -- self.config.help_text with a multi-line string; tapping the "?" pops
+    -- a TextViewer dialog with that text. No button is rendered when
+    -- help_text is unset, so the bar layout collapses to title + tabs.
+    local help_btn = nil
+    if self.config.help_text then
+        help_btn = self:_renderHelpButton(title_bar_h)
+    end
+
     local right_widget
     if self.config.tabs then
         -- Build segmented [Tab1 | Tab2] pill row; active tab is filled black,
@@ -192,14 +201,33 @@ function LibraryModal:_renderTitleBar(content_width, modal_w)
         right_widget = HorizontalSpan:new{ width = 0 }
     end
 
+    -- Compose right side: [help button] [gap] [tab segments]. When help is
+    -- absent the gap and button collapse out; when tabs are absent the
+    -- right_widget is a zero-width spacer.
+    local right_w = right_widget:getSize().w
+    local right_group
+    if help_btn then
+        local gap = Screen:scaleBySize(8)
+        local help_w = help_btn:getSize().w
+        right_group = HorizontalGroup:new{
+            align = "center",
+            help_btn,
+            HorizontalSpan:new{ width = self.config.tabs and gap or 0 },
+            right_widget,
+        }
+        right_w = help_w + (self.config.tabs and gap or 0) + right_widget:getSize().w
+    else
+        right_group = right_widget
+    end
+
     -- Title left, tab segments right, with the gap absorbed by a flexible spacer.
     local row = HorizontalGroup:new{
         align = "center",
         LeftContainer:new{
-            dimen = Geom:new{ w = content_width - right_widget:getSize().w, h = title_bar_h },
+            dimen = Geom:new{ w = content_width - right_w, h = title_bar_h },
             title_w,
         },
-        right_widget,
+        right_group,
     }
 
     -- Separator runs the full frame width (modal_w) so it spans edge-to-edge,
@@ -212,6 +240,54 @@ function LibraryModal:_renderTitleBar(content_width, modal_w)
             dimen = Geom:new{ w = modal_w, h = Device.screen:scaleBySize(3) },
         },
     }
+end
+
+function LibraryModal:_renderHelpButton(title_bar_h)
+    -- Square "?" button styled like a single tab segment so it visually
+    -- belongs to the title bar. Tap shows the help text in a scrollable
+    -- TextViewer dialog. Sized 1:1 (square) at title_bar_h so it reads
+    -- as an icon-button rather than a wide pill.
+    local Font = require("ui/font")
+    local GestureRange = require("ui/gesturerange")
+    local TextWidget = require("ui/widget/textwidget")
+    local Screen = Device.screen
+
+    local btn_w = title_bar_h
+    local glyph = TextWidget:new{
+        text = "?",
+        face = Font:getFace("cfont", 16),
+        bold = true,
+        fgcolor = Blitbuffer.COLOR_BLACK,
+    }
+    local fc = FrameContainer:new{
+        bordersize = Size.border.thin,
+        color = Blitbuffer.COLOR_BLACK,
+        padding = 0, margin = 0,
+        radius = Size.radius.default,
+        background = Blitbuffer.COLOR_WHITE,
+        CenterContainer:new{
+            dimen = Geom:new{ w = btn_w, h = title_bar_h },
+            glyph,
+        },
+    }
+    local ic = InputContainer:new{
+        dimen = Geom:new{ w = btn_w, h = title_bar_h },
+        fc,
+    }
+    ic.ges_events = {
+        TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } },
+    }
+    ic.onTapSelect = function() self:_showHelp(); return true end
+    return ic
+end
+
+function LibraryModal:_showHelp()
+    local TextViewer = require("ui/widget/textviewer")
+    UIManager:show(TextViewer:new{
+        title = self.config.help_title or self.config.title or "",
+        text = self.config.help_text or "",
+        justified = false,
+    })
 end
 
 function LibraryModal:_renderTabSegments(title_bar_h)
