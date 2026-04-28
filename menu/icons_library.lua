@@ -319,6 +319,76 @@ local function getNerdFontEntryByBytes(bytes)
     return _bytes_to_entry[bytes]
 end
 
+-- Per-chip patterns used to absorb related cmap entries into a curated
+-- chip. Plain-substring match against the cmap name (lowercase kebab-
+-- case). Patterns are deliberately narrow words that stick close to the
+-- chip's theme; widening them risks pulling unrelated brand or UI icons.
+-- Curated picks always render first (preserving their hand-written
+-- order); pattern matches append alphabetically and dedupe by codepoint.
+local PATTERNS_BY_CHIP = {
+    device  = { "battery", "wifi", "wireless", "signal", "bluetooth",
+                "cellphone", "tablet", "laptop", "monitor", "memory",
+                "chip", "disk", "router", "ethernet", "usb",
+                "power-plug", "headphone", "speaker", "cog" },
+    reading = { "book", "library", "note", "pencil", "feather",
+                "format-quote" },
+    time    = { "clock", "alarm", "watch", "hourglass", "calendar",
+                "timer", "history" },
+    status  = { "check", "close", "alert", "info", "shield", "lock",
+                "exclamation", "question", "cancel" },
+    arrows  = { "arrow", "chevron", "menu-down", "menu-up", "menu-left",
+                "menu-right", "triangle" },
+}
+
+-- Names matched by a chip's patterns that don't belong there. Substring
+-- matching can't distinguish "book" from "facebook"; rather than fight
+-- the matcher with anchored patterns (which then miss legitimate hits
+-- like "bookmark"), we list the offenders explicitly. Add an entry here
+-- when a pattern surfaces a glyph that's clearly out of place.
+local PATTERN_EXCLUDES = {
+    device = {
+        ["incognito"]  = true,   -- "cog" pattern; privacy mode UI
+        ["poker-chip"] = true,   -- "chip" pattern; not a memory chip
+    },
+    reading = {
+        -- "book" pulls FontAwesome social brands
+        ["facebook"]           = true,
+        ["facebook-box"]       = true,
+        ["facebook-messenger"] = true,
+        ["facebook.1"]         = true,
+        ["facebook_sign"]      = true,
+        -- "note" pulls brand glyphs and the music-note family
+        ["evernote"]                  = true,
+        ["onenote"]                   = true,
+        ["bookmark-music"]            = true,
+        ["library-music"]             = true,
+        ["music-note"]                = true,
+        ["music-note-bluetooth"]      = true,
+        ["music-note-bluetooth-off"]  = true,
+        ["music-note-eighth"]         = true,
+        ["music-note-half"]           = true,
+        ["music-note-off"]            = true,
+        ["music-note-quarter"]        = true,
+        ["music-note-sixteenth"]      = true,
+        ["music-note-whole"]          = true,
+    },
+    status = {
+        ["block-helper"] = true,   -- "lock" pattern; UI block element
+    },
+}
+
+local function nameMatchesAnyPattern(name, patterns)
+    for _i, pat in ipairs(patterns) do
+        if name:find(pat, 1, true) then return true end
+    end
+    return false
+end
+
+-- Cache so each chip's projection (curated + pattern-fill) is built
+-- once per session. The cmap data is static, the curated table is
+-- module-scope, so the projection is invariant after first access.
+local _projection_cache = {}
+
 -- Project a curated chip's entries into render cells. Two input shapes:
 --   { code = 0xNNNN, ... }   - Nerd Font glyph; bytes derived via
 --                              utf8FromCodepoint, label from cmap unless
@@ -328,9 +398,15 @@ end
 --   { glyph = "<bytes>", label = "..." }
 --                            - Pure-Unicode glyph not in the Nerd Font cmap.
 --                              Bytes and label flow through as-is.
+-- After the curated picks, any cmap entries matching the chip's pattern
+-- list are appended (deduped against curated codepoints, alphabetised).
 local function projectCuratedItems(chip_key)
+    if _projection_cache[chip_key] then
+        return _projection_cache[chip_key]
+    end
     local items = IconsLibrary.CURATED_BY_CHIP[chip_key] or {}
     local out = {}
+    local seen_codes = {}
     for _i, item in ipairs(items) do
         local cell = { insert_value = item.insert_value }
         if item.code then
@@ -339,12 +415,26 @@ local function projectCuratedItems(chip_key)
             local entry = getNerdFontEntryByBytes(cell.glyph)
             cell.canonical = entry and entry.name or nil
             cell.label = item.label or cell.canonical or string.format("U+%04X", item.code)
+            seen_codes[item.code] = true
         else
             cell.glyph = item.glyph
             cell.label = item.label
         end
         out[#out + 1] = cell
     end
+    local patterns = PATTERNS_BY_CHIP[chip_key]
+    if patterns then
+        local excludes = PATTERN_EXCLUDES[chip_key] or {}
+        for _i, cell in ipairs(getAllNerdFontCells()) do
+            if cell.code and not seen_codes[cell.code]
+                    and not excludes[cell.canonical]
+                    and nameMatchesAnyPattern(cell.canonical, patterns) then
+                seen_codes[cell.code] = true
+                out[#out + 1] = cell
+            end
+        end
+    end
+    _projection_cache[chip_key] = out
     return out
 end
 
