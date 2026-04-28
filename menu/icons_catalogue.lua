@@ -26,7 +26,6 @@ M.CHIPS = {
     { key = "device", label = _("Device") },
     { key = "reading", label = _("Reading") },
     { key = "time", label = _("Time") },
-    { key = "status", label = _("Status") },
     { key = "symbols", label = _("Symbols") },
     { key = "arrows", label = _("Arrows") },
     { key = "blocks", label = _("Blocks") },
@@ -37,6 +36,8 @@ M.CURATED_BY_CHIP = {
     dynamic = {
         { code = 0xE783, label = _("Battery (changes with level)"), insert_value = "%batt_icon" },   -- battery-charging
         { code = 0xECA8, label = _("Wi-Fi (changes with status)"), insert_value = "%wifi" },   -- wifi
+        { code = 0xEDE6, label = _("Frontlight (changes with on/off)"), insert_value = "%light_icon" },   -- lightbulb-on
+        { code = 0xEC93, label = _("Night mode (changes with theme)"), insert_value = "%nightmode" },   -- weather-night
     },
     device = {
         { code = 0xE782 },   -- battery-alert
@@ -159,23 +160,6 @@ M.CURATED_BY_CHIP = {
         { code = 0xF0E4 },   -- dashboard
         { code = 0xF463 },   -- dashboard.1
     },
-    status = {
-        { code = 0xE82B },   -- check
-        { code = 0xE82C },   -- check-all
-        { code = 0xECDF },   -- check-circle
-        { code = 0xE855 },   -- close
-        { code = 0xE858 },   -- close-circle
-        { code = 0xE725 },   -- alert
-        { code = 0xE727 },   -- alert-circle
-        { code = 0xE728 },   -- alert-octagon
-        { code = 0xF449 },   -- info
-        { code = 0xE904 },   -- exclamation
-        { code = 0xF420 },   -- question
-        { code = 0xEA3D },   -- lock
-        { code = 0xEA3E },   -- lock-open
-        { code = 0xEB97 },   -- shield
-        { code = 0xEE7E },   -- shield-half-full
-    },
     symbols = {
         { glyph = "\xE2\x98\xBC", label = _("Sun (outline)") },
         { glyph = "\xE2\x99\xA8", label = _("Hot springs / warmth") },
@@ -207,6 +191,7 @@ M.CURATED_BY_CHIP = {
         { code = 0xEDBB },   -- alert-decagram
         { code = 0xEE65 },   -- alert-octagram
         { code = 0xE7B4 },   -- blur
+        { code = 0xE8C8 },   -- creation
     },
     arrows = {
         { glyph = "\xE2\x86\x90", label = _("Arrow left") },
@@ -399,13 +384,9 @@ M.CURATED_BY_CHIP = {
 }
 
 M.PATTERNS_BY_CHIP = {
-    status = { "check", "close", "alert", "info", "shield", "lock", "exclamation", "question", "cancel" },
 }
 
 M.PATTERN_EXCLUDES = {
-    status = {
-        ["block-helper"] = true,
-    },
 }
 
 return M

@@ -626,6 +626,11 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
         or (ui.view and ui.view.inverse_reading_order)
     state.invert = page_turn_inverted and "yes" or "no"
 
+    -- Night mode (driven by KOReader's persistent "night_mode" setting,
+    -- toggled via the Toggle night mode action — same source as
+    -- ToggleNightMode handlers in devicelistener.lua).
+    state.night = G_reader_settings:isTrue("night_mode") and "on" or "off"
+
     -- Page-based state
     local pageno = ui.view and ui.view.state and ui.view.state.page
     local doc = ui.document
@@ -1106,7 +1111,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             batt = "[batt]", batt_icon = "[batt]", wifi = "[wifi]",
             plugin_content = "[plugins]",
             invert = "[invert]",
-            light = "[light]", warmth = "[warmth]",
+            light = "[light]", light_icon = "[light]", warmth = "[warmth]",
+            nightmode = "[night]",
             mem = "[mem]", ram = "[rss]",
             disk = "[disk]",
             bar = "\xE2\x96\xB0\xE2\x96\xB0\xE2\x96\xB1\xE2\x96\xB1",  -- ▰▰▱▱
@@ -1640,6 +1646,29 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
     end
 
+    -- Frontlight on/off icon (dynamic). Lightbulb-on glyph (rays) when
+    -- frontlight is on, lightbulb-outline (empty) when off.
+    local light_symbol = ""
+    if needs("light_icon") then
+        local powerd = Device:getPowerDevice()
+        if powerd and powerd:frontlightIntensity() > 0 then
+            light_symbol = "\xEE\xB7\xA6" -- U+EDE6 lightbulb-on
+        else
+            light_symbol = "\xEE\xA8\xB5" -- U+EA35 lightbulb-outline
+        end
+    end
+
+    -- Night mode icon (dynamic). Moon glyph when night mode is active,
+    -- sun glyph otherwise. Driven by KOReader's "night_mode" setting.
+    local night_symbol = ""
+    if needs("nightmode") then
+        if G_reader_settings:isTrue("night_mode") then
+            night_symbol = "\xEE\xB2\x93" -- U+EC93 weather-night
+        else
+            night_symbol = "\xEE\xB2\x98" -- U+EC98 weather-sunny
+        end
+    end
+
     -- Aggregate output from plugins that register with KOReader's footer
     -- extension API (ReaderFooter:addAdditionalFooterContent at
     -- readerfooter.lua:2076). Examples: kobo.koplugin (Bluetooth icon),
@@ -1808,7 +1837,9 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         wifi      = wifi_symbol,
         plugin_content = plugin_content,
         light     = fl_intensity,
+        light_icon = light_symbol,
         warmth    = fl_warmth,
+        nightmode = night_symbol,
         mem       = tostring(mem_usage),
         ram       = ram_mb,
         disk      = disk_avail,
