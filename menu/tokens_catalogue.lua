@@ -134,6 +134,7 @@ M.CONDITIONALS = {
     { description = _("If book has 2+ authors"), expression = "[if:authors>1]...[/if]", chip = "ifelse" },
     { description = _("Author with et al. for multi-author"), expression = "[if:authors>1]%author, et al.[else]%author[/if]", chip = "templates" },
     { description = _("Wi-Fi icon only when Wi-Fi enabled"), expression = "[if:wifi=on]%wifi[/if]", chip = "templates" },
+    { description = _("Bluetooth icon only when on (Kobo only)"), expression = "[if:bt=on]%bluetooth[/if]", chip = "templates" },
     { description = _("Low-battery warning"), expression = "[if:batt<20]LOW %batt_icon[/if]", chip = "templates" },
     { description = _("Bolt when charging"), expression = "[if:charging=yes]\xE2\x9A\xA1[/if] %batt_icon", chip = "templates" },
     { description = _("Arrow when page-turn flipped"), expression = "[if:invert=yes]\xE2\x87\x84[/if]", chip = "templates" },
