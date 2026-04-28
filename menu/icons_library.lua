@@ -433,6 +433,16 @@ local function projectCuratedItems(chip_key)
                 out[#out + 1] = cell
             end
         end
+        -- Sort alphabetically across curated + pattern-fill so glyphs
+        -- sharing a prefix (e.g. bluetooth, bluetooth-audio, bluetooth-off)
+        -- stay adjacent instead of scattering between the two ranges.
+        -- Pure-curated chips (Dynamic / Symbols / Blocks / Separators) skip
+        -- the sort to preserve their hand-designed thematic order.
+        table.sort(out, function(a, b)
+            local ka = (a.canonical or a.label or ""):lower()
+            local kb = (b.canonical or b.label or ""):lower()
+            return ka < kb
+        end)
     end
     _projection_cache[chip_key] = out
     return out
