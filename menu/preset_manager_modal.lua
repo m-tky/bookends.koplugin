@@ -878,10 +878,12 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
     local card_outer_w = width - star_gap - star_width
     local content_w = card_outer_w - 2 * inner_pad - 2 * Size.border.thin
 
-    -- Secondary text colour: DARK_GRAY on WHITE is fine; on LIGHT_GRAY
-    -- (selected state) we darken to pure black for readable contrast.
+    -- Secondary text colour: GRAY_5 (0x55) on WHITE — read as too faded
+    -- at the older DARK_GRAY (0x88), matched the tokens picker bump.
+    -- On LIGHT_GRAY (selected state) we darken to pure black for
+    -- readable contrast.
     local secondary_fg = opts.is_selected and Blitbuffer.COLOR_BLACK
-        or Blitbuffer.COLOR_DARK_GRAY
+        or Blitbuffer.COLOR_GRAY_5
 
     -- Title line: "Title" + optional " by Author" in smaller lighter type.
     -- Both widgets get the same forced_height + forced_baseline so the 18pt
