@@ -4,6 +4,33 @@ local BAR_PLACEHOLDER = require("bookends_overlay_widget").BAR_PLACEHOLDER
 
 local Tokens = {}
 
+-- Bluetooth state for %bluetooth and [if:bt=on] conditionals.
+-- Returns "on", "off", or nil (non-Kobo / signal unavailable).
+-- Kobo-only: the rfkill state file is the same path KOReader's own
+-- platform/kobo/koreader.sh reads to disable BT before nickel handoff,
+-- so it's load-bearing in upstream and stable across kernels.
+-- "connected" is reserved as a future return value once a hardware tester
+-- confirms a reliable detection path (likely enumerating /sys/class/bluetooth
+-- for hci*:* entries). Until then this returns only on/off.
+-- Wrapped in pcall throughout so a missing file, permission error, or
+-- non-Kobo device falls back silently rather than crashing — the user
+-- developing this can't test on Kobo hardware.
+local BT_RFKILL_PATH = "/sys/devices/platform/bt/rfkill/rfkill0/state"
+local function readBluetoothState()
+    local ok_kobo, is_kobo = pcall(function() return Device:isKobo() end)
+    if not (ok_kobo and is_kobo) then return nil end
+    local ok, content = pcall(function()
+        local f = io.open(BT_RFKILL_PATH, "r")
+        if not f then return nil end
+        local line = f:read("*l")
+        f:close()
+        return line
+    end)
+    if not ok or content == nil then return "off" end
+    return content == "1" and "on" or "off"
+end
+Tokens._readBluetoothState = readBluetoothState  -- exposed for tests
+
 -- Set by main.lua from the bookends settings file. When true, %L and %l
 -- include the current page in their count (e.g. 'n→1' instead of 'n−1→0').
 -- Default false matches stock KOReader's default behaviour.
@@ -642,6 +669,10 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     -- ToggleNightMode handlers in devicelistener.lua).
     state.night = G_reader_settings:isTrue("night_mode") and "on" or "off"
 
+    -- Bluetooth (Kobo only). Always populated so [if:bt=on] is a portable
+    -- predicate — non-Kobo devices read "off" rather than nil.
+    state.bt = readBluetoothState() or "off"
+
     -- Page-based state
     local pageno = ui.view and ui.view.state and ui.view.state.page
     local doc = ui.document
@@ -1125,6 +1156,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             light = "[light]", light_icon = "[light]", light_pct = "[light]",
             warmth = "[warmth]", warmth_pct = "[warmth]", warmth_icon = "[warmth]",
             nightmode = "[night]",
+            bluetooth = "[bt]",
             mem = "[mem]", ram = "[rss]",
             disk = "[disk]",
             bar = "\xE2\x96\xB0\xE2\x96\xB0\xE2\x96\xB1\xE2\x96\xB1",  -- ▰▰▱▱
@@ -1681,6 +1713,23 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
     end
 
+    -- Bluetooth icon (dynamic, Kobo only). Empty on non-Kobo so the line
+    -- auto-hides on devices without BT support, matching %warmth_icon's
+    -- behaviour on devices without natural light. The "connected" branch
+    -- below is reserved for when hardware-validated detection lands —
+    -- readBluetoothState currently returns only "on"/"off" on Kobo.
+    local bt_symbol = ""
+    if needs("bluetooth") then
+        local bt = readBluetoothState()
+        if bt == "connected" then
+            bt_symbol = "\xEE\x9E\xB0" -- U+E7B0 bluetooth-connect
+        elseif bt == "on" then
+            bt_symbol = "\xEE\x9E\xAE" -- U+E7AE bluetooth
+        elseif bt == "off" then
+            bt_symbol = "\xEE\x9E\xB1" -- U+E7B1 bluetooth-off
+        end
+    end
+
     -- Frontlight intensity as a 0-100 percentage. Returns just the
     -- number (no "%" suffix) to match the %book_pct convention.
     local fl_intensity_pct = ""
@@ -1895,6 +1944,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         warmth_pct = fl_warmth_pct,
         warmth_icon = warmth_symbol,
         nightmode = night_symbol,
+        bluetooth = bt_symbol,
         mem       = tostring(mem_usage),
         ram       = ram_mb,
         disk      = disk_avail,

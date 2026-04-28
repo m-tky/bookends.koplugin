@@ -105,6 +105,7 @@ M.TOKENS = {
 M.CONDITIONALS = {
     { description = _("If Wi-Fi is on"), expression = "[if:wifi=on]...[/if]", chip = "ifelse" },
     { description = _("If connected"), expression = "[if:connected=yes]...[/if]", chip = "ifelse" },
+    { description = _("If Bluetooth on (Kobo only)"), expression = "[if:bt=on]...[/if]", chip = "ifelse" },
     { description = _("Battery 0\xE2\x80\x93100"), expression = "[if:batt<50]...[/if]", chip = "ifelse" },
     { description = _("If charging"), expression = "[if:charging=yes]...[/if]", chip = "ifelse" },
     { description = _("If page-turn flipped"), expression = "[if:invert=yes]...[/if]", chip = "ifelse" },

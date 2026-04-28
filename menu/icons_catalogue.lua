@@ -36,6 +36,7 @@ M.CURATED_BY_CHIP = {
     dynamic = {
         { code = 0xE783, label = _("Battery"), insert_value = "%batt_icon" },   -- battery-charging
         { code = 0xECA8, label = _("Wi-Fi"), insert_value = "%wifi" },   -- wifi
+        { code = 0xE7AE, label = _("Bluetooth"), insert_value = "%bluetooth" },   -- bluetooth (Kobo only)
         { code = 0xEDE6, label = _("Frontlight"), insert_value = "%light_icon" },   -- lightbulb-on
         { code = 0xE20A, label = _("Warmth"), insert_value = "%warmth_icon" },   -- thermometer
         { code = 0xEC93, label = _("Night mode"), insert_value = "%nightmode" },   -- weather-night

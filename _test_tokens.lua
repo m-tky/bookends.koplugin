@@ -6,6 +6,7 @@
 package.loaded["device"] = {
     getPowerDevice = function() return nil end,
     isKindle = function() return false end,
+    isKobo = function() return false end,
     hasNaturalLight = function() return false end,
     home_dir = "/",
 }
@@ -996,6 +997,63 @@ test("ticks: hidden flows but no current_pageno falls back to whole-doc", functi
     local ticks = Tokens.computeTickFractions(doc, toc, 2)
     eq(#ticks, 1)
     eq(ticks[1][1], 0.5, "whole-doc fraction when caller didn't opt in")
+end)
+
+-- ============================================================================
+-- %bluetooth token (Kobo-only fs read; defensive on non-Kobo)
+-- ============================================================================
+test("bluetooth: state.bt = 'off' on non-Kobo (default stub)", function()
+    local s = Tokens.buildConditionState({}, 0, 0)
+    eq(s.bt, "off")
+end)
+
+test("bluetooth: [if:bt=on] is false on non-Kobo", function()
+    local s = Tokens.buildConditionState({}, 0, 0)
+    local r = Tokens._processConditionals("[if:bt=on]X[/if]Y", s)
+    eq(r, "Y")
+end)
+
+test("bluetooth: %bluetooth resolves to '' on non-Kobo (auto-hide)", function()
+    local ui = stubUiForExpand()
+    local r = Tokens.expand("%bluetooth", ui, 0, 0, false, 2, nil)
+    eq(r, "")
+end)
+
+test("bluetooth: rfkill='1' on Kobo → state.bt='on'", function()
+    local Device = package.loaded["device"]
+    local saved_isKobo, saved_open = Device.isKobo, io.open
+    Device.isKobo = function() return true end
+    io.open = function(path, mode)
+        if path == "/sys/devices/platform/bt/rfkill/rfkill0/state" then
+            return {
+                read = function() return "1" end,
+                close = function() end,
+            }
+        end
+        return saved_open(path, mode)
+    end
+    local ok, s = pcall(Tokens.buildConditionState, {}, 0, 0)
+    Device.isKobo = saved_isKobo
+    io.open = saved_open
+    assert(ok, "buildConditionState raised: " .. tostring(s))
+    eq(s.bt, "on")
+end)
+
+test("bluetooth: missing rfkill file on Kobo → state.bt='off'", function()
+    local Device = package.loaded["device"]
+    local saved_isKobo, saved_open = Device.isKobo, io.open
+    Device.isKobo = function() return true end
+    io.open = function(path, mode)
+        if path == "/sys/devices/platform/bt/rfkill/rfkill0/state" then
+            return nil
+        end
+        return saved_open(path, mode)
+    end
+    local ok, s = pcall(Tokens.buildConditionState, {}, 0, 0)
+    Device.isKobo = saved_isKobo
+    io.open = saved_open
+    assert(ok, "buildConditionState raised: " .. tostring(s))
+    eq(s.bt, "off")
 end)
 
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))
