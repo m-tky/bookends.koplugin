@@ -20,8 +20,8 @@ local Screen = Device.screen
 
 local IconsLibrary = {}
 
--- Chip ordering (left-to-right). "all" is the everything-curated default;
--- the eight category chips below mirror the legacy IconPicker.CATALOG groups.
+-- Chip ordering (left-to-right). "all" is the full Nerd Font index;
+-- the curated category chips below show smaller hand-picked lists.
 local CHIPS = {
     { key = "all",        label = _("All") },
     { key = "dynamic",    label = _("Dynamic") },
@@ -31,62 +31,92 @@ local CHIPS = {
     { key = "status",     label = _("Status") },
     { key = "symbols",    label = _("Symbols") },
     { key = "arrows",     label = _("Arrows") },
-    { key = "progress",   label = _("Progress") },
+    { key = "blocks",     label = _("Blocks") },
     { key = "separators", label = _("Separators") },
 }
 
--- Curated catalogue lifted from bookends_icon_picker.lua. Each entry has:
---   glyph        - the UTF-8 byte sequence to display (and default insert)
---   label        - user-facing description
---   insert_value - optional override (e.g. "%batt_icon" for dynamic tokens)
+-- Curated catalogue. Two entry shapes:
+--   { code = 0xNNNN, ... }   - Nerd Font glyph picked by codepoint. Label
+--                              comes from the font's cmap unless overridden.
+--   { glyph = "<bytes>", label = "..." }
+--                            - Pure-Unicode glyph (not in the Nerd Font cmap).
+--                              Label is the hand-written description.
+-- Optional fields: `label` (override the cmap name), `insert_value` (token
+-- string inserted instead of the literal glyph — used for dynamic icons).
 IconsLibrary.CURATED_BY_CHIP = {
+    -- Dynamic icons resolve at render time to a glyph that reflects current
+    -- state (battery level, Wi-Fi status). Labels stay human-written so the
+    -- "(changes with level)" cue is preserved.
     dynamic = {
-        { glyph = "\xEE\x9E\x90", label = _("Battery (changes with level)"), insert_value = "%batt_icon" },
-        { glyph = "\xEE\xB2\xA8", label = _("Wi-Fi (changes with status)"),  insert_value = "%wifi" },
+        { code = 0xE790, label = _("Battery (changes with level)"), insert_value = "%batt_icon" },
+        { code = 0xECA8, label = _("Wi-Fi (changes with status)"),  insert_value = "%wifi" },
     },
     device = {
-        { glyph = "\xEF\x83\xAB", label = _("Lightbulb") },
-        { glyph = "\xF0\x9F\x92\xA1", label = _("Lightbulb emoji") },
-        { glyph = "\xE2\x98\x80", label = _("Sun (filled)") },
-        { glyph = "\xEF\x86\x85", label = _("Sun (outline)") },
-        { glyph = "\xEF\x86\x86", label = _("Moon") },
-        { glyph = "\xEE\x88\x97", label = _("Paper aeroplane") },
-        { glyph = "\xEF\x81\x82", label = _("Adjust / contrast") },
-        { glyph = "\xEF\x83\xA7", label = _("Lightning bolt") },
-        { glyph = "\xEF\x80\x91", label = _("Power") },
-        { glyph = "\xEF\x84\x8B", label = _("Mobile") },
-        { glyph = "\xEF\x87\xAB", label = _("Wi-Fi") },
-        { glyph = "\xEF\x83\x82", label = _("Cloud") },
-        { glyph = "\xEE\xA9\x9A", label = _("Memory chip") },
-        { glyph = "\xEF\x82\xA0", label = _("HDD / disk") },
+        { code = 0xE778 },   -- battery
+        { code = 0xE783 },   -- battery-charging
+        { code = 0xE782 },   -- battery-alert
+        { code = 0xE78D },   -- battery-outline
+        { code = 0xECA8 },   -- wifi
+        { code = 0xECA9 },   -- wifi-off
+        { code = 0xEBA1 },   -- signal
+        { code = 0xEDF1 },   -- network
+        { code = 0xE7AE },   -- bluetooth
+        { code = 0xE81B },   -- cellphone
+        { code = 0xE266 },   -- chip
+        { code = 0xECED },   -- disk
+        { code = 0xE268 },   -- cloud
+        { code = 0xF013 },   -- cog
     },
     reading = {
-        { glyph = "\xEF\x80\xAD", label = _("Book") },
-        { glyph = "\xEF\x80\xAE", label = _("Bookmark (filled)") },
-        { glyph = "\xEF\x82\x97", label = _("Bookmark (outline)") },
-        { glyph = "\xEF\x81\xAE", label = _("Eye") },
-        { glyph = "\xEF\x81\xB0", label = _("Eye (hidden)") },
-        { glyph = "\xEF\x80\xA4", label = _("Flag") },
-        { glyph = "\xEF\x82\x80", label = _("Bar chart") },
-        { glyph = "\xEF\x83\xA4", label = _("Tachometer") },
-        { glyph = "\xEF\x87\x9E", label = _("Sliders") },
+        { code = 0xE7B9 },   -- book
+        { code = 0xE7BD },   -- book-open-variant
+        { code = 0xE7BE },   -- book-variant
+        { code = 0xE7BA },   -- book-multiple
+        { code = 0xEA30 },   -- library
+        { code = 0xE7BF },   -- bookmark
+        { code = 0xE7C2 },   -- bookmark-outline
+        { code = 0xE7C0 },   -- bookmark-check
+        { code = 0xEA99 },   -- note
+        { code = 0xEAEA },   -- pencil
+        { code = 0xEAE9 },   -- pen
+        { code = 0xEB46 },   -- read
     },
     time = {
-        { glyph = "\xEF\x80\x97", label = _("Clock") },
-        { glyph = "\xE2\x8F\xB2", label = _("Stopwatch") },
-        { glyph = "\xE2\x8C\x9A", label = _("Watch") },
-        { glyph = "\xE2\x8F\xB3", label = _("Hourglass") },
-        { glyph = "\xE2\x8C\x9B", label = _("Hourglass (filled)") },
-        { glyph = "\xEF\x81\xB3", label = _("Calendar") },
-        { glyph = "\xEF\x89\xB4", label = _("Calendar (checked)") },
+        { code = 0xE84F },   -- clock
+        { code = 0xE851 },   -- clock-fast
+        { code = 0xE850 },   -- clock-end
+        { code = 0xE71F },   -- alarm
+        { code = 0xEE8C },   -- alarm-bell
+        { code = 0xE7EC },   -- calendar
+        { code = 0xE7ED },   -- calendar-blank
+        { code = 0xE7EF },   -- calendar-clock
+        { code = 0xE7F5 },   -- calendar-today
+        { code = 0xE7EE },   -- calendar-check
+        { code = 0xEC1A },   -- timer
+        { code = 0xEC1E },   -- timer-sand
+        { code = 0xEC88 },   -- watch
     },
     status = {
-        { glyph = "\xEF\x80\x8C", label = _("Check") },
-        { glyph = "\xEF\x80\x8D", label = _("Cross") },
-        { glyph = "\xEF\x81\x9A", label = _("Info") },
-        { glyph = "\xEF\x81\xB1", label = _("Warning") },
-        { glyph = "\xEF\x80\x93", label = _("Cog") },
+        { code = 0xE82B },   -- check
+        { code = 0xE82C },   -- check-all
+        { code = 0xECDF },   -- check-circle
+        { code = 0xE855 },   -- close
+        { code = 0xE858 },   -- close-circle
+        { code = 0xE725 },   -- alert
+        { code = 0xE727 },   -- alert-circle
+        { code = 0xE728 },   -- alert-octagon
+        { code = 0xF449 },   -- info
+        { code = 0xE904 },   -- exclamation
+        { code = 0xF420 },   -- question
+        { code = 0xEA3D },   -- lock
+        { code = 0xEA3E },   -- lock-open
+        { code = 0xEB97 },   -- shield
+        { code = 0xEE7E },   -- shield-half-full
     },
+    -- Symbols are pure Unicode (suit symbols, dagger, pilcrow, etc.) — they
+    -- aren't in the Nerd Font cmap, so we hand-label them. Check / cross
+    -- have moved to the Status chip where they have richer cmap-named
+    -- variants (check, check-all, check-circle, …).
     symbols = {
         { glyph = "\xE2\x98\xBC", label = _("Sun (outline)") },
         { glyph = "\xE2\x99\xA8", label = _("Hot springs / warmth") },
@@ -96,8 +126,6 @@ IconsLibrary.CURATED_BY_CHIP = {
         { glyph = "\xE2\x99\xA6", label = _("Diamond suit") },
         { glyph = "\xE2\x98\x85", label = _("Star (filled)") },
         { glyph = "\xE2\x98\x86", label = _("Star (outline)") },
-        { glyph = "\xE2\x9C\x93", label = _("Check mark") },
-        { glyph = "\xE2\x9C\x97", label = _("Cross mark") },
         { glyph = "\xE2\x88\x9E", label = _("Infinity") },
         { glyph = "\xC2\xA7",     label = _("Section sign") },
         { glyph = "\xC2\xB6",     label = _("Pilcrow / paragraph") },
@@ -155,17 +183,54 @@ IconsLibrary.CURATED_BY_CHIP = {
         { glyph = "\xE2\x98\x9D", label = _("Pointing up") },
         { glyph = "\xE2\x98\x9F", label = _("Pointing down") },
     },
-    progress = {
-        { glyph = "\xE2\x96\xB0", label = _("Slant block") },
-        { glyph = "\xE2\x96\xB1", label = _("Slant block (empty)") },
-        { glyph = "\xE2\x96\xAE", label = _("Vertical block") },
-        { glyph = "\xE2\x96\xAF", label = _("Vertical block (empty)") },
-        { glyph = "\xE2\x96\xA0", label = _("Square (filled)") },
-        { glyph = "\xE2\x96\xA1", label = _("Square (empty)") },
+    -- Solid block / shape palette. Designed for hand-rolled progress bars
+    -- assembled with [if:book_pct>X]…[/if] nesting — pairs of filled/empty
+    -- variants let you compose proportional fills, and the eighth-block
+    -- ramps give finer granularity than the four shading levels.
+    blocks = {
+        -- Full blocks and shading
         { glyph = "\xE2\x96\x88", label = _("Block (full)") },
         { glyph = "\xE2\x96\x93", label = _("Block (dark)") },
         { glyph = "\xE2\x96\x92", label = _("Block (medium)") },
         { glyph = "\xE2\x96\x91", label = _("Block (light)") },
+        -- Half blocks
+        { glyph = "\xE2\x96\x80", label = _("Upper half block") },
+        { glyph = "\xE2\x96\x84", label = _("Lower half block") },
+        { glyph = "\xE2\x96\x8C", label = _("Left half block") },
+        { glyph = "\xE2\x96\x90", label = _("Right half block") },
+        -- Lower N/8 ramp
+        { glyph = "\xE2\x96\x81", label = _("Lower 1/8 block") },
+        { glyph = "\xE2\x96\x82", label = _("Lower 1/4 block") },
+        { glyph = "\xE2\x96\x83", label = _("Lower 3/8 block") },
+        { glyph = "\xE2\x96\x85", label = _("Lower 5/8 block") },
+        { glyph = "\xE2\x96\x86", label = _("Lower 3/4 block") },
+        { glyph = "\xE2\x96\x87", label = _("Lower 7/8 block") },
+        -- Left N/8 ramp (right-to-left fill)
+        { glyph = "\xE2\x96\x8F", label = _("Left 1/8 block") },
+        { glyph = "\xE2\x96\x8E", label = _("Left 1/4 block") },
+        { glyph = "\xE2\x96\x8D", label = _("Left 3/8 block") },
+        { glyph = "\xE2\x96\x8B", label = _("Left 5/8 block") },
+        { glyph = "\xE2\x96\x8A", label = _("Left 3/4 block") },
+        { glyph = "\xE2\x96\x89", label = _("Left 7/8 block") },
+        -- Squares and rectangles
+        { glyph = "\xE2\x96\xA0", label = _("Square (filled)") },
+        { glyph = "\xE2\x96\xA1", label = _("Square (empty)") },
+        { glyph = "\xE2\x96\xAC", label = _("Rectangle (filled)") },
+        { glyph = "\xE2\x96\xAD", label = _("Rectangle (empty)") },
+        { glyph = "\xE2\x96\xAE", label = _("Vertical block") },
+        { glyph = "\xE2\x96\xAF", label = _("Vertical block (empty)") },
+        { glyph = "\xE2\x96\xB0", label = _("Slant block") },
+        { glyph = "\xE2\x96\xB1", label = _("Slant block (empty)") },
+        -- Circles
+        { glyph = "\xE2\x97\x8F", label = _("Circle (filled)") },
+        { glyph = "\xE2\x97\x8B", label = _("Circle (empty)") },
+        { glyph = "\xE2\x97\x90", label = _("Circle (left half)") },
+        { glyph = "\xE2\x97\x91", label = _("Circle (right half)") },
+        { glyph = "\xE2\x97\x92", label = _("Circle (lower half)") },
+        { glyph = "\xE2\x97\x93", label = _("Circle (upper half)") },
+        -- Diamonds
+        { glyph = "\xE2\x97\x86", label = _("Diamond (filled)") },
+        { glyph = "\xE2\x97\x87", label = _("Diamond (empty)") },
     },
     separators = {
         { glyph = "|",             label = _("Vertical bar") },
@@ -195,29 +260,6 @@ local function loadNerdFontNames()
     return nerdfont_names
 end
 
--- Map upstream glyphnames.json's `{set}-` prefix to a human label. The
--- bundled glyphnames.json uses bare prefixes like `cod-account`, `fa-bookmark`,
--- `mdi-clock-outline` (no `nf-` prefix despite some online docs).
-local SET_LABELS = {
-    cod = "Codicons", custom = "Nerd Fonts custom", dev = "Devicons",
-    fa = "FontAwesome 4", fab = "FontAwesome Brands", fae = "FontAwesome Extra",
-    far = "FontAwesome Regular", fas = "FontAwesome Solid",
-    iec = "IEC Power", indent = "Indent", indentation = "Indentation",
-    linea = "Linea", md = "Material Design Icons",
-    mdi = "Material Design Icons", oct = "Octicons", pl = "Powerline",
-    ple = "Powerline Extra", pom = "Pomicons", seti = "Seti UI",
-    weather = "Weather Icons",
-}
-
-function IconsLibrary._setLabelOf(name)
-    local set = name:match("^([%w]+)%-")
-    return SET_LABELS[set] or "Nerd Fonts"
-end
-
-function IconsLibrary._suffixOf(name)
-    return (name:gsub("^[%w]+%-", ""))
-end
-
 -- Convert a Unicode codepoint integer to its UTF-8 byte sequence.
 local function utf8FromCodepoint(cp)
     if cp < 0x80 then
@@ -237,10 +279,14 @@ local function utf8FromCodepoint(cp)
     end
 end
 
--- One-time cell projection of the full Nerd Font names list. The conversion
--- (utf8FromCodepoint + suffix extraction) is identical across All view and
--- search results, so we build the cells table once on first access and reuse
--- it for the rest of the session.
+-- One-time cell projection of the full Nerd Font names list. Both the All
+-- view and the search filter consume this same list, so we build it once
+-- on first access and reuse it for the rest of the session. Label uses the
+-- font's own cmap name verbatim (e.g. "checkbox-blank-circle-outline") so
+-- the displayed string matches what search hits — earlier code stripped a
+-- leading hyphen-segment under a wrong assumption that the data carried
+-- set prefixes like `mdi-`/`fa-`/`cod-`, which mangled half the labels and
+-- caused mystery search hits like "box" → "blank-circle".
 local _all_cells = nil
 local function getAllNerdFontCells()
     if _all_cells then return _all_cells end
@@ -249,13 +295,57 @@ local function getAllNerdFontCells()
     for _i, entry in ipairs(names) do
         _all_cells[#_all_cells + 1] = {
             glyph = utf8FromCodepoint(entry.code),
-            label = IconsLibrary._suffixOf(entry.name),
+            label = entry.name,
             canonical = entry.name,
             code = entry.code,
             insert_value = utf8FromCodepoint(entry.code),
         }
     end
     return _all_cells
+end
+
+-- Reverse lookup of the Nerd Font index by UTF-8 byte sequence. Used to
+-- swap curated entries' hand-written labels for their canonical cmap name
+-- (e.g. "Memory chip" → "memory") so search by partial name finds them.
+local _bytes_to_entry = nil
+local function getNerdFontEntryByBytes(bytes)
+    if _bytes_to_entry == nil then
+        _bytes_to_entry = {}
+        local names = loadNerdFontNames()
+        for _i, entry in ipairs(names) do
+            _bytes_to_entry[utf8FromCodepoint(entry.code)] = entry
+        end
+    end
+    return _bytes_to_entry[bytes]
+end
+
+-- Project a curated chip's entries into render cells. Two input shapes:
+--   { code = 0xNNNN, ... }   - Nerd Font glyph; bytes derived via
+--                              utf8FromCodepoint, label from cmap unless
+--                              the entry overrides via `label = ...`
+--                              (used by the `dynamic` chip to preserve the
+--                              "(changes with level)" cue on tokens).
+--   { glyph = "<bytes>", label = "..." }
+--                            - Pure-Unicode glyph not in the Nerd Font cmap.
+--                              Bytes and label flow through as-is.
+local function projectCuratedItems(chip_key)
+    local items = IconsLibrary.CURATED_BY_CHIP[chip_key] or {}
+    local out = {}
+    for _i, item in ipairs(items) do
+        local cell = { insert_value = item.insert_value }
+        if item.code then
+            cell.glyph = utf8FromCodepoint(item.code)
+            cell.code = item.code
+            local entry = getNerdFontEntryByBytes(cell.glyph)
+            cell.canonical = entry and entry.name or nil
+            cell.label = item.label or cell.canonical or string.format("U+%04X", item.code)
+        else
+            cell.glyph = item.glyph
+            cell.label = item.label
+        end
+        out[#out + 1] = cell
+    end
+    return out
 end
 
 -- Build the visible item list for the current chip + search state.
@@ -274,12 +364,12 @@ local function currentItemList(state)
         return items
     end
     if state.active_chip == "all" or not state.active_chip then
-        -- All: the entire Nerd Font index (~3,400 entries) for free browsing,
-        -- alphabetised which incidentally groups by source set (cod-, fa-,
-        -- mdi-, etc.). Curated category chips show smaller hand-picked lists.
+        -- All: the entire Nerd Font index (~2,800 entries) for free browsing,
+        -- alphabetised by cmap name. Curated category chips show smaller
+        -- hand-picked lists, with cmap-name labels where applicable.
         return getAllNerdFontCells()
     end
-    return IconsLibrary.CURATED_BY_CHIP[state.active_chip] or {}
+    return projectCuratedItems(state.active_chip)
 end
 
 -- Render a single icon cell: glyph centred large, label below.
@@ -368,7 +458,15 @@ function IconsLibrary:show(on_select)
             local names = loadNerdFontNames()
             return T(_("Search %1 icons by name…"), tostring(#names))
         end,
-        on_search_submit = function(query) state.search_query = query end,
+        on_search_submit = function(query)
+            state.search_query = query
+            -- Search hits the full Nerd Font index regardless of the active
+            -- chip, so the chip strip should reflect that by snapping back
+            -- to "All" — otherwise the highlighted chip lies about what's
+            -- visible. The chip-strip callback rebuilds is_active from
+            -- state.active_chip on the next refresh.
+            if query then state.active_chip = "all" end
+        end,
         grid_cols = 4,
         cells_per_page = function() return 4 * 4 end,    -- 4 cols × 4 rows
         cell_renderer = IconsLibrary._renderCell,
