@@ -493,10 +493,20 @@ function el(tag, props, ...children) {
 
 // ---- Sidebar ------------------------------------------------------------
 
+// Dynamic chip is intentionally hidden from the curator — those entries
+// must be edited in code (they need label overrides + insert_value
+// tokens that the curator's "+ Add icon" flow can't produce). The
+// chip's data still round-trips through state.catalogue unchanged.
+const HIDDEN_CHIPS = new Set(['dynamic']);
+
+function visibleChips() {
+    return state.catalogue.chips.filter(c => !HIDDEN_CHIPS.has(c.key));
+}
+
 function renderChips() {
     const nav = document.getElementById('chips');
     clearChildren(nav);
-    for (const chip of state.catalogue.chips) {
+    for (const chip of visibleChips()) {
         const count = chip.key === 'all'
             ? state.cmap.length
             : projectChip(chip.key).length;
@@ -574,12 +584,10 @@ function renderAllGrid(q) {
     let shown = 0;
     for (const e of state.cmap) {
         if (q && !e.name.includes(q)) continue;
-        if (shown >= 500) break;
         grid.appendChild(makeCell({ code: e.code, label: e.name }, false));
         shown++;
     }
-    cnt.textContent = shown + ' / ' + state.cmap.length
-        + (shown >= 500 ? ' (capped)' : '');
+    cnt.textContent = shown + ' / ' + state.cmap.length;
 }
 
 function curatedSection(key) {
@@ -715,7 +723,6 @@ function renderPicker() {
     let shown = 0;
     for (const e of state.cmap) {
         if (q && !e.name.includes(q)) continue;
-        if (shown >= 300) break;
         const inCur = inCurated.has(e.code);
         const cell = makeCell({ code: e.code, label: e.name, _curated: inCur }, false);
         cell.style.cursor = 'pointer';
@@ -736,8 +743,7 @@ function renderPicker() {
         shown++;
     }
     body.appendChild(grid);
-    document.getElementById('picker-count').textContent =
-        shown + (shown >= 300 ? ' (capped — refine search)' : ' shown');
+    document.getElementById('picker-count').textContent = shown + ' shown';
 }
 
 // ---- Save / Reset -------------------------------------------------------
@@ -773,6 +779,7 @@ async function resetChanges() {
 // ---- Top-level -----------------------------------------------------------
 
 function renderAll() {
+    if (HIDDEN_CHIPS.has(state.activeChip)) state.activeChip = 'all';
     renderChips();
     renderDetail();
 }

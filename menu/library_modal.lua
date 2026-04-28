@@ -587,9 +587,12 @@ function LibraryModal:_renderGridArea(content_width, area_height)
     -- heuristic, which gets fooled by KOReader's display scale factor and
     -- silently drops to 3 cols when the caller wanted 4). Fall back to a
     -- target-width heuristic for callers that don't declare cols.
+    -- grid_cols may be a function so consumers can vary it per active chip.
     local cols
     if self.config.grid_cols then
-        cols = self.config.grid_cols
+        cols = type(self.config.grid_cols) == "function"
+            and self.config.grid_cols()
+            or self.config.grid_cols
     else
         local target_cell_w = Device.screen:scaleBySize(220)
         cols = math.max(3, math.floor(content_width / target_cell_w))

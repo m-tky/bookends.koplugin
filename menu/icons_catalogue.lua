@@ -34,10 +34,10 @@ M.CHIPS = {
 
 M.CURATED_BY_CHIP = {
     dynamic = {
-        { code = 0xE783, label = _("Battery (changes with level)"), insert_value = "%batt_icon" },   -- battery-charging
-        { code = 0xECA8, label = _("Wi-Fi (changes with status)"), insert_value = "%wifi" },   -- wifi
-        { code = 0xEDE6, label = _("Frontlight (changes with on/off)"), insert_value = "%light_icon" },   -- lightbulb-on
-        { code = 0xEC93, label = _("Night mode (changes with theme)"), insert_value = "%nightmode" },   -- weather-night
+        { code = 0xE783, label = _("Battery"), insert_value = "%batt_icon" },   -- battery-charging
+        { code = 0xECA8, label = _("Wi-Fi"), insert_value = "%wifi" },   -- wifi
+        { code = 0xEDE6, label = _("Frontlight"), insert_value = "%light_icon" },   -- lightbulb-on
+        { code = 0xEC93, label = _("Night mode"), insert_value = "%nightmode" },   -- weather-night
     },
     device = {
         { code = 0xE782 },   -- battery-alert
@@ -64,6 +64,12 @@ M.CURATED_BY_CHIP = {
         { code = 0xE7B0 },   -- bluetooth-connect
         { code = 0xEA5A },   -- memory
         { code = 0xEEDA },   -- micro-sd
+        { code = 0xEC93 },   -- weather-night
+        { code = 0xEC98 },   -- weather-sunny
+        { code = 0xECE1 },   -- candle
+        { code = 0xF490 },   -- flame
+        { code = 0xE943 },   -- flashlight
+        { code = 0xE944 },   -- flashlight-off
     },
     reading = {
         { code = 0xE7B9 },   -- book
@@ -192,6 +198,12 @@ M.CURATED_BY_CHIP = {
         { code = 0xEE65 },   -- alert-octagram
         { code = 0xE7B4 },   -- blur
         { code = 0xE8C8 },   -- creation
+        { code = 0xEC93 },   -- weather-night
+        { code = 0xEC98 },   -- weather-sunny
+        { code = 0xF0F4 },   -- coffee.1
+        { code = 0xEEB2 },   -- chili-mild
+        { code = 0xEEB1 },   -- chili-medium
+        { code = 0xEEB0 },   -- chili-hot
     },
     arrows = {
         { glyph = "\xE2\x86\x90", label = _("Arrow left") },
@@ -320,6 +332,15 @@ M.CURATED_BY_CHIP = {
         { code = 0xF050 },   -- fast_forward
         { code = 0xECFF },   -- page-first
         { code = 0xED00 },   -- page-last
+        { code = 0xE8BA },   -- debug-step-into
+        { code = 0xE8BB },   -- debug-step-out
+        { code = 0xE8BC },   -- debug-step-over
+        { code = 0xEBD4 },   -- step-backward
+        { code = 0xEBD5 },   -- step-backward-2
+        { code = 0xF051 },   -- step_forward
+        { code = 0xF048 },   -- step_backward
+        { code = 0xEBD7 },   -- step-forward-2
+        { code = 0xEBD6 },   -- step-forward
     },
     blocks = {
         { glyph = "\xE2\x96\x88", label = _("Block (full)") },

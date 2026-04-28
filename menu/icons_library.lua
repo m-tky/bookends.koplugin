@@ -193,12 +193,15 @@ local function currentItemList(state)
 end
 
 -- Render a single icon cell: glyph centred large, label below.
+-- Glyph size scales with cell width — wider cells (e.g. the 3-col
+-- Dynamic chip) get a bigger glyph so the extra space isn't wasted.
 function IconsLibrary._renderCell(item, dimen)
     local Font = require("ui/font")
     local TextWidget = require("ui/widget/textwidget")
+    local glyph_size = math.max(36, math.floor(dimen.w * 0.16))
     local glyph_w = TextWidget:new{
         text = item.glyph or "",
-        face = Font:getFace("symbols", 36),
+        face = Font:getFace("symbols", glyph_size),
         fgcolor = Blitbuffer.COLOR_BLACK,
     }
     local label_w = TextWidget:new{
@@ -287,8 +290,15 @@ function IconsLibrary:show(on_select)
             -- state.active_chip on the next refresh.
             if query then state.active_chip = "all" end
         end,
-        grid_cols = 4,
-        cells_per_page = function() return 4 * 4 end,    -- 4 cols × 4 rows
+        -- Dynamic chip uses a 3×3 grid so its (currently) 4 entries get
+        -- wider, taller cards — labels fit and the bigger glyphs read
+        -- better. All other chips stay at 4×4 for browse density.
+        grid_cols = function()
+            return state.active_chip == "dynamic" and 3 or 4
+        end,
+        cells_per_page = function()
+            return state.active_chip == "dynamic" and 9 or 16
+        end,
         cell_renderer = IconsLibrary._renderCell,
         cell_long_tap = IconsLibrary._showCellTooltip,
         on_cell_tap = function(item)
