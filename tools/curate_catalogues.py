@@ -748,13 +748,30 @@ function renderTokensDetail(wrap) {
     wrap.appendChild(list);
 
     if (chip.key !== 'all') {
+        // Templates is the mixed-shape chip — it accepts both regular
+        // tokens (plain-text snippets) and conditionals (if/else
+        // examples), so offer both buttons. Other chips offer the one
+        // shape that matches their content.
         const addRow = el('div', { class: 'row', style: 'gap: 8px;' });
-        const valueField = isConditionalChip(chip.key) ? 'expression' : 'token';
-        const valueLabel = isConditionalChip(chip.key) ? 'conditional' : 'token';
-        addRow.appendChild(el('button', {
-            text: '+ Add ' + valueLabel,
-            onclick: () => addTokenEntry(chip.key, valueField),
-        }));
+        if (chip.key === 'templates') {
+            addRow.appendChild(el('button', {
+                text: '+ Add snippet',
+                title: 'Plain-text template (no [if:] conditional). Pushed to TOKENS list.',
+                onclick: () => addTokenEntry(chip.key, 'token'),
+            }));
+            addRow.appendChild(el('button', {
+                text: '+ Add conditional template',
+                title: 'Template with [if:] conditional. Pushed to CONDITIONALS list.',
+                onclick: () => addTokenEntry(chip.key, 'expression'),
+            }));
+        } else {
+            const valueField = isConditionalChip(chip.key) ? 'expression' : 'token';
+            const valueLabel = isConditionalChip(chip.key) ? 'conditional' : 'token';
+            addRow.appendChild(el('button', {
+                text: '+ Add ' + valueLabel,
+                onclick: () => addTokenEntry(chip.key, valueField),
+            }));
+        }
         wrap.appendChild(addRow);
     }
 }
