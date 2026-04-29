@@ -163,22 +163,6 @@ require("bookends_colour_palette").attach(Bookends)
 require("bookends_textwidget_patch")  -- TextWidget: paint ColorRGB32 fgcolor as true colour
 
 function Bookends:init()
-    -- Older bookends versions copied a bundled chevron.down.svg into KOReader's
-    -- shared user-icons dir (DataStorage:getDataDir()/icons) so the icon-name
-    -- resolver could find it. We now rotate stock chevron.up 180° instead, so
-    -- the bundled SVG is gone — but pre-cleanup installs left the file behind,
-    -- where it lingered as visible cruft after the plugin was uninstalled
-    -- (https://www.reddit.com/r/koreader/...). Sweep it on every init; silent
-    -- no-op once it's been removed.
-    do
-        local DataStorage = require("datastorage")
-        local lfs = require("libs/libkoreader-lfs")
-        local stale = DataStorage:getDataDir() .. "/icons/chevron.down.svg"
-        if lfs.attributes(stale, "mode") == "file" then
-            os.remove(stale)
-        end
-    end
-
     self:openSettings()
     self:loadSettings()
     self.ui.menu:registerToMainMenu(self)
