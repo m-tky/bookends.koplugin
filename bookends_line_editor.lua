@@ -260,26 +260,40 @@ function LineEditor.attach(Bookends)
             )
         end
 
-        -- Nudge buttons (1px per tap)
+        -- Nudge buttons (1px per tap). Use Nerd Font chevron glyphs rendered
+        -- as button text rather than KOReader stock icons: ButtonTable doesn't
+        -- forward icon_rotation_angle to Button (its forwarded-fields allowlist
+        -- omits it), and stock KOReader ships chevron.up/left/right but not
+        -- chevron.down. The bundled Symbols Nerd Font has matched chevrons in
+        -- all four directions (mdi range U+E83F-E842), and ButtonTable does
+        -- forward `font_face` to text_font_face — so no patches, no shared-
+        -- icons-folder workaround, no stylistic split inside the dialog.
+        -- font_size matches the SVG-icon canvas of the previous chevron icons
+        -- so they read as buttons rather than tiny glyphs against the
+        -- adjacent "Position" text label.
+        local NUDGE_GLYPH_SIZE = 28
         local nudge_up = {
-            icon = "chevron.up",
+            text = "\xEE\xA1\x82",  -- U+E842 mdi-chevron-up
+            font_face = "symbols",
+            font_size = NUDGE_GLYPH_SIZE,
             callback = function() end,
         }
         local nudge_down = {
-            -- Stock KOReader ships chevron.up but not chevron.down; rotate the
-            -- up glyph 180° rather than bundle our own SVG (which previously
-            -- got copied into the user-icons dir and confused users who saw it
-            -- linger after uninstall).
-            icon = "chevron.up",
-            icon_rotation_angle = 180,
+            text = "\xEE\xA0\xBF",  -- U+E83F mdi-chevron-down
+            font_face = "symbols",
+            font_size = NUDGE_GLYPH_SIZE,
             callback = function() end,
         }
         local nudge_left = {
-            icon = "chevron.left",
+            text = "\xEE\xA1\x80",  -- U+E840 mdi-chevron-left
+            font_face = "symbols",
+            font_size = NUDGE_GLYPH_SIZE,
             callback = function() end,
         }
         local nudge_right = {
-            icon = "chevron.right",
+            text = "\xEE\xA1\x81",  -- U+E841 mdi-chevron-right
+            font_face = "symbols",
+            font_size = NUDGE_GLYPH_SIZE,
             callback = function() end,
         }
         local nudge_label = {
