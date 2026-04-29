@@ -386,30 +386,38 @@ end
 -- @param max_width number or nil: if set, truncate lines to this pixel width
 -- @param available_w number or nil: total available width (used for bar lines)
 -- @return widget, width, height
-function OverlayWidget.buildTextWidget(text, line_configs, h_anchor, max_width, available_w)
+-- buildTextWidget takes line_texts as an ARRAY (one entry per config-line).
+-- Each entry may itself contain embedded \n which expand to additional visual
+-- rows that share the same config — that distinction matters: a literal \n
+-- inside a single config-line's format string MUST keep that line's config
+-- (font, bar flag, nudges, etc.) for every row it produces. Joining with \n
+-- and splitting again loses that boundary, which is exactly what caused
+-- bar-from-line-N to render onto the wrap-row of line-N-1 (the original bug
+-- this signature change addresses).
+function OverlayWidget.buildTextWidget(line_texts, line_configs, h_anchor, max_width, available_w)
     if max_width and max_width <= 0 then
         return nil, 0, 0
     end
 
-    local lines = {}
-    for line in text:gmatch("([^\n]+)") do
-        table.insert(lines, line)
+    -- Walk per-config-line so each visual row carries its own config.
+    -- Fallback to last config if fewer configs than texts; cfont as last-ditch
+    -- since TextWidget crashes in font.lua's getAdjustedFace on a nil face.
+    local lines = {}        -- visual row strings
+    local lines_cfg = {}    -- 1:1 with lines, the config for that row
+    local default_cfg = { face = Font:getFace("cfont"), bold = false }
+    for ci, cfg_text in ipairs(line_texts) do
+        local cfg = line_configs[ci] or line_configs[#line_configs] or default_cfg
+        for row in cfg_text:gmatch("([^\n]+)") do
+            table.insert(lines, row)
+            table.insert(lines_cfg, cfg)
+        end
     end
     if #lines == 0 then
         return nil, 0, 0
     end
 
-    -- Get config for line i (fall back to last config if fewer configs than lines).
-    -- Last-ditch fallback uses cfont explicitly: TextWidget crashes in
-    -- font.lua's getAdjustedFace if face is nil, which has bitten us when
-    -- a user's configured font failed to load at freetype level.
-    local function getConfig(i)
-        return line_configs[i] or line_configs[#line_configs]
-            or { face = Font:getFace("cfont"), bold = false }
-    end
-
     if #lines == 1 then
-        local cfg = getConfig(1)
+        local cfg = lines_cfg[1]
         -- Try styled segments (BBCode tags or bar placeholder)
         local segments, has_tags = OverlayWidget.parseStyledSegments(
             lines[1], cfg.bold, cfg.italic or false, cfg.uppercase,
@@ -417,8 +425,10 @@ function OverlayWidget.buildTextWidget(text, line_configs, h_anchor, max_width, 
         if segments then
             return OverlayWidget.buildStyledLine(segments, cfg, available_w or Screen:getWidth(), max_width)
         end
-        -- Bar line without tags
-        if cfg.bar then
+        -- Bar line without tags. Only when the row actually carries the
+        -- placeholder — cfg.bar can be true for any visual row of a
+        -- config-line that uses %bar, including rows that don't contain it.
+        if cfg.bar and lines[1]:find(BAR_PLACEHOLDER, 1, true) then
             return buildBarLine(lines[1], cfg, available_w or Screen:getWidth(), max_width)
         end
         -- Plain text — fast path
@@ -446,7 +456,7 @@ function OverlayWidget.buildTextWidget(text, line_configs, h_anchor, max_width, 
     local max_w = 0
     local total_h = 0
     for i, line in ipairs(lines) do
-        local cfg = getConfig(i)
+        local cfg = lines_cfg[i]
         local widget, w, h
         -- Try styled segments (BBCode tags or bar placeholder)
         local segments, has_tags = OverlayWidget.parseStyledSegments(
@@ -454,7 +464,11 @@ function OverlayWidget.buildTextWidget(text, line_configs, h_anchor, max_width, 
             cfg.symbol_color)
         if segments then
             widget, w, h = OverlayWidget.buildStyledLine(segments, cfg, available_w or Screen:getWidth(), max_width)
-        elseif cfg.bar then
+        elseif cfg.bar and line:find(BAR_PLACEHOLDER, 1, true) then
+            -- Only treat as a bar row if it actually carries the placeholder.
+            -- A config-line whose format string contains %bar plus literal \n
+            -- produces multiple visual rows; only one of them holds the
+            -- placeholder, the rest must render as plain text.
             widget, w, h = buildBarLine(line, cfg, available_w or Screen:getWidth(), max_width)
         else
             local display_text = cfg.uppercase and Utf8Proc.uppercase_dumb(line) or line
@@ -490,32 +504,35 @@ end
 
 --- Build a widget with no truncation (for measurement), returning it for potential reuse.
 -- @return widget, width, height
-function OverlayWidget.buildAndMeasure(text, line_configs, h_anchor)
-    return OverlayWidget.buildTextWidget(text, line_configs, h_anchor, nil)
+function OverlayWidget.buildAndMeasure(line_texts, line_configs, h_anchor)
+    return OverlayWidget.buildTextWidget(line_texts, line_configs, h_anchor, nil)
 end
 
 --- Measure the text-only pixel width of a position's content (bar lines excluded).
 -- Used for overlap prevention so bars don't inflate width calculations.
-function OverlayWidget.measureTextWidth(text, line_configs)
+-- line_texts is an array (one per config-line); embedded \n inside a config-
+-- line's text expands to additional visual rows that all share that config —
+-- mirroring the buildTextWidget contract so bar-flag config doesn't leak to
+-- wrap-rows of preceding lines.
+function OverlayWidget.measureTextWidth(line_texts, line_configs)
     local max_w = 0
-    local i = 0
-    for line in text:gmatch("([^\n]+)") do
-        i = i + 1
-        local cfg = line_configs[i] or line_configs[#line_configs]
-            or { face = Font:getFace("cfont"), bold = false }
-        -- For bar lines, measure only the text portions (strip placeholder)
-        local measure_text = line
-        if cfg.bar then
-            measure_text = line:gsub(BAR_PLACEHOLDER, "")
-        end
-        if measure_text ~= "" then
-            local display_text = cfg.uppercase and Utf8Proc.uppercase_dumb(measure_text) or measure_text
-            local tw = TextWidget:new(textWidgetOpts{
-                text = display_text, face = cfg.face, bold = cfg.bold,
-            })
-            local w = tw:getSize().w
-            tw:free()
-            if w > max_w then max_w = w end
+    local default_cfg = { face = Font:getFace("cfont"), bold = false }
+    for ci, cfg_text in ipairs(line_texts) do
+        local cfg = line_configs[ci] or line_configs[#line_configs] or default_cfg
+        for row in cfg_text:gmatch("([^\n]+)") do
+            local measure_text = row
+            if cfg.bar then
+                measure_text = row:gsub(BAR_PLACEHOLDER, "")
+            end
+            if measure_text ~= "" then
+                local display_text = cfg.uppercase and Utf8Proc.uppercase_dumb(measure_text) or measure_text
+                local tw = TextWidget:new(textWidgetOpts{
+                    text = display_text, face = cfg.face, bold = cfg.bold,
+                })
+                local w = tw:getSize().w
+                tw:free()
+                if w > max_w then max_w = w end
+            end
         end
     end
     return max_w

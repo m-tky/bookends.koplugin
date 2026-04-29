@@ -1368,7 +1368,8 @@ function Bookends:_paintToInner(bb, x, y)
     -- Filter lines by page parity, join with \n, then expand tokens
     local pageno = self.ui.view.state.page or 0
     local is_odd_page = (pageno % 2) == 1
-    local expanded = {}
+    local expanded = {}             -- key -> joined string (cache comparison only)
+    local expanded_arrays = {}      -- key -> array of per-config-line expansions (for buildTextWidget)
     local active_line_indices = {} -- key -> { original indices of visible lines }
     local bar_data = {} -- key -> sparse table { [expanded_line_index] = bar_info }
     -- Shared across every Tokens.expand() call for this paint: lets expensive
@@ -1418,7 +1419,13 @@ function Bookends:_paintToInner(bb, x, y)
                     end
                 end
                 if #expanded_lines > 0 then
+                    -- Joined string is kept for cache-comparison only; the
+                    -- per-config-line array is what flows into buildTextWidget
+                    -- (joining and re-splitting on \n loses the config-line
+                    -- boundary, causing bar-from-line-N to render onto the
+                    -- wrap-row of line-N-1 when N-1 has an embedded \n).
                     expanded[pos.key] = table.concat(expanded_lines, "\n")
+                    expanded_arrays[pos.key] = expanded_lines
                     active_line_indices[pos.key] = final_indices
                     if next(position_bars) then
                         bar_data[pos.key] = position_bars
@@ -1465,8 +1472,9 @@ function Bookends:_paintToInner(bb, x, y)
     end
 
     -- Phase 2: Build per-line rendering configs and build widgets for measurement
-    local pre_built = {} -- key -> { widget, w, h, line_configs, pos_def }
+    local pre_built = {} -- key -> { widget, w, h, line_configs, pos_def, line_texts }
     for key, text in pairs(expanded) do
+        local line_texts = expanded_arrays[key] or {}
         local pos_settings = self.positions[key]
         local default_face_name = self:getPositionSetting(key, "font_face")
         local default_font_size = self:getPositionSetting(key, "font_size")
@@ -1531,26 +1539,23 @@ function Bookends:_paintToInner(bb, x, y)
             if p.key == key then pos_def = p; break end
         end
 
-        -- Apply per-token pixel limits (markers from tokens.lua) using resolved font.
-        -- Must happen before widget building so text is clean.
-        local limited_text = text
-        if text:find("\x01") then
-            local limited_lines = {}
-            local li = 0
-            for line in text:gmatch("([^\n]+)") do
-                li = li + 1
-                local cfg = line_configs[li] or line_configs[#line_configs]
-                local cleaned = OverlayWidget.applyTokenLimits(line, cfg.face, cfg.bold, cfg.uppercase)
-                table.insert(limited_lines, cleaned)
+        -- Apply per-token pixel limits (markers from tokens.lua) using resolved
+        -- font. Walk per-config-line so embedded \n inside one config-line
+        -- doesn't shift cfg lookup onto the next line's font.
+        local limited_line_texts = {}
+        for ci, cfg_text in ipairs(line_texts) do
+            if cfg_text:find("\x01") then
+                local cfg = line_configs[ci] or line_configs[#line_configs]
+                cfg_text = OverlayWidget.applyTokenLimits(cfg_text, cfg.face, cfg.bold, cfg.uppercase)
             end
-            limited_text = table.concat(limited_lines, "\n")
+            table.insert(limited_line_texts, cfg_text)
         end
 
         -- Build without truncation to measure natural text width.
         -- For bar positions, Phase 4 will rebuild with the correct row-aware available_w.
         local pos_available_w = screen_w
-        local widget, w, h = OverlayWidget.buildTextWidget(limited_text, line_configs, pos_def.h_anchor, nil, pos_available_w)
-        pre_built[key] = { widget = widget, w = w, h = h, line_configs = line_configs, pos_def = pos_def, text = limited_text }
+        local widget, w, h = OverlayWidget.buildTextWidget(limited_line_texts, line_configs, pos_def.h_anchor, nil, pos_available_w)
+        pre_built[key] = { widget = widget, w = w, h = h, line_configs = line_configs, pos_def = pos_def, line_texts = limited_line_texts }
     end
 
     -- Phase 3: Calculate overlap limits per row
@@ -1570,7 +1575,7 @@ function Bookends:_paintToInner(bb, x, y)
             local pb = pre_built[key]
             if not pb then return nil end
             if bar_data[key] then
-                return OverlayWidget.measureTextWidth(pb.text, pb.line_configs)
+                return OverlayWidget.measureTextWidth(pb.line_texts, pb.line_configs)
             end
             return pb.w
         end
@@ -1605,7 +1610,7 @@ function Bookends:_paintToInner(bb, x, y)
                     -- Truncation needed: free pre-built widget and rebuild with limit
                     if pb.widget and pb.widget.free then pb.widget:free() end
                     widget, w, h = OverlayWidget.buildTextWidget(
-                        pb.text, pb.line_configs, pb.pos_def.h_anchor, max_width, max_width)
+                        pb.line_texts, pb.line_configs, pb.pos_def.h_anchor, max_width, max_width)
                 elseif bar_data[key] then
                     -- Bar position without truncation: rebuild with row-aware available width
                     -- so auto-fill bars don't exceed the space overlap prevention would allow
@@ -1657,7 +1662,7 @@ function Bookends:_paintToInner(bb, x, y)
                         end
                     end
                     widget, w, h = OverlayWidget.buildTextWidget(
-                        pb.text, pb.line_configs, pb.pos_def.h_anchor, nil, bar_avail)
+                        pb.line_texts, pb.line_configs, pb.pos_def.h_anchor, nil, bar_avail)
                 else
                     -- No truncation: reuse pre-built widget
                     widget, w, h = pb.widget, pb.w, pb.h
