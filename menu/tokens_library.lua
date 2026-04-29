@@ -250,7 +250,9 @@ EXAMPLES
             -- library's behaviour (menu/icons_library.lua).
             if query then state.active_chip = "all" end
         end,
-        rows_per_page = 5,
+        rows_per_page = function()
+            return Screen:getWidth() > Screen:getHeight() and 4 or 5
+        end,
         item_count = function() return #TokensLibrary._currentItems(state.active_chip, state.search_query) end,
         item_at = function(idx) return TokensLibrary._currentItems(state.active_chip, state.search_query)[idx] end,
         row_renderer = function(item, dimen)

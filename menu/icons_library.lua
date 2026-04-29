@@ -290,14 +290,20 @@ function IconsLibrary:show(on_select)
             -- state.active_chip on the next refresh.
             if query then state.active_chip = "all" end
         end,
-        -- Dynamic chip uses a 3×3 grid so its (currently) 4 entries get
-        -- wider, taller cards — labels fit and the bigger glyphs read
-        -- better. All other chips stay at 4×4 for browse density.
+        -- Dynamic chip uses a 3-col grid in both orientations so its small
+        -- entry count gets wider cards. Default chips run 4 cols × 4 rows in
+        -- portrait, 5 cols × 3 rows in landscape — same browse density (16
+        -- vs 15 cells) but reshaped to the available aspect.
         grid_cols = function()
-            return state.active_chip == "dynamic" and 3 or 4
+            if state.active_chip == "dynamic" then return 3 end
+            return Screen:getWidth() > Screen:getHeight() and 5 or 4
         end,
         cells_per_page = function()
-            return state.active_chip == "dynamic" and 9 or 16
+            local landscape = Screen:getWidth() > Screen:getHeight()
+            if state.active_chip == "dynamic" then
+                return landscape and 6 or 9
+            end
+            return landscape and 15 or 16
         end,
         cell_renderer = IconsLibrary._renderCell,
         cell_long_tap = IconsLibrary._showCellTooltip,

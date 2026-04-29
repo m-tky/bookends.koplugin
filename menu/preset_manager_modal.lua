@@ -514,7 +514,9 @@ local function buildPresetLibraryConfig(self)
                 self.rebuild()
             end
         end,
-        rows_per_page = 5,
+        rows_per_page = function()
+            return Screen:getWidth() > Screen:getHeight() and 4 or 5
+        end,
         item_count = function() return #currentItemList(self) end,
         item_at = function(idx) return currentItemList(self)[idx] end,
         row_renderer = function(item, dimen)

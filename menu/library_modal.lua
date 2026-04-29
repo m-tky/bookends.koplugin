@@ -554,7 +554,12 @@ function LibraryModal:_onChipTap(chip_key)
 end
 
 function LibraryModal:_renderListArea(content_width, area_height)
+    -- rows_per_page may be a function so callers can vary it per orientation
+    -- (mirrors the grid_cols/cells_per_page contract for the grid mode).
     local rows_per_page = self.config.rows_per_page or 5
+    if type(rows_per_page) == "function" then
+        rows_per_page = rows_per_page()
+    end
     local total = self.config.item_count and self.config.item_count() or 0
 
     if total == 0 and self.config.empty_state then
@@ -698,6 +703,9 @@ function LibraryModal:_renderPagination(content_width)
     local per_page = self.config.rows_per_page
         or (self.config.cells_per_page and self.config.cells_per_page(content_width))
         or 1
+    if type(per_page) == "function" then
+        per_page = per_page()
+    end
     local total_pages = math.max(1, math.ceil(total / per_page))
 
     local chev_size = Screen:scaleBySize(32)
@@ -836,7 +844,20 @@ function LibraryModal:refresh()
     -- bigger than necessary. Uses the row renderer's intrinsic card height
     -- (matches preset_manager's Screen:scaleBySize(64)) so the area accommodates
     -- exactly rows_per_page cards plus inter/outer MARGIN gaps.
-    local rows_per_page = self.config.rows_per_page or 5
+    local rows_per_page = self.config.rows_per_page
+    if type(rows_per_page) == "function" then
+        rows_per_page = rows_per_page()
+    end
+    -- Grid mode (cell_renderer) doesn't set rows_per_page; default it to a
+    -- comfortable 5-rows-of-card-height area in portrait, one row less in
+    -- landscape so the modal doesn't dominate the shorter dimension. Same
+    -- shave applies to list-mode if its config returned the same value in
+    -- both orientations (no-op when the caller already varies by orientation).
+    rows_per_page = rows_per_page or 5
+    local landscape = Screen:getWidth() > Screen:getHeight()
+    if landscape and self.config.cell_renderer then
+        rows_per_page = math.max(2, rows_per_page - 1)
+    end
     local intrinsic_card_h = Screen:scaleBySize(64)
     -- area_height = card stack + inter-row gaps. The MARGIN above the first
     -- card and below the last card is the refresh() inter-section gap.
