@@ -266,7 +266,12 @@ function LineEditor.attach(Bookends)
             callback = function() end,
         }
         local nudge_down = {
-            icon = "chevron.down",
+            -- Stock KOReader ships chevron.up but not chevron.down; rotate the
+            -- up glyph 180° rather than bundle our own SVG (which previously
+            -- got copied into the user-icons dir and confused users who saw it
+            -- linger after uninstall).
+            icon = "chevron.up",
+            icon_rotation_angle = 180,
             callback = function() end,
         }
         local nudge_left = {

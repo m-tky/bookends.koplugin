@@ -163,31 +163,19 @@ require("bookends_colour_palette").attach(Bookends)
 require("bookends_textwidget_patch")  -- TextWidget: paint ColorRGB32 fgcolor as true colour
 
 function Bookends:init()
-    -- Install custom icons (chevron.down) into KOReader's user icons dir
-    local DataStorage = require("datastorage")
-    local lfs = require("libs/libkoreader-lfs")
-    local icons_dst = DataStorage:getDataDir() .. "/icons"
-    if lfs.attributes(icons_dst, "mode") ~= "directory" then
-        lfs.mkdir(icons_dst)
-    end
-    local plugin_icons = self.path .. "/icons"
-    if lfs.attributes(plugin_icons, "mode") == "directory" then
-        for f in lfs.dir(plugin_icons) do
-            if f:match("%.svg$") then
-                local src = plugin_icons .. "/" .. f
-                local dst = icons_dst .. "/" .. f
-                if lfs.attributes(dst, "mode") ~= "file" then
-                    local fin = io.open(src, "r")
-                    if fin then
-                        local fout = io.open(dst, "w")
-                        if fout then
-                            fout:write(fin:read("*a"))
-                            fout:close()
-                        end
-                        fin:close()
-                    end
-                end
-            end
+    -- Older bookends versions copied a bundled chevron.down.svg into KOReader's
+    -- shared user-icons dir (DataStorage:getDataDir()/icons) so the icon-name
+    -- resolver could find it. We now rotate stock chevron.up 180° instead, so
+    -- the bundled SVG is gone — but pre-cleanup installs left the file behind,
+    -- where it lingered as visible cruft after the plugin was uninstalled
+    -- (https://www.reddit.com/r/koreader/...). Sweep it on every init; silent
+    -- no-op once it's been removed.
+    do
+        local DataStorage = require("datastorage")
+        local lfs = require("libs/libkoreader-lfs")
+        local stale = DataStorage:getDataDir() .. "/icons/chevron.down.svg"
+        if lfs.attributes(stale, "mode") == "file" then
+            os.remove(stale)
         end
     end
 
