@@ -998,5 +998,109 @@ test("ticks: hidden flows but no current_pageno falls back to whole-doc", functi
     eq(ticks[1][1], 0.5, "whole-doc fraction when caller didn't opt in")
 end)
 
+-- ============================================================================
+-- Per-book today/week, streaks, lifetime aggregates (cache-seam tests)
+-- ============================================================================
+-- These stats hit SQLite via SQ3 which isn't available in this pure-Lua runner.
+-- The helpers consult stats_cache first, so pre-populating it lets us exercise
+-- the resolver + state plumbing without hitting the DB.
+test("pages_today_book: cached entry renders count", function()
+    local ui = stubUiWithStats({})
+    local r = Tokens.expand("%pages_today_book", ui, 0, 0, false, 2, nil, nil,
+        { stats_cache = { book_today = { pages = 12, duration = 1800 } } })
+    eq(r, "12")
+end)
+
+test("time_today_book: duration formatted via secondsToClockDuration", function()
+    local prev = package.loaded["datetime"].secondsToClockDuration
+    package.loaded["datetime"].secondsToClockDuration = function(_fmt, secs, _hp)
+        return "DUR:" .. tostring(secs)
+    end
+    local ui = stubUiWithStats({})
+    local r = Tokens.expand("%time_today_book", ui, 0, 0, false, 2, nil, nil,
+        { stats_cache = { book_today = { pages = 5, duration = 1800 } } })
+    eq(r, "DUR:1800")
+    package.loaded["datetime"].secondsToClockDuration = prev
+end)
+
+test("state: time_today_book and pages_today_book populated from cache", function()
+    local ui = stubUiWithStats({})
+    local s = Tokens.buildConditionState(ui, 0, 0, nil,
+        { book_today = { pages = 8, duration = 600 } })
+    eq(s.pages_today_book, 8)
+    eq(s.time_today_book, 10, "10 minutes from 600 seconds")
+end)
+
+test("state: time_today_book = 0 when cache empty and no stats", function()
+    local ui = { statistics = nil, view = { state = { page = 1 } },
+                 document = { file = "/b.epub", getPageCount = function() return 100 end,
+                              hasHiddenFlows = function() return false end,
+                              getProps = function() return {} end } }
+    local s = Tokens.buildConditionState(ui, 0, 0)
+    eq(s.pages_today_book, 0)
+    eq(s.time_today_book, 0)
+end)
+
+test("week_book: state populates from book_week cache", function()
+    local ui = stubUiWithStats({})
+    local s = Tokens.buildConditionState(ui, 0, 0, nil,
+        { book_week = { pages = 50, duration = 7200 } })
+    eq(s.pages_week_book, 50)
+    eq(s.time_week_book, 120, "120 minutes from 7200 seconds")
+end)
+
+test("streak: state.streak from cache", function()
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, nil, { streak = 7 })
+    eq(s.streak, 7)
+end)
+
+test("book_streak: state.book_streak populated when id_curr_book set", function()
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, nil, { book_streak = 3 })
+    eq(s.book_streak, 3)
+end)
+
+test("book_streak: state.book_streak = 0 without id_curr_book", function()
+    local ui = stubUiWithStats({ id_curr_book = false })
+    local s = Tokens.buildConditionState(ui, 0, 0, nil, { book_streak = 99 })
+    -- id_curr_book missing → resolver bails, cache lookup never runs.
+    eq(s.book_streak, 0)
+end)
+
+test("streak: %streak resolver renders cached integer", function()
+    local r = Tokens.expand("%streak", stubUiWithStats({}), 0, 0, false, 2, nil, nil,
+        { stats_cache = { streak = 14 } })
+    eq(r, "14")
+end)
+
+test("streak: %streak auto-hides at zero (renders empty)", function()
+    local r = Tokens.expand("%streak", stubUiWithStats({}), 0, 0, false, 2, nil, nil,
+        { stats_cache = { streak = 0 } })
+    eq(r, "")
+end)
+
+test("books_finished: state populated from book_summary cache", function()
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, nil,
+        { book_summary = { total_time = 360000, finished_count = 23 } })
+    eq(s.books_finished, 23)
+    eq(s.total_read_time, 6000, "6000 minutes from 360000 seconds")
+end)
+
+test("books_finished: %books_finished renders the count", function()
+    local r = Tokens.expand("%books_finished", stubUiWithStats({}), 0, 0, false, 2, nil, nil,
+        { stats_cache = { book_summary = { total_time = 0, finished_count = 7 } } })
+    eq(r, "7")
+end)
+
+test("[if:streak>=7] evaluates against state", function()
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, nil, { streak = 10 })
+    eq(Tokens._processConditionals("[if:streak>=7]week+[/if]", s), "week+")
+end)
+
+test("[if:books_finished>=5] evaluates against state", function()
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, nil,
+        { book_summary = { total_time = 0, finished_count = 12 } })
+    eq(Tokens._processConditionals("[if:books_finished>=5]many[/if]", s), "many")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))
 os.exit(fail == 0 and 0 or 1)

@@ -224,6 +224,167 @@ function Tokens._readBookFirstOpen(ui)
     return ts
 end
 
+-- Per-book stats over a time range. Returns { duration, pages } or nil. duration
+-- is seconds, pages is count of distinct rescaled pages read in the range.
+-- Adds the current-book in-memory deltas (mem_read_pages/mem_read_time) since
+-- KOReader doesn't flush every page-turn (MAX_PAGETURNS_BEFORE_FLUSH = 50).
+-- cache_key gates per-paint-cycle caching alongside the existing stats helpers.
+function Tokens._readStatsBookRange(ui, cache, since_ts, cache_key)
+    if cache and cache[cache_key] ~= nil then
+        if cache[cache_key] == false then return nil end
+        return cache[cache_key]
+    end
+    if not ui or not ui.statistics or not ui.statistics.id_curr_book then
+        if cache then cache[cache_key] = false end
+        return nil
+    end
+    local id_book = ui.statistics.id_curr_book
+    local ok, result = pcall(function()
+        local SQ3 = require("lua-ljsqlite3/init")
+        local DataStorage = require("datastorage")
+        local conn = SQ3.open(DataStorage:getSettingsDir() .. "/statistics.sqlite3")
+        -- page_stat is a view that rescales to current page count, so per-page
+        -- deduplication reflects the user's current page numbering. The view's
+        -- triple JOIN is heavier than page_stat_data alone but mirrors what
+        -- KOReader's own getTodayBookStats does, keeping the page count
+        -- semantically consistent with %pages_today.
+        local sql = string.format([[
+            SELECT count(*), sum(sum_duration)
+            FROM (SELECT sum(duration) AS sum_duration
+                  FROM page_stat
+                  WHERE id_book = %d AND start_time >= %d
+                  GROUP BY page);
+        ]], id_book, since_ts)
+        local stmt = conn:prepare(sql)
+        local rows, nrows = stmt:reset():resultset("i")
+        stmt:close()
+        conn:close()
+        local pages = (nrows and nrows > 0) and tonumber(rows[1][1]) or 0
+        local dur   = (nrows and nrows > 0) and tonumber(rows[1][2]) or 0
+        return { pages = pages or 0, duration = dur or 0 }
+    end)
+    if not ok or not result then
+        if cache then cache[cache_key] = false end
+        return nil
+    end
+    local mem_pages = tonumber(ui.statistics.mem_read_pages) or 0
+    local mem_time  = tonumber(ui.statistics.mem_read_time) or 0
+    result.pages = result.pages + mem_pages
+    result.duration = result.duration + mem_time
+    if cache then cache[cache_key] = result end
+    return result
+end
+
+-- Reading streak: consecutive calendar days with activity, ending today
+-- (counted) or yesterday (counted; today still has time to qualify). If
+-- id_book is non-nil, restricts to that book; otherwise across all books.
+-- Bounded to 366 days lookback so the query stays fast on large databases
+-- (the start_time index keeps the page_stat_data scan tight).
+function Tokens._readStreak(ui, cache, id_book, cache_key)
+    if cache and cache[cache_key] ~= nil then
+        if cache[cache_key] == false then return nil end
+        return cache[cache_key]
+    end
+    if not ui or not ui.statistics then
+        if cache then cache[cache_key] = false end
+        return nil
+    end
+    local ok, result = pcall(function()
+        local SQ3 = require("lua-ljsqlite3/init")
+        local DataStorage = require("datastorage")
+        local conn = SQ3.open(DataStorage:getSettingsDir() .. "/statistics.sqlite3")
+        local lookback = os.time() - 366 * 86400
+        local where = id_book
+            and string.format("WHERE id_book = %d AND start_time >= %d", id_book, lookback)
+            or string.format("WHERE start_time >= %d", lookback)
+        -- Query page_stat_data directly (raw rows, no rescaling join) since
+        -- we only need distinct calendar dates. Much cheaper than page_stat.
+        local sql = string.format([[
+            SELECT DISTINCT date(start_time, 'unixepoch', 'localtime') AS dt
+            FROM page_stat_data %s
+            ORDER BY dt DESC
+            LIMIT 366;
+        ]], where)
+        local stmt = conn:prepare(sql)
+        local rows, nrows = stmt:reset():resultset("i")
+        stmt:close()
+        conn:close()
+        if not nrows or nrows == 0 then return 0 end
+        local now_t = os.date("*t")
+        local today_str = string.format("%04d-%02d-%02d", now_t.year, now_t.month, now_t.day)
+        local yest_str  = os.date("%Y-%m-%d", os.time() - 86400)
+        if rows[1][1] ~= today_str and rows[1][1] ~= yest_str then
+            return 0
+        end
+        local streak = 1
+        local prev = rows[1][1]
+        for i = 2, nrows do
+            local cur = rows[i][1]
+            local y, m, d = prev:match("(%d+)-(%d+)-(%d+)")
+            -- Anchor at noon to dodge DST-transition off-by-one when adding 86400s.
+            local prev_t = os.time({ year=tonumber(y), month=tonumber(m), day=tonumber(d), hour=12, min=0, sec=0 })
+            local prev_minus_one = os.date("%Y-%m-%d", prev_t - 86400)
+            if cur == prev_minus_one then
+                streak = streak + 1
+                prev = cur
+            else
+                break
+            end
+        end
+        return streak
+    end)
+    if not ok or not result then
+        if cache then cache[cache_key] = false end
+        return nil
+    end
+    if cache then cache[cache_key] = result end
+    return result
+end
+
+-- Single-row aggregation over the (small) book table. Returns total lifetime
+-- read time in seconds and finished-book count. Adds the current book's
+-- in-memory mem_read_time delta to total so the value updates between flushes.
+-- "Finished" is heuristic: total_read_pages >= pages, as KOReader doesn't
+-- store an explicit completed flag in the stats DB.
+function Tokens._readStatsBookSummary(ui, cache)
+    if cache and cache.book_summary ~= nil then
+        if cache.book_summary == false then return nil end
+        return cache.book_summary
+    end
+    local ok, result = pcall(function()
+        local SQ3 = require("lua-ljsqlite3/init")
+        local DataStorage = require("datastorage")
+        local conn = SQ3.open(DataStorage:getSettingsDir() .. "/statistics.sqlite3")
+        local sql = [[
+            SELECT
+                COALESCE(SUM(total_read_time), 0),
+                COALESCE(SUM(CASE WHEN pages > 0 AND total_read_pages >= pages THEN 1 ELSE 0 END), 0)
+            FROM book;
+        ]]
+        local stmt = conn:prepare(sql)
+        local rows, nrows = stmt:reset():resultset("i")
+        stmt:close()
+        conn:close()
+        if not nrows or nrows == 0 then return { total_time = 0, finished_count = 0 } end
+        return {
+            total_time = tonumber(rows[1][1]) or 0,
+            finished_count = tonumber(rows[1][2]) or 0,
+        }
+    end)
+    if not ok or not result then
+        if cache then cache.book_summary = false end
+        return nil
+    end
+    -- Roll the current book's in-memory delta into the lifetime total so the
+    -- value increments live alongside %book_read_time rather than only at flush.
+    if ui and ui.statistics then
+        local mem_time = tonumber(ui.statistics.mem_read_time) or 0
+        result.total_time = result.total_time + mem_time
+    end
+    if cache then cache.book_summary = result end
+    return result
+end
+
 -- Split KOReader's newline-separated authors string into a list. Drops empties
 -- because KOReader can yield trailing "\n" or "\n\n" runs from messy metadata.
 local function splitAuthors(authors_raw)
@@ -828,6 +989,40 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
         end
     end
 
+    -- Today's reading totals (current book only). Mirrors pages_today/time_today
+    -- but with id_book scoping so a user reading a second book today doesn't
+    -- inflate the count for the book they're currently reading.
+    do
+        local now_t = os.date("*t")
+        local start_today = os.time() - (now_t.hour * 3600 + now_t.min * 60 + now_t.sec)
+        local s = Tokens._readStatsBookRange(ui, stats_cache, start_today, "book_today")
+        state.pages_today_book = s and math.max(0, s.pages) or 0
+        state.time_today_book = s and math.floor(s.duration / 60) or 0
+    end
+
+    -- Current book over the last 7 days (rolling window, not calendar week).
+    do
+        local since = os.time() - 7 * 86400
+        local s = Tokens._readStatsBookRange(ui, stats_cache, since, "book_week")
+        state.pages_week_book = s and math.max(0, s.pages) or 0
+        state.time_week_book = s and math.floor(s.duration / 60) or 0
+    end
+
+    -- Reading streaks (consecutive calendar days). nil id_book = any-book streak.
+    state.streak = Tokens._readStreak(ui, stats_cache, nil, "streak") or 0
+    if ui and ui.statistics and ui.statistics.id_curr_book then
+        state.book_streak = Tokens._readStreak(ui, stats_cache, ui.statistics.id_curr_book, "book_streak") or 0
+    else
+        state.book_streak = 0
+    end
+
+    -- Lifetime aggregates over the book table (single SQL, two values).
+    do
+        local s = Tokens._readStatsBookSummary(ui, stats_cache)
+        state.total_read_time = s and math.floor(s.total_time / 60) or 0
+        state.books_finished = s and s.finished_count or 0
+    end
+
     -- Lifetime stats for the current book (instance fields on ui.statistics).
     if ui.statistics and tonumber(ui.statistics.book_read_pages) and ui.statistics.book_read_pages > 0 then
         state.book_pages_read = math.floor(ui.statistics.book_read_pages)
@@ -1119,6 +1314,10 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             highlights = "[highlights]", notes = "[notes]",
             bookmarks = "[bookmarks]", annotations = "[annotations]",
             speed = "[pg/hr]", book_read_time = "[total]",
+            pages_today_book = "[pages.book]", time_today_book = "[time.book]",
+            pages_week_book = "[pages.wk]", time_week_book = "[time.wk]",
+            streak = "[streak]", book_streak = "[bk.streak]",
+            total_read_time = "[lifetime]", books_finished = "[done]",
             batt = "[batt]", batt_icon = "[batt]", wifi = "[wifi]",
             plugin_content = "[plugins]",
             invert = "[invert]",
@@ -1497,6 +1696,74 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
     end
 
+    -- Today, current book only. Same shape as pages_today/time_today but
+    -- id_book-scoped so multi-book readers see only the book they're in.
+    local pages_today_book_str = ""
+    local time_today_book_str = ""
+    if needs("pages_today_book", "time_today_book") then
+        local now_t = os.date("*t")
+        local start_today = os.time() - (now_t.hour * 3600 + now_t.min * 60 + now_t.sec)
+        local s = Tokens._readStatsBookRange(ui, stats_cache, start_today, "book_today")
+        local p = (s and tonumber(s.pages)) or 0
+        local d = (s and tonumber(s.duration)) or 0
+        if needs("pages_today_book") then
+            pages_today_book_str = tostring(math.floor(p))
+        end
+        if needs("time_today_book") then
+            local user_duration_format = G_reader_settings:readSetting("duration_format", "classic")
+            time_today_book_str = datetime.secondsToClockDuration(user_duration_format, d, true)
+        end
+    end
+
+    -- Last 7 days, current book. Rolling window from now.
+    local pages_week_book_str = ""
+    local time_week_book_str = ""
+    if needs("pages_week_book", "time_week_book") then
+        local since = os.time() - 7 * 86400
+        local s = Tokens._readStatsBookRange(ui, stats_cache, since, "book_week")
+        local p = (s and tonumber(s.pages)) or 0
+        local d = (s and tonumber(s.duration)) or 0
+        if needs("pages_week_book") then
+            pages_week_book_str = tostring(math.floor(p))
+        end
+        if needs("time_week_book") then
+            local user_duration_format = G_reader_settings:readSetting("duration_format", "classic")
+            time_week_book_str = datetime.secondsToClockDuration(user_duration_format, d, true)
+        end
+    end
+
+    -- Reading streaks: consecutive calendar days. Zero auto-hides the line
+    -- on a fresh install or after a missed day.
+    local streak_str = ""
+    if needs("streak") then
+        local n = Tokens._readStreak(ui, stats_cache, nil, "streak") or 0
+        if n > 0 then streak_str = tostring(n) end
+    end
+    local book_streak_str = ""
+    if needs("book_streak") then
+        local id_book = ui.statistics and ui.statistics.id_curr_book
+        if id_book then
+            local n = Tokens._readStreak(ui, stats_cache, id_book, "book_streak") or 0
+            if n > 0 then book_streak_str = tostring(n) end
+        end
+    end
+
+    -- Lifetime aggregates from the book table (one SQL, two values).
+    local total_read_time_str = ""
+    local books_finished_str = ""
+    if needs("total_read_time", "books_finished") then
+        local s = Tokens._readStatsBookSummary(ui, stats_cache)
+        if s then
+            if needs("total_read_time") and s.total_time > 0 then
+                local user_duration_format = G_reader_settings:readSetting("duration_format", "classic")
+                total_read_time_str = datetime.secondsToClockDuration(user_duration_format, s.total_time, true)
+            end
+            if needs("books_finished") and s.finished_count > 0 then
+                books_finished_str = tostring(s.finished_count)
+            end
+        end
+    end
+
     -- Lifetime stats for the current book (instance fields, no SQL).
     local book_pages_read_str = ""
     local avg_page_time_str = ""
@@ -1855,6 +2122,14 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         session_pages = tostring(session_pages),
         pages_today      = pages_today_str,
         time_today       = time_today_str,
+        pages_today_book = pages_today_book_str,
+        time_today_book  = time_today_book_str,
+        pages_week_book  = pages_week_book_str,
+        time_week_book   = time_week_book_str,
+        streak           = streak_str,
+        book_streak      = book_streak_str,
+        total_read_time  = total_read_time_str,
+        books_finished   = books_finished_str,
         book_pages_read   = book_pages_read_str,
         avg_page_time     = avg_page_time_str,
         book_pct_read     = book_pct_read_str,
