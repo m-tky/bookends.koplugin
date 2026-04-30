@@ -219,6 +219,15 @@ function Bookends:init()
         self._flipping_halo = FlippingHaloOverlay:new{ _bookends = self }
         UIManager:show(self._flipping_halo)
     end
+
+    -- Skip overlay painting in any forked subprocess (page-browser thumbnail
+    -- generation). The hook fires inside the child immediately after fork(),
+    -- flipping the class-level flag that paintTo checks. See paintTo for the
+    -- comment on why this is necessary (lipc FDs shared with parent block on
+    -- first child-side query).
+    require("ffi/util").addRunInSubProcessAfterForkFunc("bookends_skip_paint", function()
+        Bookends._is_subprocess = true
+    end)
 end
 
 function Bookends:onCloseDocument()
@@ -1098,8 +1107,19 @@ function Bookends:_flippingWillPaintIcon()
     return false
 end
 
+-- True only inside a forked thumbnail subprocess (page-browser tile generation).
+-- Set by an after-fork hook registered in init() and never cleared, since the
+-- subprocess only lives long enough to produce one tile and exit.
+Bookends._is_subprocess = false
+
 function Bookends:paintTo(bb, x, y)
     if not self.enabled then return end
+    -- Skip overlay painting in thumbnail subprocesses. Mirrors the stock
+    -- footer's footer_visible=false in readerthumbnail.lua: a 200px-tall
+    -- thumbnail can't legibly carry overlay text, and on Kindle several token
+    -- code paths (notably %batt_icon → powerd:isCharging via lipc) block for
+    -- ~10s after fork because the parent shares a stateful FD with the child.
+    if Bookends._is_subprocess then return end
     local ok, err = xpcall(self._paintToInner, debug.traceback, self, bb, x, y)
     if not ok then
         self._paint_error_count = (self._paint_error_count or 0) + 1
