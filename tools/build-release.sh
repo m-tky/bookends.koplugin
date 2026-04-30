@@ -42,5 +42,8 @@ rsync -a \
 echo "Built: $zip_path"
 unzip -l "$zip_path" | tail -1
 echo
-echo "Upload to GitHub release:"
+echo "First-time release for v${version}:"
+echo "  gh -R AndyHazz/bookends.koplugin release create v${version} \"$zip_path\" --title \"v${version}\" --notes \"...\""
+echo
+echo "Re-upload to existing v${version} release (replaces asset, keeps publish state):"
 echo "  gh -R AndyHazz/bookends.koplugin release upload v${version} \"$zip_path\" --clobber"
