@@ -256,11 +256,13 @@ function Tokens._readStatsBookRange(ui, cache, since_ts, cache_key)
                   GROUP BY page);
         ]], id_book, since_ts)
         local stmt = conn:prepare(sql)
+        -- resultset("i") returns column-major data: rows[col][row]. Mirrors
+        -- KOReader's own usage in getBookStat (res[1][i], res[2][i], ...).
         local rows, nrows = stmt:reset():resultset("i")
         stmt:close()
         conn:close()
         local pages = (nrows and nrows > 0) and tonumber(rows[1][1]) or 0
-        local dur   = (nrows and nrows > 0) and tonumber(rows[1][2]) or 0
+        local dur   = (nrows and nrows > 0) and tonumber(rows[2][1]) or 0
         return { pages = pages or 0, duration = dur or 0 }
     end)
     if not ok or not result then
@@ -306,20 +308,23 @@ function Tokens._readStreak(ui, cache, id_book, cache_key)
             LIMIT 366;
         ]], where)
         local stmt = conn:prepare(sql)
+        -- resultset("i") is column-major: rows[col][row]. With one column,
+        -- rows[1] is the date array indexed by row number.
         local rows, nrows = stmt:reset():resultset("i")
         stmt:close()
         conn:close()
         if not nrows or nrows == 0 then return 0 end
+        local dates = rows[1]
         local now_t = os.date("*t")
         local today_str = string.format("%04d-%02d-%02d", now_t.year, now_t.month, now_t.day)
         local yest_str  = os.date("%Y-%m-%d", os.time() - 86400)
-        if rows[1][1] ~= today_str and rows[1][1] ~= yest_str then
+        if dates[1] ~= today_str and dates[1] ~= yest_str then
             return 0
         end
         local streak = 1
-        local prev = rows[1][1]
+        local prev = dates[1]
         for i = 2, nrows do
-            local cur = rows[i][1]
+            local cur = dates[i]
             local y, m, d = prev:match("(%d+)-(%d+)-(%d+)")
             -- Anchor at noon to dodge DST-transition off-by-one when adding 86400s.
             local prev_t = os.time({ year=tonumber(y), month=tonumber(m), day=tonumber(d), hour=12, min=0, sec=0 })
@@ -362,13 +367,14 @@ function Tokens._readStatsBookSummary(ui, cache)
             FROM book;
         ]]
         local stmt = conn:prepare(sql)
+        -- resultset("i") is column-major: rows[col][row].
         local rows, nrows = stmt:reset():resultset("i")
         stmt:close()
         conn:close()
         if not nrows or nrows == 0 then return { total_time = 0, finished_count = 0 } end
         return {
             total_time = tonumber(rows[1][1]) or 0,
-            finished_count = tonumber(rows[1][2]) or 0,
+            finished_count = tonumber(rows[2][1]) or 0,
         }
     end)
     if not ok or not result then
