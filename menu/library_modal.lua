@@ -94,6 +94,29 @@ end
 --- keyboard hides. Called from tab/chip handlers, the search-row button
 --- callbacks, the tap-outside fallback, and from preset_manager_modal's
 --- card/star/preview/apply paths via self.modal_widget:_dismissKeyboard().
+-- Force a fullscreen UI refresh from inside the close path. UIManager fires
+-- CloseWidget before the widget is removed from the window stack and before
+-- the caller's Button:onTapSelectButton drains the refresh queue with
+-- forceRePaint(). Stock Button-feedback flow runs:
+--    highlight → forceRePaint → callback → forceRePaint
+-- so the second forceRePaint drains everything queued *during* the callback —
+-- but UIManager:close() with no refresh args enqueues nothing, and a deferred
+-- markDirty (e.g. via Bookends:markDirty → nextTick) doesn't land in the
+-- queue until *after* that drain. Result on Kobo / kodev emulator: only the
+-- button's own ~80px fast refresh lands, the rest of the modal area never
+-- gets refreshed, and the modal pixels linger until the next user-triggered
+-- repaint. Issue #34.
+--
+-- setDirty("all", "ui") here marks every window-stack widget dirty and
+-- enqueues a fullscreen "ui" refresh — both *before* the close finishes
+-- removing us — so the trailing forceRePaint drains a refresh that actually
+-- covers the modal area. The closing widget gets unmarked again by
+-- UIManager:close itself a few lines later (self._dirty[w] = nil during
+-- removal), so we don't paint a corpse.
+function LibraryModal:onCloseWidget()
+    UIManager:setDirty("all", "ui")
+end
+
 function LibraryModal:_dismissKeyboard()
     local input = self._search_input
     if not input then return end
