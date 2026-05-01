@@ -257,9 +257,22 @@ function PresetManager.attach(Bookends)
         self._preset_files_cache = nil
     end
 
+    -- Shallow-copy the cached entries so callers can table.insert / table.sort
+    -- freely (e.g. the modal appending a synthetic "+ New blank preset" tile,
+    -- or sortedLocalPresets reordering by mtime) without polluting the cache
+    -- for the next reader. Entry tables are still shared, but entry-level
+    -- mutations only happen inside mutator flows that invalidate the cache
+    -- anyway (rename / write / delete / update). Cost: a few dozen ref-copies,
+    -- vs. the loadfile + sandbox + parse + validate per file the cache avoids.
+    local function copyEntries(src)
+        local out = {}
+        for i = 1, #src do out[i] = src[i] end
+        return out
+    end
+
     function Bookends:readPresetFiles()
         if self._preset_files_cache then
-            return self._preset_files_cache
+            return copyEntries(self._preset_files_cache)
         end
         local lfs = require("libs/libkoreader-lfs")
         local logger = require("logger")
@@ -268,7 +281,7 @@ function PresetManager.attach(Bookends)
 
         if lfs.attributes(dir, "mode") ~= "directory" then
             self._preset_files_cache = presets
-            return presets
+            return copyEntries(presets)
         end
 
         for f in lfs.dir(dir) do
@@ -301,7 +314,7 @@ function PresetManager.attach(Bookends)
 
         table.sort(presets, function(a, b) return a.name < b.name end)
         self._preset_files_cache = presets
-        return presets
+        return copyEntries(presets)
     end
 
     function Bookends:writePresetFile(name, preset_data)
