@@ -870,10 +870,39 @@ end
 --- Build a state table of raw values for conditional evaluation.
 --- If paint_ctx is provided and already has a cached state, returns it
 --- (shared across all expand() calls within one paint cycle).
-function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, paint_ctx, stats_cache)
+function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, paint_ctx, stats_cache, format_str)
     if paint_ctx and paint_ctx._condition_state then
         return paint_ctx._condition_state
     end
+
+    -- Optional format-string gating: when paint_ctx contains the union of all
+    -- visible-line format strings (paint_ctx._cond_format_union, set by
+    -- main.lua._paintToInner), or when format_str is passed directly, only
+    -- SQL-backed condition fields referenced in some [if:...] block are
+    -- fetched. Without either, every bucket fetches (preserves test/back-
+    -- compat behaviour). Issue #36: a preset with one [if:title] used to
+    -- fire ~7 SQLite queries per page turn, dominating the ~200ms expand
+    -- cost on a Clara BW. Gating drops that to 0 for stats-free conditionals.
+    local cond_region
+    local gating_source = (paint_ctx and paint_ctx._cond_format_union) or format_str
+    if gating_source then
+        local parts = {}
+        for cond in gating_source:gmatch("%[if:([^%]]+)%]") do
+            table.insert(parts, cond)
+        end
+        cond_region = "\0" .. table.concat(parts, "\0") .. "\0"
+    end
+    local function refs(...)
+        if not cond_region then return true end
+        for i = 1, select("#", ...) do
+            local name = select(i, ...)
+            if cond_region:find("[^%w_]" .. name .. "[^%w_]", 1, false) then
+                return true
+            end
+        end
+        return false
+    end
+
     local state = {}
 
     -- WiFi
@@ -1081,7 +1110,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
 
     -- Session (prefer ReaderStatistics' skip-aware values; fall back to
     -- our wall-clock measurement and max-page counter when stats is disabled).
-    do
+    if refs("session", "session_pages", "session_time") then
         local stats_session = Tokens._readStatsBookSession(ui, stats_cache)
         if stats_session then
             state.session = math.floor(stats_session.duration / 60)
@@ -1096,7 +1125,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     -- Today's reading totals (across all books) from ReaderStatistics.
     -- pages_today is an integer; time_today is integer minutes (raw seconds
     -- get formatted at render time).
-    do
+    if refs("pages_today", "time_today") then
         local stats_today = Tokens._readStatsToday(ui, stats_cache)
         if stats_today then
             state.pages_today = math.max(0, stats_today.pages)
@@ -1110,7 +1139,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     -- Today's reading totals (current book only). Mirrors pages_today/time_today
     -- but with id_book scoping so a user reading a second book today doesn't
     -- inflate the count for the book they're currently reading.
-    do
+    if refs("pages_today_book", "time_today_book") then
         local now_t = os.date("*t")
         local start_today = os.time() - (now_t.hour * 3600 + now_t.min * 60 + now_t.sec)
         local s = Tokens._readStatsBookRange(ui, stats_cache, start_today, "book_today")
@@ -1119,7 +1148,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     end
 
     -- Current book over the last 7 days (rolling window, not calendar week).
-    do
+    if refs("pages_week_book", "time_week_book") then
         local since = os.time() - 7 * 86400
         local s = Tokens._readStatsBookRange(ui, stats_cache, since, "book_week")
         state.pages_week_book = s and math.max(0, s.pages) or 0
@@ -1127,15 +1156,19 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     end
 
     -- Reading streaks (consecutive calendar days). nil id_book = any-book streak.
-    state.streak = Tokens._readStreak(ui, stats_cache, nil, "streak") or 0
-    if ui and ui.statistics and ui.statistics.id_curr_book then
-        state.book_streak = Tokens._readStreak(ui, stats_cache, ui.statistics.id_curr_book, "book_streak") or 0
-    else
-        state.book_streak = 0
+    if refs("streak") then
+        state.streak = Tokens._readStreak(ui, stats_cache, nil, "streak") or 0
+    end
+    if refs("book_streak") then
+        if ui and ui.statistics and ui.statistics.id_curr_book then
+            state.book_streak = Tokens._readStreak(ui, stats_cache, ui.statistics.id_curr_book, "book_streak") or 0
+        else
+            state.book_streak = 0
+        end
     end
 
     -- Lifetime aggregates over the book table (single SQL, two values).
-    do
+    if refs("total_read_time", "books_finished") then
         local s = Tokens._readStatsBookSummary(ui, stats_cache)
         state.total_read_time = s and math.floor(s.total_time / 60) or 0
         state.books_finished = s and s.finished_count or 0
@@ -1165,7 +1198,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     end
 
     -- Days since first open of this book + derived per-day pace.
-    do
+    if refs("days_reading_book", "pages_per_day") then
         local first_open = Tokens._readBookFirstOpen(ui)
         if first_open and first_open > 0 then
             state.days_reading_book = math.max(0, math.floor((os.time() - first_open) / 86400))
@@ -1705,8 +1738,12 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
 
     -- Session pages read (skip-aware via ReaderStatistics with fallback to
     -- bookends' own max-page counter when stats is disabled or absent).
-    local session_pages
-    do
+    -- Only fetched when a token actually consumes it: %session_pages directly,
+    -- or %speed (derived from session_pages / session_elapsed). Skipping the
+    -- SQL read on stats-free presets is the bulk of the per-page cost on
+    -- low-power devices like the Clara BW (issue #36).
+    local session_pages = 0
+    if needs("session_pages", "speed") then
         local stats_session = Tokens._readStatsBookSession(ui, stats_cache)
         if stats_session then
             session_pages = math.max(0, stats_session.pages)

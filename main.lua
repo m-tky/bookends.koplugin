@@ -1372,6 +1372,29 @@ function Bookends:_paintToInner(bb, x, y)
     -- tokens, but the underlying SQL only needs to run once per paint.
     -- Allocated fresh each paint so values stay current across page turns.
     local stats_cache = {}
+    -- Pre-compute the union of all conditional-bearing lines across active
+    -- positions so buildConditionState can gate SQL fetches to only the
+    -- fields actually referenced in some [if:...] block. Must be populated
+    -- before any Tokens.expand() call: buildConditionState caches its result
+    -- on first call, so a partial gating source on the first line would
+    -- starve later lines of state they need (issue #36 fix). Parity filter
+    -- is intentionally omitted — overshooting by an even-only line on an odd
+    -- page costs at most one extra stats query and avoids duplicating the
+    -- visibility loop below.
+    do
+        local union = {}
+        for _, pos in ipairs(self.POSITIONS) do
+            if self:isPositionActive(pos.key) then
+                local pos_settings = self.positions[pos.key]
+                for _, line in ipairs(pos_settings.lines or {}) do
+                    if line:find("%[if:", 1, false) then
+                        table.insert(union, line)
+                    end
+                end
+            end
+        end
+        paint_ctx._cond_format_union = table.concat(union, "\0")
+    end
     for _, pos in ipairs(self.POSITIONS) do
         if self:isPositionActive(pos.key) then
             local pos_settings = self.positions[pos.key]
