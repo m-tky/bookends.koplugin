@@ -555,11 +555,19 @@ msgstr "Titolo capitolo al livello 2"
 msgid "Chapter title at depth 3"
 msgstr "Titolo capitolo al livello 3"
 
-#: menu/tokens_catalogue.lua:42 menu/tokens_catalogue.lua:121
+#: menu/tokens_catalogue.lua:42
+msgid "Chapter title without leading number (when detected)"
+msgstr "Titolo capitolo senza numero iniziale (se rilevato)"
+
+#: menu/tokens_catalogue.lua:43
+msgid "Number from chapter title (when detected)"
+msgstr "Numero estratto dal titolo capitolo (se rilevato)"
+
+#: menu/tokens_catalogue.lua:44 menu/tokens_catalogue.lua:121
 msgid "Current chapter number"
 msgstr "Numero del capitolo corrente"
 
-#: menu/tokens_catalogue.lua:43
+#: menu/tokens_catalogue.lua:45
 msgid "Chapter count"
 msgstr "Numero di capitoli"
 
@@ -1002,6 +1010,10 @@ msgstr "Titolo capitolo solo quando differisce dal titolo del libro"
 #: menu/tokens_catalogue.lua:161
 msgid "Battery bars"
 msgstr "Barre batteria"
+
+#: menu/tokens_catalogue.lua:163
+msgid "Chapter number then title"
+msgstr "Numero capitolo poi titolo"
 
 #: menu/main_menu.lua:28 menu/preset_manager_modal.lua:1066
 msgid "Save preset"

@@ -546,16 +546,21 @@ end
 local _strip_cache = setmetatable({}, { __mode = "k" })
 
 --- Walk the TOC once and return a table of chapter-title data derived from it.
--- Chapter titles have leading numbers stripped when the TOC at that depth
--- has a clean 1..N chapter-numbering sequence (e.g. "1 Title", "2 Title", ...).
--- See parseChapNumPrefix and computeStripPrefixByDepth for the rule.
+-- Chapter titles are returned as-is from the TOC. The helper additionally
+-- exposes split parts (chapter_title_num / chapter_title_name) when the
+-- heuristic deems the deepest covering depth strip-safe; see
+-- parseChapNumPrefix and computeStripPrefixByDepth for the rule.
 -- @param ui     KOReader ReaderUI instance (must have .toc)
 -- @param pageno current page number (1-indexed)
 -- @return table with keys:
---   chapter_title       — deepest (most-specific) chapter title covering the page
---   chapter_titles_by_depth — { [1]="Part II", [2]="Ch 3", ... }
+--   chapter_title       — deepest (most-specific) chapter title covering the page (raw)
+--   chapter_titles_by_depth — { [1]="Part II", [2]="Ch 3", ... } (raw)
 --   chapter_num         — 1-indexed flat position of the current entry
 --   chapter_count       — total TOC entries across all depths
+--   chapter_title_num   — leading number parsed from chapter_title when the
+--                         deepest depth has a strip-safe 1..N sequence; "" otherwise
+--   chapter_title_name  — chapter_title with the parsed leading number removed
+--                         when strip-safe; equal to chapter_title otherwise (always populated)
 -- Returns an empty-ish table if ui.toc or page data is unavailable.
 function Tokens.getChapterTitlesByDepth(ui, pageno)
     local out = {
@@ -563,26 +568,19 @@ function Tokens.getChapterTitlesByDepth(ui, pageno)
         chapter_titles_by_depth = {},
         chapter_num = 0,
         chapter_count = 0,
+        chapter_title_num = "",
+        chapter_title_name = "",
     }
     if not ui or not ui.toc or not pageno then return out end
 
     local full_toc = ui.toc.toc
     if not full_toc then
         local title = ui.toc:getTocTitleByPage(pageno)
-        if title and title ~= "" then out.chapter_title = title end
+        if title and title ~= "" then
+            out.chapter_title = title
+            out.chapter_title_name = title
+        end
         return out
-    end
-
-    local strip_by_depth = _strip_cache[full_toc]
-    if not strip_by_depth then
-        strip_by_depth = computeStripPrefixByDepth(full_toc)
-        _strip_cache[full_toc] = strip_by_depth
-    end
-
-    local function maybe_strip(t, depth)
-        if not t or t == "" or not strip_by_depth[depth] then return t end
-        local _n, rest = parseChapNumPrefix(t)
-        return rest or t
     end
 
     out.chapter_count = #full_toc
@@ -593,11 +591,11 @@ function Tokens.getChapterTitlesByDepth(ui, pageno)
         if entry.page and entry.page <= pageno then
             idx = i
             if entry.depth then
-                local stripped = maybe_strip(entry.title or "", entry.depth)
-                out.chapter_titles_by_depth[entry.depth] = stripped
+                local raw = entry.title or ""
+                out.chapter_titles_by_depth[entry.depth] = raw
                 if entry.depth >= deepest_depth then
                     deepest_depth = entry.depth
-                    deepest_title = stripped
+                    deepest_title = raw
                 end
             end
         else
@@ -612,6 +610,24 @@ function Tokens.getChapterTitlesByDepth(ui, pageno)
         local title = ui.toc:getTocTitleByPage(pageno)
         if title and title ~= "" then out.chapter_title = title end
     end
+
+    out.chapter_title_name = out.chapter_title
+
+    if out.chapter_title ~= "" and deepest_depth > 0 then
+        local strip_by_depth = _strip_cache[full_toc]
+        if not strip_by_depth then
+            strip_by_depth = computeStripPrefixByDepth(full_toc)
+            _strip_cache[full_toc] = strip_by_depth
+        end
+        if strip_by_depth[deepest_depth] then
+            local n, rest = parseChapNumPrefix(out.chapter_title)
+            if n and rest then
+                out.chapter_title_num  = tostring(n)
+                out.chapter_title_name = rest
+            end
+        end
+    end
+
     return out
 end
 
@@ -1047,10 +1063,12 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     -- Chapter titles (reuses the helper already called for state.chap_num/chap_count)
     if pageno and ui.toc then
         local titles = Tokens.getChapterTitlesByDepth(ui, pageno)
-        state.chap_title   = titles.chapter_title or ""
-        state.chap_title_1 = titles.chapter_titles_by_depth[1] or ""
-        state.chap_title_2 = titles.chapter_titles_by_depth[2] or ""
-        state.chap_title_3 = titles.chapter_titles_by_depth[3] or ""
+        state.chap_title      = titles.chapter_title or ""
+        state.chap_title_1    = titles.chapter_titles_by_depth[1] or ""
+        state.chap_title_2    = titles.chapter_titles_by_depth[2] or ""
+        state.chap_title_3    = titles.chapter_titles_by_depth[3] or ""
+        state.chap_title_num  = titles.chapter_title_num or ""
+        state.chap_title_name = titles.chapter_title_name or ""
     end
 
     -- Time (minutes since midnight, compare with HH:MM or raw minutes)
@@ -1409,6 +1427,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             title = "[title]", author = "[author]",
             series = "[series]", series_name = "[series.name]", series_num = "[series.#]",
             chap_title = "[chapter]",
+            chap_title_num = "[ch.#]", chap_title_name = "[chapter]",
             filename = "[file]", lang = "[lang]",
             format = "[format]",
             highlights = "[highlights]", notes = "[notes]",
@@ -1567,8 +1586,10 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local chapter_title = ""
     local chapter_num = ""      -- 1-indexed position of current chapter in TOC
     local chapter_count = ""    -- total number of entries in TOC
+    local chapter_title_num = ""   -- leading number parsed from title when strip-safe
+    local chapter_title_name = ""  -- title with leading number removed when strip-safe; raw title otherwise
     local chapter_titles_by_depth = {}  -- { [1] = "Part II", [2] = "Chapter 1", ... }
-    if needs("chap_pct", "chap_pct_left", "chap_read", "chap_pages", "chap_pages_left", "chap_title", "chap_num", "chap_count") and pageno and ui.toc then
+    if needs("chap_pct", "chap_pct_left", "chap_read", "chap_pages", "chap_pages_left", "chap_title", "chap_num", "chap_count", "chap_title_num", "chap_title_name") and pageno and ui.toc then
         -- Raw page calculation for %P (percentage)
         local chapter_start = ui.toc:getPreviousChapter(pageno)
         if ui.toc:isChapterStart(pageno) then
@@ -1622,6 +1643,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         chapter_titles_by_depth = titles.chapter_titles_by_depth
         if titles.chapter_num > 0  then chapter_num   = titles.chapter_num   end
         if titles.chapter_count > 0 then chapter_count = titles.chapter_count end
+        chapter_title_num  = titles.chapter_title_num or ""
+        chapter_title_name = titles.chapter_title_name or ""
     end
 
     -- Bar token data (parallel channel — not embedded in text)
@@ -2247,7 +2270,9 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         series      = tostring(series),
         series_name = tostring(series_name or ""),   -- populated in Task 10
         series_num  = tostring(series_num or ""),    -- populated in Task 10
-        chap_title  = tostring(chapter_title),
+        chap_title      = tostring(chapter_title),
+        chap_title_num  = tostring(chapter_title_num or ""),
+        chap_title_name = tostring(chapter_title_name or ""),
         filename    = file_name,
         lang        = book_language,
         format      = doc_format,

@@ -2305,6 +2305,18 @@ msgstr "Unter neuem Namen installieren…"
 msgid "Install as"
 msgstr "Installieren als"
 
+#: menu/tokens_catalogue.lua:42
+msgid "Chapter title without leading number (when detected)"
+msgstr "Kapiteltitel ohne führende Zahl (wenn erkannt)"
+
+#: menu/tokens_catalogue.lua:43
+msgid "Number from chapter title (when detected)"
+msgstr "Zahl aus Kapiteltitel (wenn erkannt)"
+
+#: menu/tokens_catalogue.lua:163
+msgid "Chapter number then title"
+msgstr "Kapitelnummer dann Titel"
+
 #~ msgid "Battery (changes with level)"
 #~ msgstr "Batterie (ändert sich mit Ladestand)"
 

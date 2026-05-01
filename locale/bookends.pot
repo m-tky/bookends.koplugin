@@ -2200,3 +2200,15 @@ msgstr ""
 #: menu/preset_manager_modal.lua:1662
 msgid "Install as"
 msgstr ""
+
+#: menu/tokens_catalogue.lua:42
+msgid "Chapter title without leading number (when detected)"
+msgstr ""
+
+#: menu/tokens_catalogue.lua:43
+msgid "Number from chapter title (when detected)"
+msgstr ""
+
+#: menu/tokens_catalogue.lua:163
+msgid "Chapter number then title"
+msgstr ""

@@ -558,7 +558,15 @@ msgstr "Заглавие на главата на ниво 2"
 msgid "Chapter title at depth 3"
 msgstr "Заглавие на главата на ниво 3"
 
-#: menu/tokens_catalogue.lua:42 menu/tokens_catalogue.lua:121
+#: menu/tokens_catalogue.lua:42
+msgid "Chapter title without leading number (when detected)"
+msgstr "Заглавие на главата без водещ номер (при засичане)"
+
+#: menu/tokens_catalogue.lua:43
+msgid "Number from chapter title (when detected)"
+msgstr "Номер от заглавието на главата (при засичане)"
+
+#: menu/tokens_catalogue.lua:44 menu/tokens_catalogue.lua:121
 msgid "Current chapter number"
 msgstr "Номер на текущата глава"
 
@@ -1005,6 +1013,10 @@ msgstr "Заглавие на главата само когато се разл
 #: menu/tokens_catalogue.lua:161
 msgid "Battery bars"
 msgstr "Стълбчета за батерията"
+
+#: menu/tokens_catalogue.lua:163
+msgid "Chapter number then title"
+msgstr "Номер на главата, след него заглавие"
 
 #: menu/main_menu.lua:28 menu/preset_manager_modal.lua:1066
 msgid "Save preset"

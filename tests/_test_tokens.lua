@@ -1293,7 +1293,7 @@ test("computeStripPrefixByDepth: trailing whitespace in rest is normalised", fun
        "trailing space shouldn't make 'Chapter ' and 'Chapter' look distinct")
 end)
 
-test("getChapterTitlesByDepth: strips '1 Title' family at depth 1", function()
+test("getChapterTitlesByDepth: returns raw titles (no auto-strip on chap_title)", function()
     local toc = {
         { title = "1 Continental Setting", depth = 1, page = 1 },
         { title = "2 The Wars",            depth = 1, page = 50 },
@@ -1306,8 +1306,9 @@ test("getChapterTitlesByDepth: strips '1 Title' family at depth 1", function()
         },
     }
     local out = Tokens.getChapterTitlesByDepth(stub_ui, 60)
-    eq(out.chapter_title, "The Wars")
-    eq(out.chapter_titles_by_depth[1], "The Wars")
+    eq(out.chapter_title, "2 The Wars",
+       "chapter_title is raw; the strip happens in chapter_title_name only")
+    eq(out.chapter_titles_by_depth[1], "2 The Wars")
 end)
 
 test("getChapterTitlesByDepth: leaves year-titles untouched", function()
@@ -1325,6 +1326,54 @@ test("getChapterTitlesByDepth: leaves year-titles untouched", function()
     local out = Tokens.getChapterTitlesByDepth(stub_ui, 60)
     eq(out.chapter_title, "1940 Battle of Britain")
     eq(out.chapter_titles_by_depth[1], "1940 Battle of Britain")
+end)
+
+test("getChapterTitlesByDepth: chapter_title_num/_name populate when strip-safe", function()
+    local toc = {
+        { title = "1 Continental Setting", depth = 1, page = 1 },
+        { title = "2 The Wars",            depth = 1, page = 50 },
+        { title = "3 The Aftermath",       depth = 1, page = 100 },
+    }
+    local stub_ui = {
+        toc = {
+            toc = toc,
+            getTocTitleByPage = function(_, _) return "" end,
+        },
+    }
+    local out = Tokens.getChapterTitlesByDepth(stub_ui, 60)
+    eq(out.chapter_title_num, "2", "leading number parsed from current chapter title")
+    eq(out.chapter_title_name, "The Wars", "stripped name")
+end)
+
+test("getChapterTitlesByDepth: chapter_title_num empty / _name = raw when not strip-safe", function()
+    local toc = {
+        { title = "1939 Invasion of Poland", depth = 1, page = 1 },
+        { title = "1940 Battle of Britain",  depth = 1, page = 50 },
+        { title = "1941 Pearl Harbor",       depth = 1, page = 100 },
+    }
+    local stub_ui = {
+        toc = {
+            toc = toc,
+            getTocTitleByPage = function(_, _) return "" end,
+        },
+    }
+    local out = Tokens.getChapterTitlesByDepth(stub_ui, 60)
+    eq(out.chapter_title_num, "", "no parsed number when heuristic rejects")
+    eq(out.chapter_title_name, "1940 Battle of Britain",
+       "name falls back to raw title so layouts using only _name still work")
+end)
+
+test("getChapterTitlesByDepth: chapter_title_num/_name empty when no chapter title", function()
+    local stub_ui = {
+        toc = {
+            toc = {},
+            getTocTitleByPage = function(_, _) return "" end,
+        },
+    }
+    local out = Tokens.getChapterTitlesByDepth(stub_ui, 60)
+    eq(out.chapter_title, "")
+    eq(out.chapter_title_num, "")
+    eq(out.chapter_title_name, "")
 end)
 
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))
