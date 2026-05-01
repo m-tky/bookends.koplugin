@@ -1103,6 +1103,80 @@ test("[if:books_finished>=5] evaluates against state", function()
 end)
 
 -- ============================================================================
+-- buildConditionState: lazy SQL-fetch gating (issue #36)
+-- ============================================================================
+
+test("gating: format_str arg restricts SQL fetch to referenced fields", function()
+    local cache = {
+        session = { pages = 5, duration = 300 },
+        today = { pages = 9, duration = 600 },
+        book_today = { pages = 4, duration = 200 },
+        book_week = { pages = 30, duration = 3600 },
+        streak = 7,
+        book_streak = 3,
+        book_summary = { total_time = 360000, finished_count = 23 },
+    }
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, nil, cache,
+        "[if:streak >= 5]hot[/if]")
+    eq(s.streak, 7, "streak referenced -> populated")
+    eq(s.session_pages, nil, "session_pages not referenced -> nil")
+    eq(s.pages_today, nil, "pages_today not referenced -> nil")
+    eq(s.book_streak, nil, "book_streak not referenced -> nil")
+    eq(s.total_read_time, nil, "total_read_time not referenced -> nil")
+    eq(s.pages_today_book, nil, "pages_today_book not referenced -> nil")
+end)
+
+test("gating: paint_ctx._cond_format_union takes precedence over format_str arg", function()
+    local cache = { streak = 7, book_summary = { total_time = 60, finished_count = 1 } }
+    local paint_ctx = { _cond_format_union = "[if:total_read_time > 0]ok[/if]" }
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, paint_ctx, cache,
+        "[if:streak >= 5]hot[/if]")
+    eq(s.total_read_time, 1, "union-referenced field populated")
+    eq(s.streak, nil, "format_str-only field skipped when union present")
+end)
+
+test("gating: word-boundary regex distinguishes streak from book_streak", function()
+    local cache = { streak = 99, book_streak = 4 }
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, nil, cache,
+        "[if:book_streak >= 3]chain[/if]")
+    eq(s.book_streak, 4, "book_streak fetched as referenced")
+    eq(s.streak, nil, "streak not over-matched by book_streak ref")
+end)
+
+test("gating: pages_today_book ref does not pull pages_today bucket", function()
+    local cache = {
+        today = { pages = 50, duration = 1000 },
+        book_today = { pages = 5, duration = 200 },
+    }
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, nil, cache,
+        "[if:pages_today_book > 0]read[/if]")
+    eq(s.pages_today_book, 5, "today_book bucket fetched")
+    eq(s.pages_today, nil, "today bucket not fetched (different field)")
+end)
+
+test("gating: union covering multiple lines fetches each referenced bucket", function()
+    local cache = {
+        streak = 14,
+        book_summary = { total_time = 1200, finished_count = 8 },
+        session = { pages = 3, duration = 180 },
+    }
+    local paint_ctx = {
+        _cond_format_union = "[if:streak >= 7]hot[/if]\0[if:books_finished > 5]reader[/if]",
+    }
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, paint_ctx, cache)
+    eq(s.streak, 14, "first line's field fetched")
+    eq(s.books_finished, 8, "second line's field fetched")
+    eq(s.session_pages, nil, "unreferenced bucket not fetched even when cache has data")
+end)
+
+test("gating: no format_str and no union -> all SQL buckets fetched (back-compat)", function()
+    local cache = { streak = 1, book_summary = { total_time = 0, finished_count = 0 } }
+    local s = Tokens.buildConditionState(stubUiWithStats({}), 0, 0, nil, cache)
+    eq(s.streak, 1, "streak populated without gating")
+    eq(s.books_finished, 0, "book_summary populated without gating")
+end)
+
+-- ============================================================================
 -- Chapter-number prefix stripping
 -- ============================================================================
 
