@@ -17,7 +17,7 @@ Customisable text overlays for KOReader — page numbers, reading stats, progres
 
 ### Quick start
 
-1. Copy `bookends.koplugin/` to your KOReader plugins directory ([paths](#installation))
+1. Download the [latest release zip](https://github.com/AndyHazz/bookends.koplugin/releases/latest) and extract `bookends.koplugin/` to your KOReader plugins directory ([paths](#installation))
 2. Open a book → **typeset/document menu** (style icon) → **Bookends** → **Bookends settings** → tick **Enable bookends**
 3. Tap a position (e.g., Bottom-center) → **Add line**
 4. Type a format string or use the **Tokens** and **Symbols** buttons to insert placeholders
