@@ -118,16 +118,34 @@ function TokensLibrary._renderRow(item, slot_dimen, doc_ctx)
     else
         local expansion = ""
         if doc_ctx and item.token then
-            -- Tokens.expand can throw on edge cases (eg %datetime{format} with
-            -- bad format spec, or stats tokens before SQLite is ready) — pcall
-            -- so a single bad token doesn't take the whole list down.
-            local ok, val = pcall(Tokens.expand, item.token, doc_ctx.ui,
-                doc_ctx.session_elapsed, doc_ctx.session_pages,
-                nil, doc_ctx.tick_mult, nil, nil,
-                { stats_cache = doc_ctx.stats_cache })
-            if ok and val and val ~= "" and val ~= item.token then
-                expansion = " \xE2\x86\x92 " .. Utils.truncateUtf8(val, 25)
+            -- Memoise per-token within this modal session: token values are
+            -- invariant for the lifetime of the picker, but row_renderer
+            -- fires every refresh (chip tap, page chevron, search submit).
+            -- doc_ctx.expand_cache holds the formatted suffix string, or
+            -- false when the token has no displayable value. nil = uncached.
+            local cache = doc_ctx.expand_cache
+            if not cache then
+                cache = {}
+                doc_ctx.expand_cache = cache
             end
+            local cached = cache[item.token]
+            if cached == nil then
+                -- Tokens.expand can throw on edge cases (eg %datetime{format}
+                -- with bad format spec, or stats tokens before SQLite is
+                -- ready) — pcall so a single bad token doesn't take the
+                -- whole list down.
+                local ok, val = pcall(Tokens.expand, item.token, doc_ctx.ui,
+                    doc_ctx.session_elapsed, doc_ctx.session_pages,
+                    nil, doc_ctx.tick_mult, nil, nil,
+                    { stats_cache = doc_ctx.stats_cache })
+                if ok and val and val ~= "" and val ~= item.token then
+                    cached = " \xE2\x86\x92 " .. Utils.truncateUtf8(val, 25)
+                else
+                    cached = false
+                end
+                cache[item.token] = cached
+            end
+            if cached then expansion = cached end
         end
         line2_text = (item.token or "") .. expansion
     end
@@ -177,6 +195,20 @@ end
 function TokensLibrary:show(bookends, on_select)
     self.bookends = bookends
     local state = { active_chip = "all", search_query = nil }
+    -- Memoise the filtered list per (chip, query) key. Each LibraryModal
+    -- refresh fires item_count + item_at-per-row + a second item_count from
+    -- pagination, so without this the merged TOKENS+CONDITIONALS list got
+    -- rebuilt 6-8x per refresh. Key invalidates automatically when chip or
+    -- query change; nothing else mutates the underlying catalogues.
+    local items_key, items_cache = nil, nil
+    local function items()
+        local key = (state.active_chip or "") .. "\0" .. (state.search_query or "")
+        if items_key ~= key then
+            items_cache = TokensLibrary._currentItems(state.active_chip, state.search_query)
+            items_key = key
+        end
+        return items_cache
+    end
     -- Doc context built once at modal-open. Live-token expansions in row 2
     -- reference this; if buildDocContext returned nil (e.g. ui not ready),
     -- _renderRow falls back to showing the raw token literal.
@@ -253,8 +285,8 @@ EXAMPLES
         rows_per_page = function()
             return Screen:getWidth() > Screen:getHeight() and 4 or 5
         end,
-        item_count = function() return #TokensLibrary._currentItems(state.active_chip, state.search_query) end,
-        item_at = function(idx) return TokensLibrary._currentItems(state.active_chip, state.search_query)[idx] end,
+        item_count = function() return #items() end,
+        item_at = function(idx) return items()[idx] end,
         row_renderer = function(item, dimen)
             local row = TokensLibrary._renderRow(item, dimen, doc_ctx)
             -- Bind the tap inside the row_renderer closure rather than via a

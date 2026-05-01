@@ -267,6 +267,20 @@ function IconsLibrary:show(on_select)
     -- a closure rather than on the modal so taps/chips/search can mutate it
     -- without going through LibraryModal's own state.
     local state = { active_chip = "all", search_query = nil }
+    -- Memoise the filtered list per (chip, query) key. LibraryModal calls
+    -- item_count + item_at-per-cell + pagination's second item_count per
+    -- refresh, so without this the search path was scanning all ~2,800
+    -- nerd-font cells multiple times per keystroke-submit. Curated chips
+    -- benefit too: projectCuratedItems builds a fresh table every time.
+    local items_key, items_cache = nil, nil
+    local function items()
+        local key = (state.active_chip or "") .. "\0" .. (state.search_query or "")
+        if items_key ~= key then
+            items_cache = currentItemList(state)
+            items_key = key
+        end
+        return items_cache
+    end
     local self_ref = self
     local config
     config = {
@@ -335,8 +349,8 @@ function IconsLibrary:show(on_select)
             if self_ref.modal then UIManager:close(self_ref.modal); self_ref.modal = nil end
             if on_select then on_select(val) end
         end,
-        item_count = function() return #currentItemList(state) end,
-        item_at = function(idx) return currentItemList(state)[idx] end,
+        item_count = function() return #items() end,
+        item_at = function(idx) return items()[idx] end,
         footer_actions = {
             { key = "close", label = _("Close"), on_tap = function()
                 if self_ref.modal then UIManager:close(self_ref.modal); self_ref.modal = nil end
