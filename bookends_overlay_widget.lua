@@ -1356,6 +1356,8 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
 
     elseif style == "radial" or style == "radial_hollow" then
         -- Radial (pie-chart) style: a circle filled clockwise from 12 o'clock.
+        -- Asymmetric: read arc keeps full radii; unread arc uses scaled-down radii
+        -- (so "50% unread" means a 50%-diameter pie wedge on the unread side).
         local diameter = math.min(vertical and h or w, vertical and w or h)
         local radius = math.floor(diameter / 2)
         if radius < 2 then radius = 2 end
@@ -1368,118 +1370,148 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
         local radial_tick = resolveColor(custom_tick, Blitbuffer.COLOR_BLACK)
         local radial_border_color = resolveColor(custom_border, Blitbuffer.COLOR_BLACK)
 
-        local r2 = radius * radius
         local hollow = style == "radial_hollow"
         local inner_radius = hollow and math.floor(radius * 0.55) or 0
+
+        -- Unread radii scale by unread_thick/read_thick. When symmetric, equal to read.
+        local unread_radius = unread_thick == read_thick and radius
+            or math.floor(radius * unread_thick / read_thick)
+        local unread_inner_radius = unread_thick == read_thick and inner_radius
+            or math.floor(inner_radius * unread_thick / read_thick)
+
+        local r2 = radius * radius
         local inner_r2 = inner_radius * inner_radius
-        -- Asymmetric: unread arc renders as a thinner band centred on the
-        -- read band's midline. Symmetric configs collapse to the read band.
-        local mid_r = (radius + inner_radius) / 2
-        local band_half = (radius - inner_radius) / 2
-        local unread_band_half = unread_thick == read_thick and band_half
-            or band_half * unread_thick / read_thick
-        local unread_outer = mid_r + unread_band_half
-        local unread_inner = mid_r - unread_band_half
-        local unread_outer_r2 = unread_outer * unread_outer
-        local unread_inner_r2 = unread_inner * unread_inner
+        local unread_r2 = unread_radius * unread_radius
+        local unread_inner_r2 = unread_inner_radius * unread_inner_radius
         local two_pi = 2 * math.pi
 
-        -- Paint the pie circle pixel by pixel. Read arc fills the full ring
-        -- band (radius..inner_radius); unread arc fills a thinner band
-        -- centred on the band midline. Angle 0 = 12 o'clock (top).
+        -- Paint the pie/donut pixel by pixel. Read arc uses full radii;
+        -- unread arc uses scaled-down radii. Angle 0 = 12 o'clock (top).
         for py = -radius, radius - 1 do
             for px = -radius, radius - 1 do
-                -- Offset to pixel center for smoother circle
                 local dx = px + 0.5
                 local dy = py + 0.5
                 local d2 = dx * dx + dy * dy
-                if d2 <= r2 and d2 > inner_r2 then
-                    local angle = math.atan2(dx, -dy)
-                    if angle < 0 then angle = angle + two_pi end
-                    local pixel_frac = angle / two_pi
-                    local in_fill = pixel_frac <= fraction
-                    local in_band = in_fill
-                        or (d2 <= unread_outer_r2 and d2 > unread_inner_r2)
-                    if in_band then
-                        local color = in_fill and radial_fill or radial_bg
-                        if color then
-                            bbPaintRect(bb, cx + px, cy + py, 1, 1, color)
+                local angle = math.atan2(dx, -dy)
+                if angle < 0 then angle = angle + two_pi end
+                local pixel_frac = angle / two_pi
+                local in_fill = pixel_frac <= fraction
+                if in_fill then
+                    if d2 <= r2 and d2 > inner_r2 then
+                        if radial_fill then
+                            bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_fill)
+                        end
+                    end
+                else
+                    if unread_radius > 0 and d2 <= unread_r2 and d2 > unread_inner_r2 then
+                        if radial_bg then
+                            bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_bg)
                         end
                     end
                 end
             end
         end
 
-        -- Chapter tick marks: radial lines from center to edge at each chapter boundary
+        -- Chapter tick marks: radial lines from inner-r to outer-r at each chapter
+        -- boundary. Per-half: read ticks span the full ring band; unread ticks span
+        -- the (possibly smaller) unread ring band.
         for _, tick in ipairs(ticks or {}) do
             local tick_frac = type(tick) == "table" and tick[1] or tick
             local tick_w = type(tick) == "table" and tick[2] or 1
 
-            local tick_angle = tick_frac * two_pi - math.pi / 2  -- 0 = top (12 o'clock)
-            -- Adjusted: tick at fraction 0 points up. tick_angle measured from 3 o'clock.
             -- Recalculate: from 12 o'clock clockwise
-            tick_angle = tick_frac * two_pi
+            local tick_angle = tick_frac * two_pi
             local cos_a = math.cos(tick_angle - math.pi / 2)
             local sin_a = math.sin(tick_angle - math.pi / 2)
 
-            -- Draw tick as a line from 60% of radius to the edge
-            local inner_r = math.floor(radius * (1 - tick_height_pct / 100))
-            if inner_r < inner_radius then inner_r = inner_radius end
-            for t = inner_r, radius do
-                local lx = cx + math.floor(t * cos_a)
-                local ly = cy + math.floor(t * sin_a)
-                -- Determine if this tick position is in the filled region
-                local pix_angle = math.atan2(t * cos_a, -(t * sin_a))
-                if pix_angle < 0 then pix_angle = pix_angle + two_pi end
-                local pix_frac = pix_angle / two_pi
-                local in_fill = pix_frac <= fraction
-                local tick_color
-                if invert_read_ticks ~= false and in_fill then
-                    tick_color = resolveColor(custom_invert, Blitbuffer.COLOR_WHITE)
-                else
-                    tick_color = radial_tick
-                end
-                if tick_color then
-                    bbPaintRect(bb, lx, ly, tick_w, tick_w, tick_color)
+            local in_fill = tick_frac <= fraction
+            local local_radius = in_fill and radius or unread_radius
+            local local_inner_radius = in_fill and inner_radius or unread_inner_radius
+            if local_radius > 0 then
+                local inner_r_for_tick = math.floor(local_radius * (1 - tick_height_pct / 100))
+                if inner_r_for_tick < local_inner_radius then inner_r_for_tick = local_inner_radius end
+                for t = inner_r_for_tick, local_radius do
+                    local lx = cx + math.floor(t * cos_a)
+                    local ly = cy + math.floor(t * sin_a)
+                    -- Determine if this tick pixel falls in the read band (for inversion)
+                    local pix_angle = math.atan2(t * cos_a, -(t * sin_a))
+                    if pix_angle < 0 then pix_angle = pix_angle + two_pi end
+                    local pix_frac = pix_angle / two_pi
+                    local pix_in_fill = pix_frac <= fraction
+                    local tick_color
+                    if invert_read_ticks ~= false and pix_in_fill then
+                        tick_color = resolveColor(custom_invert, Blitbuffer.COLOR_WHITE)
+                    else
+                        tick_color = radial_tick
+                    end
+                    if tick_color then
+                        bbPaintRect(bb, lx, ly, tick_w, tick_w, tick_color)
+                    end
                 end
             end
         end
 
-        -- Optional border ring at outer edge. Thickness honours the same
-        -- colors.border_thickness setting that bordered/rounded already use.
+        -- Optional border ring at outer edge. Read arc uses full radius; unread arc
+        -- uses scaled radius. Border thickness honours colors.border_thickness;
+        -- clamped against the local radius so a fat border can't collapse the disk.
         if radial_border_color then
             local border = (colors and colors.border_thickness) or 1
             if border < 0 then border = 0 end
-            if border > radius then border = radius end
             if border > 0 then
-                local border_r2_outer = radius * radius
-                local border_r2_inner = (radius - border) * (radius - border)
+                local read_b = math.min(border, radius)
+                local unread_b = math.min(border, unread_radius)
+                local r_outer_r2 = radius * radius
+                local r_inner_r2 = (radius - read_b) * (radius - read_b)
+                local u_outer_r2 = unread_radius * unread_radius
+                local u_inner_r2 = (unread_radius - unread_b) * (unread_radius - unread_b)
                 for py = -radius, radius - 1 do
                     for px = -radius, radius - 1 do
                         local dx = px + 0.5
                         local dy = py + 0.5
                         local d2 = dx * dx + dy * dy
-                        if d2 <= border_r2_outer and d2 > border_r2_inner then
-                            bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_border_color)
+                        local angle = math.atan2(dx, -dy)
+                        if angle < 0 then angle = angle + two_pi end
+                        local pixel_frac = angle / two_pi
+                        local in_fill = pixel_frac <= fraction
+                        if in_fill then
+                            if read_b > 0 and d2 <= r_outer_r2 and d2 > r_inner_r2 then
+                                bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_border_color)
+                            end
+                        else
+                            if unread_b > 0 and unread_radius > 0 and d2 <= u_outer_r2 and d2 > u_inner_r2 then
+                                bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_border_color)
+                            end
                         end
                     end
                 end
-            end
-            -- Inner border ring for hollow variant. Same thickness, clamped
-            -- against inner_radius so a fat border can't collapse the hole.
-            if hollow then
-                local inner_border = border
-                if inner_border > inner_radius then inner_border = inner_radius end
-                if inner_border > 0 then
-                    local ib_r2_outer = inner_radius * inner_radius
-                    local ib_r2_inner = (inner_radius - inner_border) * (inner_radius - inner_border)
-                    for py = -inner_radius, inner_radius - 1 do
-                        for px = -inner_radius, inner_radius - 1 do
-                            local dx = px + 0.5
-                            local dy = py + 0.5
-                            local d2 = dx * dx + dy * dy
-                            if d2 <= ib_r2_outer and d2 > ib_r2_inner then
-                                bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_border_color)
+                -- Inner border ring for hollow variant. Read inner ring at
+                -- inner_radius; unread inner ring at unread_inner_radius.
+                if hollow then
+                    local read_ib = math.min(border, inner_radius)
+                    local unread_ib = math.min(border, unread_inner_radius)
+                    if read_ib > 0 or (unread_ib > 0 and unread_inner_radius > 0) then
+                        local rib_outer_r2 = inner_radius * inner_radius
+                        local rib_inner_r2 = (inner_radius - read_ib) * (inner_radius - read_ib)
+                        local uib_outer_r2 = unread_inner_radius * unread_inner_radius
+                        local uib_inner_r2 = (unread_inner_radius - unread_ib) * (unread_inner_radius - unread_ib)
+                        for py = -inner_radius, inner_radius - 1 do
+                            for px = -inner_radius, inner_radius - 1 do
+                                local dx = px + 0.5
+                                local dy = py + 0.5
+                                local d2 = dx * dx + dy * dy
+                                local angle = math.atan2(dx, -dy)
+                                if angle < 0 then angle = angle + two_pi end
+                                local pixel_frac = angle / two_pi
+                                local in_fill = pixel_frac <= fraction
+                                if in_fill then
+                                    if read_ib > 0 and d2 <= rib_outer_r2 and d2 > rib_inner_r2 then
+                                        bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_border_color)
+                                    end
+                                else
+                                    if unread_ib > 0 and unread_inner_radius > 0 and d2 <= uib_outer_r2 and d2 > uib_inner_r2 then
+                                        bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_border_color)
+                                    end
+                                end
                             end
                         end
                     end
