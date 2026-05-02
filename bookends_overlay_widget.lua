@@ -1785,9 +1785,10 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
             end
 
             -- Boundary connectors: bridge between read and unread heights so the
-            -- outline is closed and "flows" from thick to thin instead of looking
-            -- like two separate bars meeting at a doubled border.
-            if border > 0 and read_thick ~= unread_thick then
+            -- bordered outline is closed and "flows" from thick to thin. Only paint
+            -- for bordered (radius == 0); rounded keeps its rounded inner end on the
+            -- read pill and a vertical connector here would clash with that look.
+            if border > 0 and read_thick ~= unread_thick and radius == 0 then
                 local boundary_x = ox + (reverse and unread_seg_ox + unread_len or read_seg_ox + read_len)
                 local b_x = boundary_x - math.floor(border / 2)
                 -- Top connector: from read top (oy) down to unread top (unread_oy),
