@@ -1160,6 +1160,8 @@ local function resolveBarColors(bc)
         invert_read_ticks = bc.invert_read_ticks,
         tick_height_pct = bc.tick_height_pct,
         border_thickness = bc.border_thickness,
+        read_height_pct = bc.read_height_pct,
+        unread_height_pct = bc.unread_height_pct,
     }
 end
 
@@ -1316,7 +1318,7 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
     local bc = self.settings:readSetting("bar_colors") or {}
     bc.tick_height_pct = global_tick_height_pct or bc.tick_height_pct
     local bar_colors
-    if bc.fill or bc.bg or bc.track or bc.tick or bc.invert_read_ticks ~= nil or bc.tick_height_pct or bc.border or bc.invert or bc.border_thickness or bc.metro_fill then
+    if bc.fill or bc.bg or bc.track or bc.tick or bc.invert_read_ticks ~= nil or bc.tick_height_pct or bc.border or bc.invert or bc.border_thickness or bc.metro_fill or bc.read_height_pct or bc.unread_height_pct then
         bar_colors = resolveBarColors(bc)
     end
 
