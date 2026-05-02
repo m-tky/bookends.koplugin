@@ -1785,6 +1785,10 @@ msgstr "Couleur de lecture"
 msgid "Read color (% black)"
 msgstr "Couleur de lecture (% noir)"
 
+#: menu/colours_menu.lua:291 menu/colours_menu.lua:295
+msgid "Read thickness"
+msgstr "Épaisseur de lecture"
+
 #: menu/colours_menu.lua:101
 msgid "Unread color"
 msgstr "Couleur non lu"
@@ -1792,6 +1796,10 @@ msgstr "Couleur non lu"
 #: menu/colours_menu.lua:105
 msgid "Unread color (% black)"
 msgstr "Couleur non lu (% noir)"
+
+#: menu/colours_menu.lua:312 menu/colours_menu.lua:316
+msgid "Unread thickness"
+msgstr "Épaisseur non lu"
 
 #: menu/colours_menu.lua:114
 msgid "Metro read color"

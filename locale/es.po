@@ -1855,6 +1855,14 @@ msgstr "Altura de la marca"
 msgid "Reset all to defaults"
 msgstr "Restablecer todo"
 
+#: menu/colours_menu.lua:291
+msgid "Read thickness"
+msgstr "Grosor leído"
+
+#: menu/colours_menu.lua:312
+msgid "Unread thickness"
+msgstr "Grosor no leído"
+
 #: menu/colours_menu.lua:368 menu/colours_menu.lua:376
 #: menu/colours_menu.lua:400 menu/progress_bar_menu.lua:32
 msgid "book"

@@ -1861,6 +1861,14 @@ msgstr "Larghezza tacca"
 msgid "Tick height"
 msgstr "Altezza tacca"
 
+#: menu/colours_menu.lua:291 menu/colours_menu.lua:295
+msgid "Read thickness"
+msgstr "Spessore letto"
+
+#: menu/colours_menu.lua:312 menu/colours_menu.lua:316
+msgid "Unread thickness"
+msgstr "Spessore non letto"
+
 #: menu/colours_menu.lua:290
 msgid "Reset all to defaults"
 msgstr "Ripristina tutto"

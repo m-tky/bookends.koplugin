@@ -1859,6 +1859,14 @@ msgstr "Височина на отметките"
 msgid "Reset all to defaults"
 msgstr "Нулиране на всичко до стойностите по подразбиране"
 
+#: menu/colours_menu.lua:291 menu/colours_menu.lua:295
+msgid "Read thickness"
+msgstr "Дебелина на прочетеното"
+
+#: menu/colours_menu.lua:312 menu/colours_menu.lua:316
+msgid "Unread thickness"
+msgstr "Дебелина на непрочетеното"
+
 #: menu/colours_menu.lua:368 menu/colours_menu.lua:376
 #: menu/colours_menu.lua:400 menu/progress_bar_menu.lua:32
 msgid "book"

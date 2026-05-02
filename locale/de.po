@@ -1848,6 +1848,14 @@ msgstr "Markierungsbreite"
 msgid "Tick height"
 msgstr "Markierungshöhe"
 
+#: menu/colours_menu.lua:291
+msgid "Read thickness"
+msgstr "Gelesene Dicke"
+
+#: menu/colours_menu.lua:312
+msgid "Unread thickness"
+msgstr "Ungelesene Dicke"
+
 #: menu/colours_menu.lua:290
 msgid "Reset all to defaults"
 msgstr "Alles zurücksetzen"
