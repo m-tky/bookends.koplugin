@@ -1818,6 +1818,40 @@ function Bookends:onFlushSettings()
     end
 end
 
+-- KOReader's PluginLoader calls this when the user ticks "Also delete plugin
+-- settings" while deleting Bookends via Plugin management. By the time we run,
+-- the koplugin folder is already purged; what remains is everything we wrote
+-- into koreader/settings/, which we own and clear here.
+function Bookends:deletePluginSettings()
+    -- Cancel before clearing self.settings: the 2 s autosave debounce can
+    -- otherwise fire between our delete and the user accepting the restart
+    -- prompt, recreating the file we just removed.
+    if self._pending_autosave then
+        UIManager:unschedule(self._pending_autosave)
+        self._pending_autosave = nil
+    end
+    self.settings = nil
+
+    local DataStorage = require("datastorage")
+    local ffiUtil = require("ffi/util")
+    local settings_dir = DataStorage:getSettingsDir()
+
+    os.remove(settings_dir .. "/bookends.lua")
+    os.remove(settings_dir .. "/bookends.lua.old")
+    pcall(ffiUtil.purgeDir, settings_dir .. "/bookends_cache")
+    pcall(ffiUtil.purgeDir, settings_dir .. "/bookends_presets")
+
+    -- Pre-v4 keys: the one-time migration at openSettings() moves these into
+    -- bookends.lua on first boot, but a user who deletes the plugin before
+    -- ever opening a book post-upgrade would never have triggered it.
+    for _, key in ipairs(Config.LEGACY_GLOBAL_KEYS) do
+        G_reader_settings:delSetting("bookends_" .. key)
+    end
+    for _, pos in ipairs(self.POSITIONS) do
+        G_reader_settings:delSetting("bookends_pos_" .. pos.key)
+    end
+end
+
 -- Tokens whose displayed value changes purely with wall-clock time (no event
 -- fires — they need the 60s heartbeat to stay current). Battery percent is
 -- here because charging/uncharging events handle the icon state change but
