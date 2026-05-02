@@ -1707,12 +1707,20 @@ msgstr ""
 msgid "transparent"
 msgstr ""
 
+#: menu/progress_bar_menu.lua
+msgid "Read"
+msgstr ""
+
 #: menu/colours_menu.lua:88
 msgid "Read color"
 msgstr ""
 
 #: menu/colours_menu.lua:92
 msgid "Read color (% black)"
+msgstr ""
+
+#: menu/progress_bar_menu.lua
+msgid "Unread"
 msgstr ""
 
 #: menu/colours_menu.lua:101
