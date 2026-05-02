@@ -60,12 +60,20 @@ function LibraryModal:init()
     if self.config.tabs and #self.config.tabs > 0 then
         self.active_tab = self.config.tabs[1].key
     end
-    -- Default chip is "all" if present in the chip strip
+    -- Default chip = the explicit is_active=true winner. When chips
+    -- advertise explicit is_active values but none is true (e.g. gallery
+    -- cold state where neither Latest nor Popular has been engaged yet),
+    -- treat that as a deliberate "no active chip" and leave self.active_chip
+    -- nil — otherwise the chips[1] fallback would make _onChipTap's
+    -- "already-active, return" branch silently swallow the user's first tap
+    -- on whatever chips[1] happens to be.
     local chips = self.config.chip_strip and self.config.chip_strip(self.active_tab) or {}
+    local any_explicit = false
     for _i, chip in ipairs(chips) do
+        if chip.is_active ~= nil then any_explicit = true end
         if chip.is_active then self.active_chip = chip.key; break end
     end
-    if not self.active_chip and chips[1] then
+    if not self.active_chip and not any_explicit and chips[1] then
         self.active_chip = chips[1].key
     end
     -- Modal-wide tap fallback: if a tap isn't consumed by a child widget AND
@@ -311,9 +319,21 @@ function LibraryModal:_onTabSelect(tab_key)
     self.active_tab = tab_key
     self.search_query = nil
     self.page = 1
-    -- Default chip on the new tab is its first chip (or "all")
+    -- Default chip on the new tab: same logic as init() at line 64. Honour
+    -- explicit is_active=true; when chips advertise explicit is_active but
+    -- none is true (gallery cold state), leave active_chip nil so the first
+    -- chip tap on the new tab actually fires _onChipTap rather than being
+    -- swallowed by the same-key short-circuit.
     local chips = self.config.chip_strip and self.config.chip_strip(self.active_tab) or {}
-    self.active_chip = chips[1] and chips[1].key or nil
+    local any_explicit = false
+    self.active_chip = nil
+    for _i, chip in ipairs(chips) do
+        if chip.is_active ~= nil then any_explicit = true end
+        if chip.is_active then self.active_chip = chip.key; break end
+    end
+    if not self.active_chip and not any_explicit and chips[1] then
+        self.active_chip = chips[1].key
+    end
     -- The search placeholder may differ per tab. Dismiss any open keyboard,
     -- then release the persisted InputText so _renderSearchInput rebuilds
     -- it with the new hint.
