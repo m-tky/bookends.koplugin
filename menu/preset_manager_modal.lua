@@ -651,9 +651,9 @@ function PresetManagerModal.show(bookends)
         local Gallery = require("preset_gallery")
         self.gallery_loading = true
         self.gallery_error = nil
-        -- Keep gallery_counts and approval_queue_count through the refresh so
-        -- stale-refresh-in-background doesn't visibly strip the current sort.
-        -- They get overwritten when the new fetches land.
+        -- Keep gallery_counts through the refresh so stale-refresh-in-background
+        -- doesn't visibly strip the current sort. It gets overwritten when the
+        -- new fetch lands.
         self.rebuild()
 
         -- Visible feedback while the synchronous httpGets block the main
@@ -680,25 +680,13 @@ function PresetManagerModal.show(bookends)
                 self.gallery_index = idx
                 self.gallery_error = nil
                 self.gallery_last_refresh_time = os.time()
-                -- Secondary fetches: approval queue (open PRs) and install counts.
-                -- Both are non-fatal. We only flip gallery_loading off once both
-                -- resolve so the status text doesn't flicker between them.
-                local pending = 2
-                local function maybeDone()
-                    pending = pending - 1
-                    if pending <= 0 then
-                        self.gallery_loading = false
-                        dismissLoading()
-                        self.rebuild()
-                    end
-                end
-                Gallery.fetchApprovalQueueCount("KOReader-Bookends", function(count)
-                    if count then self.approval_queue_count = count end
-                    maybeDone()
-                end)
+                -- Secondary fetch: install counts (drives Popular sort). Non-fatal:
+                -- failure just hides the popularity ordering until the next refresh.
                 Gallery.fetchCounts("KOReader-Bookends", function(counts)
                     if counts then self.gallery_counts = counts end
-                    maybeDone()
+                    self.gallery_loading = false
+                    dismissLoading()
+                    self.rebuild()
                 end)
             end)
         end)

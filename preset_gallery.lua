@@ -1,7 +1,7 @@
 --- Preset Gallery: fetch remote index + preset files over HTTPS.
--- Online-only by design: Refresh always hits the network, results live in
--- the modal's in-memory state, nothing is persisted to disk. Keeps the
--- mental model simple — gallery == current state of the upstream repo.
+-- Online-only by design: results live in the modal's in-memory state,
+-- nothing is persisted to disk. Keeps the mental model simple — gallery
+-- == current state of the upstream repo.
 
 local Gallery = {}
 
@@ -10,10 +10,6 @@ local BASE_URL  = "https://raw.githubusercontent.com/AndyHazz/bookends-presets/m
 local SUBMIT_URL = "https://bookends-submit.andy-nmc.workers.dev/submit"
 local INSTALL_URL = "https://bookends-submit.andy-nmc.workers.dev/install"
 local COUNTS_URL  = "https://bookends-submit.andy-nmc.workers.dev/counts"
--- GitHub Pulls API — returns open PRs on the presets repo. 100/page is the
--- max without pagination; the gallery's approval queue is never close to
--- that in practice so we trust the first page as the total.
-local PRS_URL = "https://api.github.com/repos/AndyHazz/bookends-presets/pulls?state=open&per_page=100"
 
 local function httpGet(url, user_agent)
     local ok_require, http, ltn12, socket, socketutil = pcall(function()
@@ -130,10 +126,12 @@ function Gallery.fetchIndex(user_agent, callback)
         callback(nil, "offline")
         return
     end
-    -- Cache-bust GitHub's CDN (Cache-Control: max-age=300 on raw.githubusercontent.com)
-    -- so each Refresh consults origin and sees repo edits immediately.
-    local url = INDEX_URL .. "?ts=" .. tostring(os.time())
-    local body = httpGet(url, user_agent or "KOReader-Bookends")
+    -- No cache-buster: raw.githubusercontent.com sets Cache-Control: max-age=300,
+    -- and we accept up-to-5-min staleness in exchange for ~100 ms edge-cached
+    -- responses (vs ~1 s origin). The gallery changes a few times a week, so the
+    -- staleness window is invisible. The original buster supported a Refresh
+    -- button that's since been removed.
+    local body = httpGet(INDEX_URL, user_agent or "KOReader-Bookends")
     if not body then
         callback(nil, "fetch failed")
         return
@@ -146,31 +144,6 @@ function Gallery.fetchIndex(user_agent, callback)
         return
     end
     callback(data, nil)
-end
-
---- Count open PRs (preset submissions awaiting review) on the presets repo.
--- Only called as a secondary fetch after a user-initiated Refresh — never
--- on its own. Unauthenticated GitHub API is rate-limited to 60/hr per IP,
--- plenty for a refresh-gated call.
-function Gallery.fetchApprovalQueueCount(user_agent, callback)
-    if not Gallery.isOnline() then
-        callback(nil, "offline")
-        return
-    end
-    local url = PRS_URL .. "&ts=" .. tostring(os.time())
-    local body = httpGet(url, user_agent or "KOReader-Bookends")
-    if not body then
-        callback(nil, "fetch failed")
-        return
-    end
-    local ok_req, json = pcall(require, "json")
-    if not ok_req then callback(nil, "json module missing"); return end
-    local ok, data = pcall(json.decode, body)
-    if not ok or type(data) ~= "table" then
-        callback(nil, "invalid response")
-        return
-    end
-    callback(#data, nil)
 end
 
 --- Fire-and-forget install ping. Shells out to a detached background curl so
@@ -196,17 +169,17 @@ function Gallery.recordInstall(slug, user_agent)
     if ok and handle then pcall(handle.close, handle) end
 end
 
---- GET /counts → { slug = count, ... }. Edge-cached 60s server-side so
--- tapping Refresh repeatedly within a minute is cheap. Called as a secondary
--- fetch alongside the approval-queue count; failure is non-fatal, the UI
--- just hides the Popular sort until a refresh succeeds.
+--- GET /counts → { slug = count, ... }. Edge-cached 60 s server-side; we
+-- pass no cache-buster so chip-tap fetches actually hit that edge cache (a
+-- per-tap unique ?ts= would defeat it). Called as a secondary fetch after
+-- fetchIndex; failure is non-fatal, the UI just hides the Popular sort
+-- until the next gallery refresh succeeds.
 function Gallery.fetchCounts(user_agent, callback)
     if not Gallery.isOnline() then
         callback(nil, "offline")
         return
     end
-    local body = httpGet(COUNTS_URL .. "?ts=" .. tostring(os.time()),
-                         user_agent or "KOReader-Bookends")
+    local body = httpGet(COUNTS_URL, user_agent or "KOReader-Bookends")
     if not body then
         callback(nil, "fetch failed")
         return
