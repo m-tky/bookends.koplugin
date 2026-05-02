@@ -223,21 +223,51 @@ function Bookends:buildSingleBarMenu(bar_idx, bar_cfg)
                 local is_radial = (bar_cfg.style or "solid") == "radial" or bar_cfg.style == "radial_hollow"
                 local label = is_radial and _("Diameter") or _("Thickness")
                 local default = is_radial and 60 or 20
-                return label .. ": " .. (bar_cfg.height or default) .. "px"
+                local read_val = bar_cfg.height or default
+                if bar_cfg.unread_height ~= nil and bar_cfg.unread_height ~= read_val then
+                    return label .. ": " .. read_val .. "/" .. bar_cfg.unread_height .. "px"
+                end
+                return label .. ": " .. read_val .. "px"
             end,
             enabled_func = isEnabled,
             keep_menu_open = true,
             callback = function(touchmenu_instance)
                 local is_radial = (bar_cfg.style or "solid") == "radial" or bar_cfg.style == "radial_hollow"
-                local label = is_radial and _("Diameter") or _("Bar thickness")
+                local title = is_radial and _("Diameter") or _("Bar thickness")
                 local default = is_radial and 60 or 20
-                local max_val = is_radial and 200 or 60
-                self:showNudgeDialog(label, bar_cfg.height or default, 1, max_val, default, "px",
-                    function(val)
-                        bar_cfg.height = val
+                DialogHelpers.showNudgeGrid{
+                    title = title,
+                    rows = {
+                        { label = _("Read"),   field = "height" },
+                        { label = _("Unread"), field = "unread_height" },
+                    },
+                    get_value = function(field)
+                        if field == "height" then return bar_cfg.height or default end
+                        return bar_cfg.unread_height or bar_cfg.height or default
+                    end,
+                    set_value = function(field, value)
+                        if field == "height" then
+                            bar_cfg.height = value
+                            -- If unread_height was implicitly tracking the
+                            -- old read value, leave it nil so it keeps
+                            -- tracking — only an explicit unread nudge
+                            -- materialises the field.
+                        else
+                            -- Clear when unread matches read; nil means symmetric.
+                            local read_val = bar_cfg.height or default
+                            bar_cfg.unread_height = (value ~= read_val) and value or nil
+                        end
+                    end,
+                    on_row_change = saveBar,
+                    on_cancel = saveBar,
+                    on_default = function()
+                        bar_cfg.height = default
+                        bar_cfg.unread_height = nil
                         saveBar()
                     end,
-                    nil, nil, nil, touchmenu_instance)
+                    default_text = _("Default") .. " " .. default .. "px",
+                    parent_menu = touchmenu_instance,
+                }
             end,
         },
         {
