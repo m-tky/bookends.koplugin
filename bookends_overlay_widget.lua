@@ -1417,7 +1417,9 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
     elseif style == "solid" then
         local solid_fill = resolveColor(custom_fill, Blitbuffer.COLOR_GRAY_5)
         local solid_bg = resolveColor(custom_bg, Blitbuffer.COLOR_GRAY)
-        pr(ox, oy, length, thickness, solid_bg)
+        if unread_thick > 0 then
+            pr(ox, unread_oy, length, unread_thick, solid_bg)
+        end
         local fill_len = math.floor(length * fraction)
         local fill_start = reverse and (length - fill_len) or 0
         if fill_len > 0 then
