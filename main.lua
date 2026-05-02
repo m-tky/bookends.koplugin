@@ -1359,6 +1359,17 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
                         colors = { unread_height = bar_cfg.unread_height }
                     end
                 end
+                -- Strip global Read/Unread thickness %s — those are inline-only.
+                -- Full-width bars have their own per-bar absolute-px controls.
+                if colors and (colors.read_height_pct or colors.unread_height_pct) then
+                    if colors == bar_colors then
+                        local copy = {}
+                        for k, v in pairs(colors) do copy[k] = v end
+                        colors = copy
+                    end
+                    colors.read_height_pct = nil
+                    colors.unread_height_pct = nil
+                end
                 OverlayWidget.paintProgressBar(bb, bar_x, bar_y, bar_w, bar_h, pct, ticks,
                     bar_cfg.style or "solid", paint_vertical and "vertical" or nil, paint_reverse, colors)
                 table.insert(self._hold_rects, { x = bar_x, y = bar_y, w = bar_w, h = bar_h })
