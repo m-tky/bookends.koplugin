@@ -434,6 +434,14 @@ msgstr ""
 msgid "Bookends update available: v"
 msgstr "Aggiornamento Bookends disponibile: v"
 
+#: menu/progress_bar_menu.lua:241
+msgid "Read"
+msgstr "Letto"
+
+#: menu/progress_bar_menu.lua:242
+msgid "Unread"
+msgstr "Non letto"
+
 #: main.lua:2528 menu/main_menu.lua:522 menu/progress_bar_menu.lua:245
 #: menu/progress_bar_menu.lua:379
 msgid "Adjust margins"

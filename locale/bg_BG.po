@@ -2014,6 +2014,14 @@ msgstr "Дебелина"
 msgid "Bar thickness"
 msgstr "Дебелина на лентата"
 
+#: menu/progress_bar_menu.lua:241
+msgid "Read"
+msgstr "Прочетена"
+
+#: menu/progress_bar_menu.lua:242
+msgid "Unread"
+msgstr "Непрочетена"
+
 #: menu/progress_bar_menu.lua:259 menu/progress_bar_menu.lua:261
 msgid "Custom colors and tick marks"
 msgstr "Персонализирани цветове и отметки"

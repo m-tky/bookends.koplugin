@@ -1764,6 +1764,10 @@ msgstr "Standard"
 msgid "transparent"
 msgstr "transparent"
 
+#: menu/progress_bar_menu.lua
+msgid "Read"
+msgstr "Gelesen"
+
 #: menu/colours_menu.lua:88
 msgid "Read color"
 msgstr "Gelesene Farbe"
@@ -1771,6 +1775,10 @@ msgstr "Gelesene Farbe"
 #: menu/colours_menu.lua:92
 msgid "Read color (% black)"
 msgstr "Gelesene Farbe (% schwarz)"
+
+#: menu/progress_bar_menu.lua
+msgid "Unread"
+msgstr "Ungelesen"
 
 #: menu/colours_menu.lua:101
 msgid "Unread color"

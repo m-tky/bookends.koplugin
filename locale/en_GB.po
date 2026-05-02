@@ -1942,6 +1942,14 @@ msgstr ""
 msgid "Bar thickness"
 msgstr ""
 
+#: menu/progress_bar_menu.lua:241
+msgid "Read"
+msgstr ""
+
+#: menu/progress_bar_menu.lua:242
+msgid "Unread"
+msgstr ""
+
 #: menu/progress_bar_menu.lua:259 menu/progress_bar_menu.lua:261
 msgid "Custom colors and tick marks"
 msgstr "Custom colours and tick marks"

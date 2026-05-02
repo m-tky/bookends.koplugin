@@ -2009,6 +2009,14 @@ msgstr "Grosor"
 msgid "Bar thickness"
 msgstr "Grosor de la barra"
 
+#: menu/progress_bar_menu.lua:241
+msgid "Read"
+msgstr "Leído"
+
+#: menu/progress_bar_menu.lua:242
+msgid "Unread"
+msgstr "No leído"
+
 #: menu/progress_bar_menu.lua:259 menu/progress_bar_menu.lua:261
 msgid "Custom colors and tick marks"
 msgstr "Colores y marcas personalizadas"

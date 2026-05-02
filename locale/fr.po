@@ -2012,6 +2012,14 @@ msgstr "Épaisseur"
 msgid "Bar thickness"
 msgstr "Épaisseur de la barre"
 
+#: menu/progress_bar_menu.lua:241
+msgid "Read"
+msgstr "Lu"
+
+#: menu/progress_bar_menu.lua:242
+msgid "Unread"
+msgstr "Non lu"
+
 #: menu/progress_bar_menu.lua:259 menu/progress_bar_menu.lua:261
 msgid "Custom colors and tick marks"
 msgstr "Couleurs et graduations personnalisées"
