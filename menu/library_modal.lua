@@ -587,6 +587,34 @@ function LibraryModal:_renderChipStrip(content_width)
     end
     table.insert(rows, current_row)
 
+    -- Optional inline status text rendered alongside the chips on the first
+    -- row, in the empty space to their right. The domain returns a string
+    -- (or nil) via `chip_strip_status` — used for transient feedback like
+    -- "Loading gallery…" so the message reads as part of the modal chrome
+    -- rather than a separate KOReader popup. Matches the slot the legacy
+    -- bespoke chrome used for the approval-queue count.
+    local status_text = self.config.chip_strip_status
+        and self.config.chip_strip_status(self.active_tab) or nil
+    if status_text and #status_text > 0 and rows[1] then
+        local row1 = rows[1]
+        local row1_w = 0
+        for _i, child in ipairs(row1) do
+            local sz = child.getSize and child:getSize() or { w = 0 }
+            row1_w = row1_w + (sz.w or 0)
+        end
+        local status_gap = Screen:scaleBySize(12)
+        local status_max = content_width - row1_w - status_gap
+        if status_max > 0 then
+            table.insert(row1, HorizontalSpan:new{ width = status_gap })
+            table.insert(row1, TextWidget:new{
+                text = status_text,
+                face = Font:getFace("cfont", 13),
+                max_width = status_max,
+                fgcolor = Blitbuffer.COLOR_DARK_GRAY,
+            })
+        end
+    end
+
     local vg = VerticalGroup:new{ align = "left" }
     for i, row in ipairs(rows) do
         if i > 1 then table.insert(vg, VerticalSpan:new{ width = row_gap }) end

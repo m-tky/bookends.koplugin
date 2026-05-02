@@ -15,7 +15,6 @@ local Geom = require("ui/geometry")
 local GestureRange = require("ui/gesturerange")
 local HorizontalGroup = require("ui/widget/horizontalgroup")
 local HorizontalSpan = require("ui/widget/horizontalspan")
-local InfoMessage = require("ui/widget/infomessage")
 local InputContainer = require("ui/widget/container/inputcontainer")
 local InputDialog = require("ui/widget/inputdialog")
 local LeftContainer = require("ui/widget/container/leftcontainer")
@@ -495,6 +494,17 @@ local function buildPresetLibraryConfig(self)
                 }
             end
         end,
+        -- Inline status text rendered to the right of the chips, in the
+        -- slot the legacy chrome used for the approval-queue count.
+        -- Currently only used for transient gallery-load feedback so the
+        -- message reads as part of bookends' modal rather than a generic
+        -- KOReader popup floating over it.
+        chip_strip_status = function(active_tab)
+            if active_tab == "gallery" and self.gallery_loading then
+                return _("Loading gallery…")
+            end
+            return nil
+        end,
         on_chip_tap = function(chip_key)
             if self.tab == "local" then
                 self.setMySort(chip_key)
@@ -656,24 +666,19 @@ function PresetManagerModal.show(bookends)
         -- new fetch lands.
         self.rebuild()
 
-        -- Visible feedback while the synchronous httpGets block the main
-        -- thread. Without this the chip-tap would freeze the UI silently
-        -- for 1–5 s: rebuild()'s nextTick can't fire because the next call
-        -- on the stack is the blocking fetch. scheduleIn(0.1, ...) gives
-        -- the message a paint cycle before the freeze. Same shape as
-        -- bookends_updater.lua:304-309.
-        local loading_msg = InfoMessage:new{ text = _("Loading gallery…") }
-        UIManager:show(loading_msg)
-        local function dismissLoading()
-            UIManager:close(loading_msg)
-        end
-
+        -- Defer the synchronous fetch by one paint cycle so the chip strip
+        -- has a chance to render the "Loading gallery…" status (driven by
+        -- the chip_strip_status callback above) before the main thread
+        -- freezes inside httpGet. Without this the chip-tap would freeze
+        -- the UI silently for 1–5 s: rebuild()'s nextTick can't fire
+        -- because the next call on the stack is the blocking fetch. 0.1 s
+        -- is the same delay bookends_updater.lua:304-309 uses for the
+        -- equivalent "show feedback then block" pattern.
         UIManager:scheduleIn(0.1, function()
             Gallery.fetchIndex("KOReader-Bookends", function(idx, err)
                 if not idx then
                     self.gallery_loading = false
                     self.gallery_error = err
-                    dismissLoading()
                     self.rebuild()
                     return
                 end
@@ -685,7 +690,6 @@ function PresetManagerModal.show(bookends)
                 Gallery.fetchCounts("KOReader-Bookends", function(counts)
                     if counts then self.gallery_counts = counts end
                     self.gallery_loading = false
-                    dismissLoading()
                     self.rebuild()
                 end)
             end)
