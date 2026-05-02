@@ -1342,10 +1342,21 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
         local hollow = style == "radial_hollow"
         local inner_radius = hollow and math.floor(radius * 0.55) or 0
         local inner_r2 = inner_radius * inner_radius
+        -- Asymmetric: unread arc renders as a thinner band centred on the
+        -- read band's midline. Symmetric configs collapse to the read band.
+        local mid_r = (radius + inner_radius) / 2
+        local band_half = (radius - inner_radius) / 2
+        local unread_band_half = unread_thick == read_thick and band_half
+            or band_half * unread_thick / read_thick
+        local unread_outer = mid_r + unread_band_half
+        local unread_inner = mid_r - unread_band_half
+        local unread_outer_r2 = unread_outer * unread_outer
+        local unread_inner_r2 = unread_inner * unread_inner
         local two_pi = 2 * math.pi
 
-        -- Paint the pie circle pixel by pixel.
-        -- Angle 0 = 12 o'clock (top), increasing clockwise.
+        -- Paint the pie circle pixel by pixel. Read arc fills the full ring
+        -- band (radius..inner_radius); unread arc fills a thinner band
+        -- centred on the band midline. Angle 0 = 12 o'clock (top).
         for py = -radius, radius - 1 do
             for px = -radius, radius - 1 do
                 -- Offset to pixel center for smoother circle
@@ -1353,15 +1364,17 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                 local dy = py + 0.5
                 local d2 = dx * dx + dy * dy
                 if d2 <= r2 and d2 > inner_r2 then
-                    -- Compute angle from top, clockwise: atan2(dx, -dy) mapped to [0, 2π)
                     local angle = math.atan2(dx, -dy)
                     if angle < 0 then angle = angle + two_pi end
                     local pixel_frac = angle / two_pi
-
                     local in_fill = pixel_frac <= fraction
-                    local color = in_fill and radial_fill or radial_bg
-                    if color then
-                        bbPaintRect(bb, cx + px, cy + py, 1, 1, color)
+                    local in_band = in_fill
+                        or (d2 <= unread_outer_r2 and d2 > unread_inner_r2)
+                    if in_band then
+                        local color = in_fill and radial_fill or radial_bg
+                        if color then
+                            bbPaintRect(bb, cx + px, cy + py, 1, 1, color)
+                        end
                     end
                 end
             end
@@ -1402,31 +1415,42 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
             end
         end
 
-        -- Optional border circle (1px ring at the outer edge)
+        -- Optional border ring at outer edge. Thickness honours the same
+        -- colors.border_thickness setting that bordered/rounded already use.
         if radial_border_color then
-            local border_r2_outer = radius * radius
-            local border_r2_inner = (radius - 1) * (radius - 1)
-            for py = -radius, radius - 1 do
-                for px = -radius, radius - 1 do
-                    local dx = px + 0.5
-                    local dy = py + 0.5
-                    local d2 = dx * dx + dy * dy
-                    if d2 <= border_r2_outer and d2 > border_r2_inner then
-                        bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_border_color)
-                    end
-                end
-            end
-            -- Inner border ring for hollow variant
-            if hollow then
-                local ib_r2_outer = inner_radius * inner_radius
-                local ib_r2_inner = (inner_radius - 1) * (inner_radius - 1)
-                for py = -inner_radius, inner_radius - 1 do
-                    for px = -inner_radius, inner_radius - 1 do
+            local border = (colors and colors.border_thickness) or 1
+            if border < 0 then border = 0 end
+            if border > radius then border = radius end
+            if border > 0 then
+                local border_r2_outer = radius * radius
+                local border_r2_inner = (radius - border) * (radius - border)
+                for py = -radius, radius - 1 do
+                    for px = -radius, radius - 1 do
                         local dx = px + 0.5
                         local dy = py + 0.5
                         local d2 = dx * dx + dy * dy
-                        if d2 <= ib_r2_outer and d2 > ib_r2_inner then
+                        if d2 <= border_r2_outer and d2 > border_r2_inner then
                             bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_border_color)
+                        end
+                    end
+                end
+            end
+            -- Inner border ring for hollow variant. Same thickness, clamped
+            -- against inner_radius so a fat border can't collapse the hole.
+            if hollow then
+                local inner_border = border
+                if inner_border > inner_radius then inner_border = inner_radius end
+                if inner_border > 0 then
+                    local ib_r2_outer = inner_radius * inner_radius
+                    local ib_r2_inner = (inner_radius - inner_border) * (inner_radius - inner_border)
+                    for py = -inner_radius, inner_radius - 1 do
+                        for px = -inner_radius, inner_radius - 1 do
+                            local dx = px + 0.5
+                            local dy = py + 0.5
+                            local d2 = dx * dx + dy * dy
+                            if d2 <= ib_r2_outer and d2 > ib_r2_inner then
+                                bbPaintRect(bb, cx + px, cy + py, 1, 1, radial_border_color)
+                            end
                         end
                     end
                 end
