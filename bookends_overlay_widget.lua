@@ -1514,8 +1514,13 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                     local unread_b_inner = math.min(border, unread_inner_radius)
                     local uib_outer_r2 = unread_inner_radius * unread_inner_radius
                     local uib_inner_r2 = (unread_inner_radius - unread_b_inner) * (unread_inner_radius - unread_b_inner)
-                    for py = -inner_radius, inner_radius - 1 do
-                        for px = -inner_radius, inner_radius - 1 do
+                    -- Loop must cover both read inner_radius AND unread_inner_radius
+                    -- (which can be larger when the unread band is centred on the
+                    -- read midline and shrinks toward it). Use ceil to avoid
+                    -- truncating the unread band's outermost pixels.
+                    local loop_r = math.max(inner_radius, math.ceil(unread_inner_radius))
+                    for py = -loop_r, loop_r - 1 do
+                        for px = -loop_r, loop_r - 1 do
                             local dx = px + 0.5
                             local dy = py + 0.5
                             local d2 = dx * dx + dy * dy
@@ -1773,8 +1778,9 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                     end
                 end
 
-                squareInnerSide(ox + read_seg_ox, oy, read_len, read_thick, read_r,
-                    reverse and "left" or "right")
+                -- Only square the unread segment's inner end. Read keeps its
+                -- rounded inner end so the read pill ends with a clean rounded
+                -- "tip" at the boundary.
                 squareInnerSide(ox + unread_seg_ox, unread_oy, unread_len, unread_thick, unread_r,
                     reverse and "right" or "left")
             end
