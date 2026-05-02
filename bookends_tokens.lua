@@ -1935,11 +1935,19 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     if needs("avg_page_time") and ui.statistics
        and tonumber(ui.statistics.avg_time)
        and ui.statistics.avg_time > 0 then
-        local user_duration_format = G_reader_settings:readSetting("duration_format", "classic")
-        -- Pass withoutSeconds=false so per-page averages keep their second-level
-        -- resolution (typical values are 30-90s; rounding to whole minutes loses
-        -- meaningful precision unlike the longer session/today durations).
-        avg_page_time_str = datetime.secondsToClockDuration(user_duration_format, ui.statistics.avg_time, false)
+        local avg_secs = ui.statistics.avg_time
+        -- Per-page averages run 30–90 s for most readers; the clock format
+        -- ("0:00:47") is awkward for sub-minute values. Render those as a
+        -- compact "47s" and only fall back to the user's clock format once
+        -- the average crosses a minute. Issue #38. Hard-coded "s" suffix is
+        -- universal scientific abbreviation; not gettext'd to avoid pulling
+        -- the i18n module into bookends_tokens.lua for one symbol.
+        if avg_secs < 60 then
+            avg_page_time_str = math.floor(avg_secs) .. "s"
+        else
+            local user_duration_format = G_reader_settings:readSetting("duration_format", "classic")
+            avg_page_time_str = datetime.secondsToClockDuration(user_duration_format, avg_secs, false)
+        end
     end
 
     local book_pct_read_str = ""
