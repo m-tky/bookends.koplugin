@@ -285,6 +285,48 @@ function Bookends:buildBarColorsMenu()
         end,
     })
 
+    -- Read thickness % (inline bars only — scales bar height relative to font size)
+    table.insert(items, {
+        text_func = function()
+            return _("Read thickness") .. ": " .. (bc.read_height_pct or 100) .. "%"
+        end,
+        keep_menu_open = true,
+        callback = function(touchmenu_instance)
+            self:showNudgeDialog(_("Read thickness"), bc.read_height_pct or 100, 25, 200, 100, "%",
+                function(val)
+                    bc.read_height_pct = (val ~= 100) and val or nil
+                    saveColors()
+                end,
+                nil, nil, nil, touchmenu_instance)
+        end,
+        hold_callback = function(touchmenu_instance)
+            bc.read_height_pct = nil
+            saveColors()
+            if touchmenu_instance then touchmenu_instance:updateItems() end
+        end,
+    })
+
+    -- Unread thickness % (default for all bars; per-bar Unread px overrides)
+    table.insert(items, {
+        text_func = function()
+            return _("Unread thickness") .. ": " .. (bc.unread_height_pct or 100) .. "%"
+        end,
+        keep_menu_open = true,
+        callback = function(touchmenu_instance)
+            self:showNudgeDialog(_("Unread thickness"), bc.unread_height_pct or 100, 0, 100, 100, "%",
+                function(val)
+                    bc.unread_height_pct = (val ~= 100) and val or nil
+                    saveColors()
+                end,
+                nil, nil, nil, touchmenu_instance)
+        end,
+        hold_callback = function(touchmenu_instance)
+            bc.unread_height_pct = nil
+            saveColors()
+            if touchmenu_instance then touchmenu_instance:updateItems() end
+        end,
+    })
+
     -- Reset all
     table.insert(items, {
         text = _("Reset all to defaults"),
