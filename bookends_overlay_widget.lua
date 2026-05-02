@@ -1137,7 +1137,7 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
         if line_fill > 0 then
             pr(line_ox + read_trunk_start, line_y, line_fill, line_thick, metro_track)
         end
-        if unread_trunk_len > 0 and unread_line_thick > 0 then
+        if unread_trunk_len > 0 and unread_line_thick > 0 and unread_thick > 0 then
             pr(line_ox + unread_trunk_start, unread_line_y, unread_trunk_len, unread_line_thick, metro_track)
         end
         -- Optional fill overlay on the read portion (always at read line_thick)
@@ -1269,6 +1269,7 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
             local cy = wave_y(i)
             local in_fill = i >= fill_start and i < fill_end
             local color = in_fill and wave_fill or wave_track
+            if not in_fill and unread_thick == 0 then color = nil end
             local h_local = in_fill and ribbon_h or unread_ribbon_h
             local half_local = in_fill and half_ribbon or unread_half_ribbon
             local ry = cy - half_local
