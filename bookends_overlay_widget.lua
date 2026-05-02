@@ -1497,6 +1497,91 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
         if border > math.floor(thickness / 2) then border = math.floor(thickness / 2) end
         local min_dim = vertical and w or h
         local radius = style == "rounded" and math.floor(min_dim / 2) or 0
+        -- Asymmetric path: paint two adjacent segments (read at read_thick,
+        -- unread at unread_thick centred on the same midline). Each segment
+        -- is fully bordered. Symmetric configs fall through to the legacy
+        -- single-rect render below to keep that pixel output unchanged.
+        if unread_thick ~= read_thick then
+            local read_len = math.floor(length * fraction)
+            local unread_len = length - read_len
+            local read_seg_ox = reverse and (length - read_len) or 0
+            local unread_seg_ox = reverse and 0 or read_len
+
+            -- Real-coord paint for one segment. seg_ox/seg_oy are abstract;
+            -- this helper swaps to real-screen coords for the rounded-rect
+            -- API which doesn't have an axis-swap variant.
+            local function paintSeg(seg_ox, seg_oy, seg_len, seg_thick, fill_color)
+                if seg_len <= 0 or seg_thick <= 0 then return end
+                local rx = vertical and seg_oy or seg_ox
+                local ry = vertical and seg_ox or seg_oy
+                local rw = vertical and seg_thick or seg_len
+                local rh = vertical and seg_len or seg_thick
+                local seg_radius = radius
+                if seg_radius > math.floor(math.min(rw, rh) / 2) then
+                    seg_radius = math.floor(math.min(rw, rh) / 2)
+                end
+                if seg_radius > 0 then
+                    if fill_color then
+                        bbPaintRoundedRect(bb, rx, ry, rw, rh, fill_color, seg_radius)
+                    end
+                else
+                    if fill_color then
+                        bbPaintRect(bb, rx, ry, rw, rh, fill_color)
+                    end
+                end
+                local seg_border_color = resolveColor(custom_border, Blitbuffer.COLOR_BLACK)
+                if seg_border_color and border > 0 then
+                    if seg_radius > 0 then
+                        bbPaintBorder(bb, rx, ry, rw, rh, border, seg_border_color, seg_radius)
+                    else
+                        local seg_b = border
+                        if seg_b > math.floor(seg_thick / 2) then seg_b = math.floor(seg_thick / 2) end
+                        if seg_b < 0 then seg_b = 0 end
+                        if seg_b > 0 then
+                            bbPaintRect(bb, rx, ry, rw, seg_b, seg_border_color)
+                            bbPaintRect(bb, rx, ry + rh - seg_b, rw, seg_b, seg_border_color)
+                            bbPaintRect(bb, rx, ry, seg_b, rh, seg_border_color)
+                            bbPaintRect(bb, rx + rw - seg_b, ry, seg_b, rh, seg_border_color)
+                        end
+                    end
+                end
+            end
+
+            paintSeg(ox + read_seg_ox, oy, read_len, read_thick, border_fill)
+            paintSeg(ox + unread_seg_ox, unread_oy, unread_len, unread_thick, border_bg)
+
+            -- Ticks (read-thickness, centred on read midline). Mirrors the
+            -- symmetric tick logic below, simplified — the asymmetric segments
+            -- already carry their own borders, so no inner-rect inset is needed.
+            local tick_ox = ox
+            local tick_len = length
+            local tick_thick = read_thick
+            local fill_len_for_ticks = read_len
+            local fill_start_for_ticks = read_seg_ox
+            for _, tick in ipairs(ticks or {}) do
+                local tick_frac = type(tick) == "table" and tick[1] or tick
+                local tick_w = type(tick) == "table" and tick[2] or 1
+                if reverse then tick_frac = 1 - tick_frac end
+                local tick_pos = math.floor(tick_len * tick_frac)
+                if tick_pos > 0 and tick_pos < tick_len then
+                    local base_tick = resolveColor(custom_tick, Blitbuffer.COLOR_BLACK)
+                    if base_tick then
+                        local in_fill = tick_pos >= fill_start_for_ticks
+                            and tick_pos < fill_start_for_ticks + fill_len_for_ticks
+                        local tick_color
+                        if invert_read_ticks ~= false and in_fill then
+                            tick_color = resolveColor(custom_invert, border_bg)
+                        else
+                            tick_color = base_tick
+                        end
+                        local th = math.max(1, math.floor(tick_thick * tick_height_pct / 100))
+                        local t_oy = oy + math.floor((tick_thick - th) / 2)
+                        pr(tick_ox + tick_pos, t_oy, tick_w, th, tick_color)
+                    end
+                end
+            end
+            return
+        end
         -- Background (use real coordinates for rounded rect API)
         if radius > 0 then
             if border_bg then
