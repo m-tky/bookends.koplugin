@@ -1535,33 +1535,43 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                         end
                     end
                 end
-                -- Connector radial lines at the angular boundaries (solid only).
-                -- These bridge between the read circle's outer edge and the unread
-                -- (smaller) circle's outer edge so the border outline is closed.
-                -- Skip for symmetric (no step to bridge) and for hollow (band is at
-                -- read midline; the inner/outer bands transition smoothly).
-                if not hollow and unread_radius ~= radius and fraction > 0 and fraction < 1 then
-                    local function paintRadialConnector(angle_at)
-                        -- Paint border-thickness-wide radial line from unread_radius
-                        -- (or 0 if unread_radius = 0) to radius at the given angle.
+                -- Connector radial lines at the angular boundaries. For solid:
+                -- bridge the read disk's outer edge to the unread (smaller) disk's
+                -- outer edge. For hollow: bridge the band's outer edges AND the
+                -- band's inner edges (read band extends from inner_radius to
+                -- radius; unread band extends from unread_inner_band_r to
+                -- unread_outer_band_r — both shorter than the read band).
+                if read_thick ~= unread_thick and fraction > 0 and fraction < 1 then
+                    local function paintRadialConnector(angle_at, r_a, r_b)
+                        -- Paint border-thickness radial line from r_a to r_b at the
+                        -- given angle. Caller passes any pair; ordering doesn't matter.
+                        if r_a == r_b then return end
                         local cos_a = math.cos(angle_at - math.pi / 2)
                         local sin_a = math.sin(angle_at - math.pi / 2)
-                        local r_lo = math.min(unread_radius, radius)
-                        local r_hi = math.max(unread_radius, radius)
+                        local r_lo = math.min(r_a, r_b)
+                        local r_hi = math.max(r_a, r_b)
+                        local half_b = math.floor(border / 2)
                         for t = r_lo, r_hi do
-                            -- Sweep border perpendicular to the radial line.
-                            -- Use a small cross-stamp: paint a (border × border)
-                            -- block centred on each radial pixel for thickness.
                             local lx = cx + math.floor(t * cos_a)
                             local ly = cy + math.floor(t * sin_a)
-                            local half_b = math.floor(border / 2)
-                            bbPaintRect(bb, lx - half_b, ly - half_b, math.max(1, border), math.max(1, border), radial_border_color)
+                            bbPaintRect(bb, lx - half_b, ly - half_b,
+                                math.max(1, border), math.max(1, border),
+                                radial_border_color)
                         end
                     end
-                    -- Boundary at 12 o'clock (angle 0) — between unread end and read start
-                    paintRadialConnector(0)
-                    -- Boundary at fraction × 2π — between read end and unread start
-                    paintRadialConnector(fraction * two_pi)
+                    if hollow then
+                        -- Bridge outer band edges (radius vs unread_outer_band_r)
+                        paintRadialConnector(0, radius, unread_outer_band_r)
+                        paintRadialConnector(fraction * two_pi, radius, unread_outer_band_r)
+                        -- Bridge inner band edges (inner_radius vs unread_inner_band_r)
+                        paintRadialConnector(0, inner_radius, unread_inner_band_r)
+                        paintRadialConnector(fraction * two_pi, inner_radius, unread_inner_band_r)
+                    else
+                        -- Solid: just one connector per boundary, from outer disk
+                        -- (radius) down to unread disk (unread_radius).
+                        paintRadialConnector(0, unread_radius, radius)
+                        paintRadialConnector(fraction * two_pi, unread_radius, radius)
+                    end
                 end
             end
         end
@@ -1718,6 +1728,56 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
             local unread_skip = reverse and "right" or "left"
             paintSeg(ox + read_seg_ox, oy, read_len, read_thick, border_bg, border_fill, read_skip)
             paintSeg(ox + unread_seg_ox, unread_oy, unread_len, unread_thick, border_bg, nil, unread_skip)
+
+            -- Rounded asymmetric: paintSeg painted both segments as fully-rounded
+            -- pills. The inner-facing rounded corners create a "two separate pills"
+            -- look that breaks the stepped flow. Overpaint each segment's inner
+            -- side: erase the inner-facing border, fill the corner indents with bg
+            -- to square them, then re-paint straight top/bottom borders extending
+            -- to the boundary.
+            if radius > 0 and read_thick ~= unread_thick then
+                local seg_border_color = resolveColor(custom_border, Blitbuffer.COLOR_BLACK)
+
+                -- Per-segment inner radius (clamped to half the segment thickness,
+                -- matching paintSeg's clamp).
+                local read_r = radius
+                if read_r > math.floor(read_thick / 2) then read_r = math.floor(read_thick / 2) end
+                local unread_r = radius
+                if unread_r > math.floor(unread_thick / 2) then unread_r = math.floor(unread_thick / 2) end
+
+                local function squareInnerSide(seg_ox, seg_oy, seg_len, seg_thick, seg_r, side)
+                    -- side: "right" (square the right end) or "left" (square left end)
+                    if seg_len <= 0 or seg_thick <= 0 then return end
+                    local inner_x  -- abstract x of the inner-facing edge (boundary side)
+                    if side == "right" then
+                        inner_x = seg_ox + seg_len - seg_r
+                    else
+                        inner_x = seg_ox
+                    end
+                    -- Erase inner-facing border: full segment height, border-thick.
+                    if border > 0 then
+                        local erase_ox = (side == "right")
+                            and (seg_ox + seg_len - border)
+                            or seg_ox
+                        pr(erase_ox, seg_oy, border, seg_thick, border_bg)
+                    end
+                    -- Fill the two inner-side corner indents (square them).
+                    pr(inner_x, seg_oy, seg_r, seg_r, border_bg)
+                    pr(inner_x, seg_oy + seg_thick - seg_r, seg_r, seg_r, border_bg)
+                    -- Re-paint top and bottom borders straight across the squared
+                    -- corner area so the segment outline is continuous along the
+                    -- top and bottom edges.
+                    if seg_border_color and border > 0 then
+                        pr(inner_x, seg_oy, seg_r, border, seg_border_color)
+                        pr(inner_x, seg_oy + seg_thick - border, seg_r, border, seg_border_color)
+                    end
+                end
+
+                squareInnerSide(ox + read_seg_ox, oy, read_len, read_thick, read_r,
+                    reverse and "left" or "right")
+                squareInnerSide(ox + unread_seg_ox, unread_oy, unread_len, unread_thick, unread_r,
+                    reverse and "right" or "left")
+            end
 
             -- Boundary connectors: bridge between read and unread heights so the
             -- outline is closed and "flows" from thick to thin instead of looking
