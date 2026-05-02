@@ -1192,10 +1192,13 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                     is_read = tick_pos <= line_fill
                 end
                 local tick_color = (metro_fill and is_read) and metro_fill or metro_track
+                -- Anchor ticks at the bar's vertical centre so they always cross
+                -- the trunk regardless of read/unread thickness asymmetry.
+                local centre_y = oy + math.floor(thickness / 2)
                 if tick_above then
-                    pr(line_ox + tick_pos, line_y - metro_tick_h, line_thick, metro_tick_h, tick_color)
+                    pr(line_ox + tick_pos, centre_y - metro_tick_h, line_thick, metro_tick_h, tick_color)
                 else
-                    pr(line_ox + tick_pos, line_y + line_thick, line_thick, metro_tick_h, tick_color)
+                    pr(line_ox + tick_pos, centre_y, line_thick, metro_tick_h, tick_color)
                 end
             end
         end
@@ -1532,7 +1535,7 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
             -- Real-coord paint for one segment. seg_ox/seg_oy are abstract;
             -- this helper swaps to real-screen coords for the rounded-rect
             -- API which doesn't have an axis-swap variant.
-            local function paintSeg(seg_ox, seg_oy, seg_len, seg_thick, fill_color)
+            local function paintSeg(seg_ox, seg_oy, seg_len, seg_thick, outer_color, inner_color)
                 if seg_len <= 0 or seg_thick <= 0 then return end
                 local rx = vertical and seg_oy or seg_ox
                 local ry = vertical and seg_ox or seg_oy
@@ -1542,15 +1545,33 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                 if seg_radius > math.floor(math.min(rw, rh) / 2) then
                     seg_radius = math.floor(math.min(rw, rh) / 2)
                 end
-                if seg_radius > 0 then
-                    if fill_color then
-                        bbPaintRoundedRect(bb, rx, ry, rw, rh, fill_color, seg_radius)
-                    end
-                else
-                    if fill_color then
-                        bbPaintRect(bb, rx, ry, rw, rh, fill_color)
+                -- Outer bg fill
+                if outer_color then
+                    if seg_radius > 0 then
+                        bbPaintRoundedRect(bb, rx, ry, rw, rh, outer_color, seg_radius)
+                    else
+                        bbPaintRect(bb, rx, ry, rw, rh, outer_color)
                     end
                 end
+                -- Inner fill, inset by border + padding (matches symmetric path's
+                -- "fill stripe inside the bordered rect" look).
+                if inner_color then
+                    local padding = math.max(1, math.floor(seg_thick * 0.1))
+                    local inset = border + padding
+                    local inner_rx = rx + inset
+                    local inner_ry = ry + inset
+                    local inner_rw = rw - 2 * inset
+                    local inner_rh = rh - 2 * inset
+                    if inner_rw > 0 and inner_rh > 0 then
+                        if seg_radius > 0 then
+                            local inner_r = math.max(0, seg_radius - inset)
+                            bbPaintRoundedRect(bb, inner_rx, inner_ry, inner_rw, inner_rh, inner_color, inner_r)
+                        else
+                            bbPaintRect(bb, inner_rx, inner_ry, inner_rw, inner_rh, inner_color)
+                        end
+                    end
+                end
+                -- Border around outer
                 local seg_border_color = resolveColor(custom_border, Blitbuffer.COLOR_BLACK)
                 if seg_border_color and border > 0 then
                     if seg_radius > 0 then
@@ -1569,8 +1590,10 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                 end
             end
 
-            paintSeg(ox + read_seg_ox, oy, read_len, read_thick, border_fill)
-            paintSeg(ox + unread_seg_ox, unread_oy, unread_len, unread_thick, border_bg)
+            -- Read segment: outer bg + inner fill (mimics symmetric "bordered rect
+            -- with fill stripe inside"). Unread segment: outer bg only.
+            paintSeg(ox + read_seg_ox, oy, read_len, read_thick, border_bg, border_fill)
+            paintSeg(ox + unread_seg_ox, unread_oy, unread_len, unread_thick, border_bg, nil)
 
             -- Ticks (read-thickness, centred on read midline). Mirrors the
             -- symmetric tick logic below, simplified — the asymmetric segments
