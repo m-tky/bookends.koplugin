@@ -279,10 +279,14 @@ OverlayWidget.BAR_PLACEHOLDER = BAR_PLACEHOLDER
 -- @return widget, width, height
 local function buildBarLine(text, cfg, available_w, max_width)
     local bar_info = cfg.bar
-    -- Height precedence: inline %bar{v…} overrides the line's bar_height setting,
-    -- which in turn overrides the line-font-size default.
+    -- Height precedence: inline %bar{v…} overrides the line's bar_height
+    -- setting, which overrides the global read_height_pct-scaled font size,
+    -- which overrides the raw font-size default.
+    local read_pct = cfg.bar_colors and cfg.bar_colors.read_height_pct
+    local font_h = cfg.face and cfg.face.size
+    local font_scaled = (font_h and read_pct) and math.floor(font_h * read_pct / 100) or font_h
     local bar_h = (bar_info and bar_info.height)
-        or cfg.bar_height or (cfg.face and cfg.face.size) or 5
+        or cfg.bar_height or font_scaled or 5
     local bar_style = cfg.bar_style or "bordered"
     local effective_w = max_width or available_w
 
@@ -881,8 +885,14 @@ function OverlayWidget.buildStyledLine(segments, cfg, available_w, max_width)
     -- Handle bar segment if present
     if bar_slot and cfg.bar then
         local bar_info = cfg.bar
+        -- Height precedence: inline %bar{v…} overrides the line's bar_height
+        -- setting, which overrides the global read_height_pct-scaled font size,
+        -- which overrides the raw font-size default.
+        local read_pct = cfg.bar_colors and cfg.bar_colors.read_height_pct
+        local font_h = cfg.face and cfg.face.size
+        local font_scaled = (font_h and read_pct) and math.floor(font_h * read_pct / 100) or font_h
         local bar_h = (bar_info and bar_info.height)
-            or cfg.bar_height or (cfg.face and cfg.face.size) or 5
+            or cfg.bar_height or font_scaled or 5
         local bar_style = cfg.bar_style or "bordered"
         local bar_manual_w = (bar_info and bar_info.width) or 0
 
@@ -1097,8 +1107,19 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
     -- Asymmetric thickness: read side = full `thickness`, unread side = a
     -- separate value (centred on the same midline). nil/equal = symmetric,
     -- and the per-style code paths collapse back to the existing render.
+    -- Resolution order for unread thickness:
+    --   1. colors.unread_height (per-bar absolute px) — wins if set
+    --   2. colors.unread_height_pct (global %)        — fallback
+    --   3. read_thick                                 — symmetric default
     local read_thick = thickness
-    local unread_thick = (colors and colors.unread_height) or read_thick
+    local unread_thick
+    if colors and colors.unread_height then
+        unread_thick = colors.unread_height
+    elseif colors and colors.unread_height_pct then
+        unread_thick = math.floor(read_thick * colors.unread_height_pct / 100)
+    else
+        unread_thick = read_thick
+    end
     if unread_thick < 0 then unread_thick = 0 end
     if unread_thick > read_thick then unread_thick = read_thick end
     local unread_oy = oy + math.floor((read_thick - unread_thick) / 2)
