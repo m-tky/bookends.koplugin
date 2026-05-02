@@ -302,11 +302,11 @@ EXAMPLES
             return row
         end,
         footer_actions = {
-            { key = "help", label = _("Help"), on_tap = function()
-                if self_ref.modal then self_ref.modal:_showHelp() end
-            end },
             { key = "close", label = _("Close"), on_tap = function()
                 if self_ref.modal then UIManager:close(self_ref.modal); self_ref.modal = nil end
+            end },
+            { key = "help", label = _("Help"), on_tap = function()
+                if self_ref.modal then self_ref.modal:_showHelp() end
             end },
         },
     }
