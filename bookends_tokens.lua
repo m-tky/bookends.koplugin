@@ -2116,25 +2116,27 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
     end
 
-    -- Frontlight intensity as a 0-100 percentage. Returns just the
-    -- number (no "%" suffix) to match the %book_pct convention.
+    -- Frontlight intensity as a 0-100 percentage with "%" suffix, matching
+    -- %book_pct / %chap_pct. Conditional state (state.light_pct) stays
+    -- numeric for [if:light_pct>50] comparisons — that's a separate path
+    -- in buildConditionState.
     local fl_intensity_pct = ""
     if needs("light_pct") then
         local pwd = Device:getPowerDevice()
         if pwd and pwd.fl_max and pwd.fl_max > 0 then
-            fl_intensity_pct = tostring(math.floor(
-                pwd:frontlightIntensity() / pwd.fl_max * 100 + 0.5))
+            fl_intensity_pct = math.floor(
+                pwd:frontlightIntensity() / pwd.fl_max * 100 + 0.5) .. "%"
         end
     end
 
-    -- Frontlight warmth as a 0-100 percentage. frontlightWarmth() is
-    -- already in the KOReader 0-100 scale (powerd.lua:243), so no
-    -- division is needed.
+    -- Frontlight warmth as a 0-100 percentage with "%" suffix.
+    -- frontlightWarmth() is already in the KOReader 0-100 scale
+    -- (powerd.lua:243), so no division is needed.
     local fl_warmth_pct = ""
     if needs("warmth_pct") then
         local pwd = Device:getPowerDevice()
         if pwd and Device:hasNaturalLight() then
-            fl_warmth_pct = tostring(math.floor(pwd:frontlightWarmth() + 0.5))
+            fl_warmth_pct = math.floor(pwd:frontlightWarmth() + 0.5) .. "%"
         end
     end
 
