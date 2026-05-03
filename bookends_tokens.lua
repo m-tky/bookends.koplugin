@@ -2368,25 +2368,17 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     }
     -- Per-token occurrence counters for matching limits
     local token_occurrence = {}
-    -- Expand depth-specific chapter tokens (%chap_title_1..3) before bareword
-    -- tokens. Legacy %C1/%C2/%C3 are rewritten to %chap_title_1/2/3 by the
-    -- alias pass at the top of expand().
-    local result = result_str:gsub("%%chap_title_(%d)", function(depth_str)
-        local d = tonumber(depth_str)
-        has_token = true
-        local val = chapter_titles_by_depth[d] or ""
-        if val ~= "" then all_empty = false end
-        local key = "%chap_title_" .. depth_str
-        if token_limits[key] then
-            token_occurrence[key] = (token_occurrence[key] or 0) + 1
-            local px = token_limits[key][token_occurrence[key]]
-            if px then
-                return "\x01" .. tostring(px) .. "\x02" .. val .. "\x03"
-            end
-        end
-        return val
-    end)
-    result = result:gsub("%%([%a_][%w_]*)", function(ident)
+    -- Bareword pass runs BEFORE the depth-specific chap_title_N pass. If we
+    -- expanded %chap_title_1 first, its title text would inline directly
+    -- next to any preceding bareword token (e.g. %nightmode%chap_title_1
+    -- → %nightmodePart I), and the bareword regex would then greedily
+    -- match "%nightmodePart" as one unknown identifier and leave it as
+    -- literal text. Running bareword first leaves "%chap_title_1" intact
+    -- (chap_title_1 isn't in the replace dict, so it returns "%"..ident),
+    -- and the subsequent chap_title_N pass picks it up cleanly. Adjacent
+    -- baretoken pairs like %light%warmth already worked because the "%"
+    -- boundary between them stops the [%w_]* class on first match.
+    local result = result_str:gsub("%%([%a_][%w_]*)", function(ident)
         local val = replace[ident]
         if val == nil then return "%" .. ident end  -- unknown, leave as-is
         has_token = true
@@ -2409,6 +2401,24 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
                     return table.concat(wrapped, "\n")
                 end
                 -- \x01 N \x02 value \x03
+                return "\x01" .. tostring(px) .. "\x02" .. val .. "\x03"
+            end
+        end
+        return val
+    end)
+    -- Depth-specific chapter tokens (%chap_title_1..3). Legacy %C1/%C2/%C3
+    -- are rewritten to %chap_title_1/2/3 by the alias pass at the top of
+    -- expand().
+    result = result:gsub("%%chap_title_(%d)", function(depth_str)
+        local d = tonumber(depth_str)
+        has_token = true
+        local val = chapter_titles_by_depth[d] or ""
+        if val ~= "" then all_empty = false end
+        local key = "%chap_title_" .. depth_str
+        if token_limits[key] then
+            token_occurrence[key] = (token_occurrence[key] or 0) + 1
+            local px = token_limits[key][token_occurrence[key]]
+            if px then
                 return "\x01" .. tostring(px) .. "\x02" .. val .. "\x03"
             end
         end
