@@ -1025,12 +1025,27 @@ function Bookends:gatedRepaint(token_names, debounce)
     end
 end
 
-local FRONTLIGHT_TOKENS     = { "light", "warmth" }
+-- Suffixed variants must be enumerated: anyActiveLineUses pattern-matches
+-- "%name" + a non-identifier boundary, so listing only "light" misses
+-- "%light_pct" / "%light_icon" (the "_" after "light" is an identifier
+-- char and the boundary check fails). Without these the FrontlightState
+-- event handler skips the repaint entirely and the icons/percentages
+-- only refresh on the next page turn.
+local FRONTLIGHT_TOKENS     = {
+    "light", "light_pct", "light_icon",
+    "warmth", "warmth_pct", "warmth_icon",
+}
 local BATTERY_TOKENS        = { "batt", "batt_icon" }
 local WIFI_TOKENS           = { "wifi" }
 local PLUGIN_CONTENT_TOKENS = { "plugin_content" }
 
-function Bookends:onFrontlightStateChanged()    self:gatedRepaint(FRONTLIGHT_TOKENS, 1.0) end
+-- 0.3s is a coalescing-only debounce: long enough to merge slider-drag
+-- events, short enough to feel instant. The original 1.0s was load-bearing
+-- against a feedback loop with 2-dim-during-refresh.lua, but markOverlayDirty
+-- now uses regional setDirty calls (see comment at the function definition)
+-- which the dim patch ignores — so the loop is already broken at the source
+-- and the debounce no longer needs to outlast multiple dim/restore cycles.
+function Bookends:onFrontlightStateChanged()    self:gatedRepaint(FRONTLIGHT_TOKENS, 0.3) end
 function Bookends:onCharging()                  self:gatedRepaint(BATTERY_TOKENS) end
 function Bookends:onNotCharging()               self:gatedRepaint(BATTERY_TOKENS) end
 function Bookends:onNetworkConnected()          self:gatedRepaint(WIFI_TOKENS) end
