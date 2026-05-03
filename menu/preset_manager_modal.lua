@@ -132,6 +132,11 @@ local function buildBlankPreset(name)
         name = name,
         description = "",
         author = "",
+        -- Empty-but-present defaults table is the trigger for loadPreset's
+        -- margin-reset path: without a `defaults` key the reset block is
+        -- skipped and self.defaults retains whatever the previous preset
+        -- left behind (e.g. inherited margin=0 from a customised preset).
+        defaults = {},
         positions = {
             tl = { lines = {} }, tc = { lines = {} }, tr = { lines = {} },
             bl = { lines = {} }, bc = { lines = {} }, br = { lines = {} },

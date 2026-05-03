@@ -12,7 +12,7 @@ Config.MAX_BARS = 8
 Config.SCHEMA_VERSION = 5
 
 Config.DEFAULT_MARGINS = {
-    margin_top = 10, margin_bottom = 25,
+    margin_top = 10, margin_bottom = 10,
     margin_left = 18, margin_right = 18,
 }
 
