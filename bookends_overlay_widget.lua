@@ -1368,7 +1368,10 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
         local cy = y + math.floor(h / 2)
 
         local radial_bg = resolveColor(custom_bg, Blitbuffer.COLOR_GRAY)
-        local radial_fill = resolveColor(custom_fill, Blitbuffer.COLOR_DARK_GRAY)
+        -- Match solid bar's GRAY_5 (0x55) read default. DARK_GRAY (0x88) was
+        -- only 0x22 darker than the GRAY (0xAA) unread bg — too washed-out
+        -- on e-ink to read as a clear progress indicator.
+        local radial_fill = resolveColor(custom_fill, Blitbuffer.COLOR_GRAY_5)
         local radial_tick = resolveColor(custom_tick, Blitbuffer.COLOR_BLACK)
         local radial_border_color = resolveColor(custom_border, Blitbuffer.COLOR_BLACK)
 
