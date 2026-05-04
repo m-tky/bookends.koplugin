@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: bookends\n"
-"POT-Creation-Date: 2026-05-04 18:47+0000\n"
+"POT-Creation-Date: 2026-05-05 00:44+0000\n"
 "PO-Revision-Date: 2026-04-21 14:00+0000\n"
 "Language-Team: Bulgarian\n"
 "Language: bg_BG\n"
@@ -12,9 +12,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 
-#: bookends_colour_palette.lua:294 bookends_dialog_helpers.lua:88
-#: bookends_line_editor.lua:343 bookends_line_editor.lua:601 main.lua:1951
-#: main.lua:2608 menu/main_menu.lua:32 menu/main_menu.lua:72
+#: bookends_colour_palette.lua:339 bookends_dialog_helpers.lua:88
+#: bookends_line_editor.lua:343 bookends_line_editor.lua:601 main.lua:2011
+#: main.lua:2668 menu/main_menu.lua:32 menu/main_menu.lua:72
 #: menu/preset_manager_modal.lua:1094 menu/preset_manager_modal.lua:1215
 #: menu/preset_manager_modal.lua:1256 menu/preset_manager_modal.lua:1357
 #: menu/preset_manager_modal.lua:1401 menu/preset_manager_modal.lua:1503
@@ -24,27 +24,27 @@ msgstr ""
 msgid "Cancel"
 msgstr "Отказ"
 
-#: bookends_colour_palette.lua:296 bookends_dialog_helpers.lua:96 main.lua:1961
-#: main.lua:2151 menu/colours_menu.lua:67 menu/colours_menu.lua:321
-#: menu/colours_menu.lua:401 menu/progress_bar_menu.lua:268
+#: bookends_colour_palette.lua:341 bookends_dialog_helpers.lua:96 main.lua:2021
+#: main.lua:2211 menu/colours_menu.lua:67 menu/colours_menu.lua:321
+#: menu/colours_menu.lua:403 menu/progress_bar_menu.lua:268
 #: menu/progress_bar_menu.lua:425
 msgid "Default"
 msgstr "По подразбиране"
 
-#: bookends_colour_palette.lua:298 bookends_dialog_helpers.lua:103
-#: main.lua:1971 menu/preset_manager_modal.lua:587
+#: bookends_colour_palette.lua:343 bookends_dialog_helpers.lua:103
+#: main.lua:2031 menu/preset_manager_modal.lua:587
 msgid "Apply"
 msgstr "Прилагане"
 
-#: bookends_colour_palette.lua:320 bookends_colour_palette.lua:435
+#: bookends_colour_palette.lua:365 bookends_colour_palette.lua:480
 msgid "Pick a color"
 msgstr "Избор на цвят"
 
-#: bookends_colour_palette.lua:404
+#: bookends_colour_palette.lua:449
 msgid "Invalid hex colour (use #RGB or #RRGGBB)"
 msgstr "Невалиден хекс цвят (използвайте #RGB или #RRGGBB)"
 
-#: bookends_line_editor.lua:97 main.lua:896
+#: bookends_line_editor.lua:97 main.lua:897
 msgid "Regular"
 msgstr "Обикновен"
 
@@ -154,7 +154,7 @@ msgstr "Икони"
 msgid "Tokens"
 msgstr "Токени"
 
-#: bookends_line_editor.lua:377 main.lua:2610 menu/main_menu.lua:34
+#: bookends_line_editor.lua:377 main.lua:2670 menu/main_menu.lua:34
 #: menu/preset_manager_modal.lua:1098 menu/preset_manager_modal.lua:1257
 #: menu/preset_manager_modal.lua:1358
 msgid "Save"
@@ -213,7 +213,7 @@ msgstr "Bookends е актуален."
 msgid "Version: "
 msgstr "Версия: "
 
-#: bookends_updater.lua:266 main.lua:2446 menu/icons_library.lua:355
+#: bookends_updater.lua:266 main.lua:2506 menu/icons_library.lua:355
 #: menu/preset_manager_modal.lua:561 menu/tokens_library.lua:305
 msgid "Close"
 msgstr "Затваряне"
@@ -258,7 +258,7 @@ msgstr "Bookends е актуализиран до v"
 msgid "Restart KOReader now?"
 msgstr "Рестартиране на KOReader сега?"
 
-#: bookends_updater.lua:398 main.lua:57
+#: bookends_updater.lua:398 main.lua:58
 msgid "Restart"
 msgstr "Рестартиране"
 
@@ -302,119 +302,120 @@ msgstr "Ръкописен"
 msgid "Fantasy"
 msgstr "Фантазия"
 
-#: main.lua:58
+#: main.lua:59
 msgid "Dismiss"
 msgstr "Затваряне"
 
-#: main.lua:143
+#: main.lua:144
 msgid "Top-left"
 msgstr "Горе вляво"
 
-#: main.lua:144
+#: main.lua:145
 msgid "Top-center"
 msgstr "Горе в центъра"
 
-#: main.lua:145
+#: main.lua:146
 msgid "Top-right"
 msgstr "Горе вдясно"
 
-#: main.lua:146
+#: main.lua:147
 msgid "Bottom-left"
 msgstr "Долу вляво"
 
-#: main.lua:147
+#: main.lua:148
 msgid "Bottom-center"
 msgstr "Долу в центъра"
 
-#: main.lua:148
+#: main.lua:149
 msgid "Bottom-right"
 msgstr "Долу вдясно"
 
-#: main.lua:250
+#: main.lua:251
 msgid "Bookends: toggle visibility"
 msgstr "Bookends: превключване на видимостта"
 
-#: main.lua:256
+#: main.lua:257
 msgid "Bookends: cycle preset"
 msgstr "Bookends: следваща предварителна настройка"
 
-#: main.lua:262
+#: main.lua:263
 msgid "Bookends: set visibility"
 msgstr "Bookends: задаване на видимост"
 
-#: main.lua:265
+#: main.lua:266
 msgid "on"
 msgstr "вкл."
 
-#: main.lua:265
+#: main.lua:266 menu/colours_menu.lua:437 menu/colours_menu.lua:445
+#: menu/colours_menu.lua:485
 msgid "off"
 msgstr "изкл."
 
-#: main.lua:270
+#: main.lua:271
 msgid "Bookends: open preset library"
 msgstr "Bookends: отваряне на библиотека с настройки"
 
-#: main.lua:359 main.lua:397 menu/preset_manager_modal.lua:1464
+#: main.lua:360 main.lua:398 menu/preset_manager_modal.lua:1464
 msgid "My setup"
 msgstr "Моята конфигурация"
 
-#: main.lua:360 main.lua:398 menu/preset_manager_modal.lua:1468
+#: main.lua:361 main.lua:399 menu/preset_manager_modal.lua:1468
 msgid "Imported from your earlier Bookends settings"
 msgstr "Импортирано от предишните ви настройки на Bookends"
 
-#: main.lua:540
+#: main.lua:541
 msgid "Preset error: %1"
 msgstr "Грешка в настройката: %1"
 
-#: main.lua:549
+#: main.lua:550
 msgid "Preset: %1"
 msgstr "Предварителна настройка: %1"
 
-#: main.lua:897
+#: main.lua:898
 msgid "Bold"
 msgstr "Удебелен"
 
-#: main.lua:898
+#: main.lua:899
 msgid "Italic"
 msgstr "Курсив"
 
-#: main.lua:899
+#: main.lua:900
 msgid "Bold italic"
 msgstr "Удебелен курсив"
 
-#: main.lua:2167
+#: main.lua:2227
 msgid "Select font"
 msgstr "Избор на шрифт"
 
-#: main.lua:2208
+#: main.lua:2268
 msgid "Font-family fonts"
 msgstr "Шрифтове по семейство"
 
-#: main.lua:2273
+#: main.lua:2333
 msgid "Fonts"
 msgstr "Шрифтове"
 
-#: main.lua:2367 menu/library_modal.lua:825
+#: main.lua:2427 menu/library_modal.lua:825
 msgid "Page %1 of %2"
 msgstr "Страница %1 от %2"
 
-#: main.lua:2456 main.lua:2630
+#: main.lua:2516 main.lua:2690
 msgid "Reset"
 msgstr "Нулиране"
 
-#: main.lua:2465
+#: main.lua:2525
 msgid "Set font"
 msgstr "Задаване на шрифт"
 
-#: main.lua:2604 menu/main_menu.lua:416 menu/main_menu.lua:418
+#: main.lua:2664 menu/main_menu.lua:416 menu/main_menu.lua:418
 msgid "Development branch"
 msgstr "Клон за разработка"
 
-#: main.lua:2606
+#: main.lua:2666
 msgid "Branch name (leave empty for stable)"
 msgstr "Име на клон (оставете празно за стабилна версия)"
 
-#: main.lua:2629
+#: main.lua:2689
 msgid ""
 "This will clear the development branch setting and install the latest stable "
 "release of Bookends, then restart KOReader. Continue?"
@@ -422,28 +423,28 @@ msgstr ""
 "Това ще изчисти настройките на клона за разработка и ще инсталира последната "
 "стабилна версия на Bookends, след което ще рестартира KOReader. Продължаване?"
 
-#: main.lua:2648
+#: main.lua:2708
 msgid "Bookends update available: v"
 msgstr "Налична актуализация на Bookends: v"
 
-#: main.lua:2656 menu/main_menu.lua:522 menu/progress_bar_menu.lua:275
+#: main.lua:2716 menu/main_menu.lua:522 menu/progress_bar_menu.lua:275
 #: menu/progress_bar_menu.lua:409
 msgid "Adjust margins"
 msgstr "Настройване на полета"
 
-#: main.lua:2658 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
+#: main.lua:2718 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
 msgid "Top"
 msgstr "Горе"
 
-#: main.lua:2659 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
+#: main.lua:2719 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
 msgid "Bottom"
 msgstr "Долу"
 
-#: main.lua:2660 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
+#: main.lua:2720 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
 msgid "Left"
 msgstr "Ляво"
 
-#: main.lua:2661 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
+#: main.lua:2721 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
 msgid "Right"
 msgstr "Дясно"
 
@@ -452,13 +453,14 @@ msgid "per style"
 msgstr "по стил"
 
 #: menu/colours_menu.lua:72 menu/colours_menu.lua:83 menu/colours_menu.lua:185
-#: menu/colours_menu.lua:407 menu/colours_menu.lua:415
-#: menu/colours_menu.lua:421 menu/colours_menu.lua:429
+#: menu/colours_menu.lua:409 menu/colours_menu.lua:417
+#: menu/colours_menu.lua:423 menu/colours_menu.lua:431
 #: menu/progress_bar_menu.lua:358
 msgid "default"
 msgstr "по подразбиране"
 
-#: menu/colours_menu.lua:80 menu/colours_menu.lua:412 menu/colours_menu.lua:426
+#: menu/colours_menu.lua:80 menu/colours_menu.lua:414 menu/colours_menu.lua:428
+#: menu/colours_menu.lua:442
 msgid "transparent"
 msgstr "прозрачен"
 
@@ -559,25 +561,29 @@ msgstr "Нулиране на всичко до стойностите по по
 msgid "Progress bar colors and tick marks"
 msgstr "Цветове и отметки на лентата за напредъка"
 
-#: menu/colours_menu.lua:407 menu/colours_menu.lua:415
-#: menu/colours_menu.lua:439 menu/progress_bar_menu.lua:32
+#: menu/colours_menu.lua:369
+msgid "No background"
+msgstr "Без фон"
+
+#: menu/colours_menu.lua:409 menu/colours_menu.lua:417
+#: menu/colours_menu.lua:455 menu/progress_bar_menu.lua:32
 msgid "book"
 msgstr "книга"
 
-#: menu/colours_menu.lua:421 menu/colours_menu.lua:429
-#: menu/colours_menu.lua:454
+#: menu/colours_menu.lua:423 menu/colours_menu.lua:431
+#: menu/colours_menu.lua:470
 msgid "text"
 msgstr "текст"
 
-#: menu/colours_menu.lua:435 menu/colours_menu.lua:439
+#: menu/colours_menu.lua:451 menu/colours_menu.lua:455
 msgid "Text color"
 msgstr "Цвят на текста"
 
-#: menu/colours_menu.lua:449 menu/colours_menu.lua:454
+#: menu/colours_menu.lua:465 menu/colours_menu.lua:470
 msgid "Icon color"
 msgstr "Цвят на икона"
 
-#: menu/colours_menu.lua:451
+#: menu/colours_menu.lua:467
 msgid ""
 "Applies to Nerd Font and FontAwesome icon glyphs (the Private Use Area "
 "range, e.g. %W, %B, %k). Unicode symbols in the regular text ranges (like "
@@ -592,6 +598,17 @@ msgstr ""
 "\n"
 "Вграден таг [c=#RRGGBB]…[/c] в реда замества цвета на иконите за всички "
 "глифи вътре в него."
+
+#: menu/colours_menu.lua:480 menu/colours_menu.lua:485
+msgid "Background colour"
+msgstr "Цвят на фона"
+
+#: menu/colours_menu.lua:482
+msgid ""
+"Solid fill drawn behind the top and bottom overlay regions, edge to edge "
+"across the screen. Choose a colour to enable, hold this row or tap Default "
+"in the picker to turn off."
+msgstr ""
 
 #: menu/icons_catalogue.lua:24 menu/tokens_catalogue.lua:20
 msgid "All"
