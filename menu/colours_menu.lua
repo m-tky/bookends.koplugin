@@ -437,6 +437,7 @@ function Bookends:buildTextColourMenu()
         if bg.hex then return bg.hex end
         if bg.grey then
             local pct = math.floor((0xFF - bg.grey) * 100 / 0xFF + 0.5)
+            if pct == 0 then return _("transparent") end
             return pct .. "%"
         end
         return _("off")
