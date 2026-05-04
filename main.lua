@@ -1401,22 +1401,27 @@ end
 --- geometry is stable when a position is toggled off.
 function Bookends:_assembleFillPositionsData()
     local Screen_local = Device.screen
+    local font_scale = self.defaults.font_scale or 100
     local data = {}
     for _, pos in ipairs(self.POSITIONS) do
         local p = self.positions[pos.key] or {}
         local lines = p.lines or {}
-        local font_size = self:getPositionSetting(pos.key, "font_size")
-        -- Approx px height per line: scaled font size × 1.2 line-height factor.
-        -- Disabled positions never paint, so the approximation only affects
-        -- the fill rect's outer extent on ends where a disabled position is
-        -- the *tallest*. The error budget (a few pixels) is below visual
-        -- noise on a 300dpi screen.
-        local line_height_px = math.floor(Screen_local:scaleBySize(font_size) * 1.2 + 0.5)
+        local default_font_size = self:getPositionSetting(pos.key, "font_size")
+        -- Per-line height: each line uses its line_font_size override if any,
+        -- else the position default. Match the paint path's scale formula
+        -- (main.lua:1614) so the fill band lines up with rendered text on any
+        -- font_scale setting.
+        local total_height = 0
+        for i = 1, #lines do
+            local line_font = (p.line_font_size and p.line_font_size[i]) or default_font_size
+            local effective = math.max(1, math.floor(line_font * font_scale / 100 + 0.5))
+            total_height = total_height + math.floor(Screen_local:scaleBySize(effective) * 1.2 + 0.5)
+        end
         local v_margin = self:getMargin(pos.key)
         local v_offset = self:getPositionSetting(pos.key, "v_offset")
         data[pos.key] = {
             disabled = p.disabled and true or false,
-            height_px = #lines * line_height_px,
+            height_px = total_height,
             v_offset = v_offset,
             v_margin = v_margin,
         }
