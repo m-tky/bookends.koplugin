@@ -2,33 +2,33 @@
 # Español translation
 msgid ""
 msgstr ""
-"POT-Creation-Date: 2026-05-02 20:07+0000\n"
+"POT-Creation-Date: 2026-05-04 18:47+0000\n"
 "Language: es\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: bookends_colour_palette.lua:294 bookends_dialog_helpers.lua:88
-#: bookends_line_editor.lua:343 bookends_line_editor.lua:601 main.lua:1939
-#: main.lua:2596 menu/main_menu.lua:32 menu/main_menu.lua:72
-#: menu/preset_manager_modal.lua:1089 menu/preset_manager_modal.lua:1210
-#: menu/preset_manager_modal.lua:1251 menu/preset_manager_modal.lua:1352
-#: menu/preset_manager_modal.lua:1396 menu/preset_manager_modal.lua:1498
-#: menu/preset_manager_modal.lua:1565 menu/preset_manager_modal.lua:1660
-#: menu/preset_manager_modal.lua:1684 menu/preset_manager_modal.lua:1708
+#: bookends_line_editor.lua:343 bookends_line_editor.lua:601 main.lua:1951
+#: main.lua:2608 menu/main_menu.lua:32 menu/main_menu.lua:72
+#: menu/preset_manager_modal.lua:1094 menu/preset_manager_modal.lua:1215
+#: menu/preset_manager_modal.lua:1256 menu/preset_manager_modal.lua:1357
+#: menu/preset_manager_modal.lua:1401 menu/preset_manager_modal.lua:1503
+#: menu/preset_manager_modal.lua:1570 menu/preset_manager_modal.lua:1665
+#: menu/preset_manager_modal.lua:1689 menu/preset_manager_modal.lua:1713
 #: menu/progress_bar_menu.lua:62
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: bookends_colour_palette.lua:296 bookends_dialog_helpers.lua:96 main.lua:1949
-#: main.lua:2139 menu/colours_menu.lua:67 menu/colours_menu.lua:321
+#: bookends_colour_palette.lua:296 bookends_dialog_helpers.lua:96 main.lua:1961
+#: main.lua:2151 menu/colours_menu.lua:67 menu/colours_menu.lua:321
 #: menu/colours_menu.lua:401 menu/progress_bar_menu.lua:268
 #: menu/progress_bar_menu.lua:425
 msgid "Default"
 msgstr "Predeterminado"
 
 #: bookends_colour_palette.lua:298 bookends_dialog_helpers.lua:103
-#: main.lua:1959 menu/preset_manager_modal.lua:582
+#: main.lua:1971 menu/preset_manager_modal.lua:587
 msgid "Apply"
 msgstr "Aplicar"
 
@@ -40,7 +40,7 @@ msgstr "Elige un color"
 msgid "Invalid hex colour (use #RGB or #RRGGBB)"
 msgstr "Color hex inválido (usa #RGB o #RRGGBB)"
 
-#: bookends_line_editor.lua:97 main.lua:898
+#: bookends_line_editor.lua:97 main.lua:896
 msgid "Regular"
 msgstr "Normal"
 
@@ -150,9 +150,9 @@ msgstr "Iconos"
 msgid "Tokens"
 msgstr "Tokens"
 
-#: bookends_line_editor.lua:377 main.lua:2598 menu/main_menu.lua:34
-#: menu/preset_manager_modal.lua:1093 menu/preset_manager_modal.lua:1252
-#: menu/preset_manager_modal.lua:1353
+#: bookends_line_editor.lua:377 main.lua:2610 menu/main_menu.lua:34
+#: menu/preset_manager_modal.lua:1098 menu/preset_manager_modal.lua:1257
+#: menu/preset_manager_modal.lua:1358
 msgid "Save"
 msgstr "Guardar"
 
@@ -176,8 +176,8 @@ msgstr "Mover a"
 msgid "Line %1: %2"
 msgstr "Línea %1: %2"
 
-#: bookends_line_editor.lua:597 menu/preset_manager_modal.lua:1195
-#: menu/preset_manager_modal.lua:1584
+#: bookends_line_editor.lua:597 menu/preset_manager_modal.lua:1200
+#: menu/preset_manager_modal.lua:1589
 msgid "Delete"
 msgstr "Eliminar"
 
@@ -209,8 +209,8 @@ msgstr "Bookends está actualizado."
 msgid "Version: "
 msgstr "Versión: "
 
-#: bookends_updater.lua:266 main.lua:2434 menu/icons_library.lua:355
-#: menu/preset_manager_modal.lua:556 menu/tokens_library.lua:305
+#: bookends_updater.lua:266 main.lua:2446 menu/icons_library.lua:355
+#: menu/preset_manager_modal.lua:561 menu/tokens_library.lua:305
 msgid "Close"
 msgstr "Cerrar"
 
@@ -350,92 +350,96 @@ msgstr "apagado"
 msgid "Bookends: open preset library"
 msgstr "Bookends: abrir biblioteca de presets"
 
-#: main.lua:359 main.lua:397 menu/preset_manager_modal.lua:1459
+#: main.lua:359 main.lua:397 menu/preset_manager_modal.lua:1464
 msgid "My setup"
 msgstr "Mi configuración"
 
-#: main.lua:360 main.lua:398 menu/preset_manager_modal.lua:1463
+#: main.lua:360 main.lua:398 menu/preset_manager_modal.lua:1468
 msgid "Imported from your earlier Bookends settings"
 msgstr "Importado de tus ajustes anteriores de Bookends"
 
-#: main.lua:542
+#: main.lua:540
 msgid "Preset error: %1"
 msgstr "Error de preset: %1"
 
-#: main.lua:551
+#: main.lua:549
 msgid "Preset: %1"
 msgstr "Preset: %1"
 
-#: main.lua:899
+#: main.lua:897
 msgid "Bold"
 msgstr "Negrita"
 
-#: main.lua:900
+#: main.lua:898
 msgid "Italic"
 msgstr "Cursiva"
 
-#: main.lua:901
+#: main.lua:899
 msgid "Bold italic"
 msgstr "Negrita cursiva"
 
-#: main.lua:2155
+#: main.lua:2167
 msgid "Select font"
 msgstr "Seleccionar fuente"
 
-#: main.lua:2196
+#: main.lua:2208
 msgid "Font-family fonts"
 msgstr "Fuentes por familia"
 
-#: main.lua:2261
+#: main.lua:2273
 msgid "Fonts"
 msgstr "Fuentes"
 
-#: main.lua:2355 menu/library_modal.lua:815
+#: main.lua:2367 menu/library_modal.lua:825
 msgid "Page %1 of %2"
 msgstr "Página %1 de %2"
 
-#: main.lua:2444 main.lua:2618
+#: main.lua:2456 main.lua:2630
 msgid "Reset"
 msgstr "Restablecer"
 
-#: main.lua:2453
+#: main.lua:2465
 msgid "Set font"
 msgstr "Establecer fuente"
 
-#: main.lua:2592 menu/main_menu.lua:416 menu/main_menu.lua:418
+#: main.lua:2604 menu/main_menu.lua:416 menu/main_menu.lua:418
 msgid "Development branch"
 msgstr "Branch de desarrollo"
 
-#: main.lua:2594
+#: main.lua:2606
 msgid "Branch name (leave empty for stable)"
 msgstr "Nombre del branch (dejar vacío para estable)"
 
-#: main.lua:2617
-msgid "This will clear the development branch setting and install the latest stable release of Bookends, then restart KOReader. Continue?"
-msgstr "Esto borrará el ajuste de branch de desarrollo e instalará la última versión estable de Bookends y, a continuación, reiniciará KOReader. ¿Continuar?"
+#: main.lua:2629
+msgid ""
+"This will clear the development branch setting and install the latest stable "
+"release of Bookends, then restart KOReader. Continue?"
+msgstr ""
+"Esto borrará el ajuste de branch de desarrollo e instalará la última versión "
+"estable de Bookends y, a continuación, reiniciará KOReader. ¿Continuar?"
 
-#: main.lua:2636
+#: main.lua:2648
 msgid "Bookends update available: v"
 msgstr "Actualización de Bookends disponible: v"
 
-#: main.lua:2644 menu/main_menu.lua:522 menu/progress_bar_menu.lua:275
+#: main.lua:2656 menu/main_menu.lua:522 menu/progress_bar_menu.lua:275
 #: menu/progress_bar_menu.lua:409
 msgid "Adjust margins"
 msgstr "Ajustar márgenes"
 
-#: main.lua:2646 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
+#: main.lua:2658 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
 msgid "Top"
 msgstr "Arriba"
 
-#: main.lua:2647 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
+#: main.lua:2659 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
 msgid "Bottom"
 msgstr "Abajo"
 
-#: main.lua:2648 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
+#: main.lua:2660 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
 msgid "Left"
 msgstr "Izquierda"
 
-#: main.lua:2649 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
+#: main.lua:2661 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
 msgid "Right"
 msgstr "Derecha"
 
@@ -571,13 +575,19 @@ msgstr "Color del icono"
 
 #: menu/colours_menu.lua:451
 msgid ""
-"Applies to Nerd Font and FontAwesome icon glyphs (the Private Use Area range, e.g. %W, %B, %k). Unicode symbols in the regular text ranges (like the hourglass \"⌛\") follow the text color instead.\n"
+"Applies to Nerd Font and FontAwesome icon glyphs (the Private Use Area "
+"range, e.g. %W, %B, %k). Unicode symbols in the regular text ranges (like "
+"the hourglass \"⌛\") follow the text color instead.\n"
 "\n"
-"An inline [c=#RRGGBB]…[/c] tag in a line overrides the icon colour for any glyphs inside it."
+"An inline [c=#RRGGBB]…[/c] tag in a line overrides the icon colour for any "
+"glyphs inside it."
 msgstr ""
-"Se aplica a glifos de iconos Nerd Font y FontAwesome (el rango de uso privado, p. ej. %W, %B, %k). Los símbolos Unicode en rangos de texto regular (como el reloj de arena \"⌛\") siguen el color del texto.\n"
+"Se aplica a glifos de iconos Nerd Font y FontAwesome (el rango de uso "
+"privado, p. ej. %W, %B, %k). Los símbolos Unicode en rangos de texto regular "
+"(como el reloj de arena \"⌛\") siguen el color del texto.\n"
 "\n"
-"Una etiqueta [c=#RRGGBB]…[/c] dentro de una línea anula el color del icono para cualquier glifo en su interior."
+"Una etiqueta [c=#RRGGBB]…[/c] dentro de una línea anula el color del icono "
+"para cualquier glifo en su interior."
 
 #: menu/icons_catalogue.lua:24 menu/tokens_catalogue.lua:20
 msgid "All"
@@ -1047,11 +1057,11 @@ msgstr "Librería de iconos"
 msgid "Search %1 icons by name…"
 msgstr "Buscar %1 iconos por nombre…"
 
-#: menu/library_modal.lua:355
+#: menu/library_modal.lua:365
 msgid "Search…"
 msgstr "Buscar…"
 
-#: menu/library_modal.lua:391
+#: menu/library_modal.lua:401
 msgid "Search"
 msgstr "Buscar"
 
@@ -1059,11 +1069,11 @@ msgstr "Buscar"
 msgid "Bookends"
 msgstr "Bookends"
 
-#: menu/main_menu.lua:28 menu/preset_manager_modal.lua:1085
+#: menu/main_menu.lua:28 menu/preset_manager_modal.lua:1090
 msgid "Save preset"
 msgstr "Guardar preset"
 
-#: menu/main_menu.lua:30 menu/preset_manager_modal.lua:1087
+#: menu/main_menu.lua:30 menu/preset_manager_modal.lua:1092
 msgid "Preset name"
 msgstr "Nombre del preset"
 
@@ -1071,12 +1081,12 @@ msgstr "Nombre del preset"
 msgid "Saved preset:"
 msgstr "Preset guardado:"
 
-#: menu/main_menu.lua:69 menu/preset_manager_modal.lua:1207
+#: menu/main_menu.lua:69 menu/preset_manager_modal.lua:1212
 msgid "Rename preset"
 msgstr "Renombrar preset"
 
 #: menu/main_menu.lua:74 menu/main_menu.lua:490
-#: menu/preset_manager_modal.lua:1211 menu/preset_manager_modal.lua:1398
+#: menu/preset_manager_modal.lua:1216 menu/preset_manager_modal.lua:1403
 msgid "Rename"
 msgstr "Renombrar"
 
@@ -1113,11 +1123,18 @@ msgid "recommended"
 msgstr "recomendado"
 
 #: menu/main_menu.lua:222
-msgid "Hides KOReader's built-in status bar. This simplifies the render pipeline and can reduce e-ink flicker on some devices. All status bar features are available as Bookends tokens."
-msgstr "Oculta la barra de estado integrada de KOReader. Esto simplifica el proceso de renderizado y puede reducir el parpadeo de la tinta electrónica en algunos dispositivos. Todas las funciones de la barra de estado están disponibles como tokens de Bookends."
+msgid ""
+"Hides KOReader's built-in status bar. This simplifies the render pipeline "
+"and can reduce e-ink flicker on some devices. All status bar features are "
+"available as Bookends tokens."
+msgstr ""
+"Oculta la barra de estado integrada de KOReader. Esto simplifica el proceso "
+"de renderizado y puede reducir el parpadeo de la tinta electrónica en "
+"algunos dispositivos. Todas las funciones de la barra de estado están "
+"disponibles como tokens de Bookends."
 
 #: menu/main_menu.lua:243 menu/main_menu.lua:253
-#: menu/preset_manager_modal.lua:1290
+#: menu/preset_manager_modal.lua:1295
 msgid "Default font"
 msgstr "Fuente predeterminada"
 
@@ -1138,12 +1155,16 @@ msgid "preset library"
 msgstr "biblioteca de presets"
 
 #: menu/main_menu.lua:289
-msgid "Configure what happens when you tap the centre of the status bar area, and whether long-pressing a progress bar opens the skim dialog."
-msgstr "Configura lo que ocurre al tocar el centro de la barra de estado y si al mantener pulsada una barra de progreso se abre el diálogo de vista rápida."
+msgid ""
+"Configure what happens when you tap the centre of the status bar area, and "
+"whether long-pressing a progress bar opens the skim dialog."
+msgstr ""
+"Configura lo que ocurre al tocar el centro de la barra de estado y si al "
+"mantener pulsada una barra de progreso se abre el diálogo de vista rápida."
 
 #: menu/main_menu.lua:300
-msgid "Do nothing"
-msgstr "Ninguna acción"
+msgid "Pass through"
+msgstr "Dejar pasar"
 
 #: menu/main_menu.lua:308
 msgid "Toggle bookends"
@@ -1162,16 +1183,25 @@ msgid "Long-press progress bars to skim document"
 msgstr "Mantén pulsada la barra de progreso para hojear el documento"
 
 #: menu/main_menu.lua:359
-msgid "Opens the skim dialog when you long-press on a full-width progress bar. Replaces the stock status bar's long-press to skim feature."
-msgstr "Abre el diálogo de vista rápida al mantener pulsada una barra de progreso de ancho completo. Reemplaza la función de hojear con pulsación larga de la barra de estado original."
+msgid ""
+"Opens the skim dialog when you long-press on a full-width progress bar. "
+"Replaces the stock status bar's long-press to skim feature."
+msgstr ""
+"Abre el diálogo de vista rápida al mantener pulsada una barra de progreso de "
+"ancho completo. Reemplaza la función de hojear con pulsación larga de la "
+"barra de estado original."
 
 #: menu/main_menu.lua:366
 msgid "Include current page in pages-left tokens"
 msgstr "Incluir la página actual en los tokens de páginas restantes"
 
 #: menu/main_menu.lua:367
-msgid "Affects %L (pages left in book) and %l (pages left in chapter). Off (default): 'n−1 → 0'. On: 'n → 1'."
-msgstr "Afecta a %L (páginas restantes del libro) y %l (páginas restantes del capítulo). Desactivado (predeterminado): 'n−1 → 0'. Activado: 'n → 1'."
+msgid ""
+"Affects %L (pages left in book) and %l (pages left in chapter). Off "
+"(default): 'n−1 → 0'. On: 'n → 1'."
+msgstr ""
+"Afecta a %L (páginas restantes del libro) y %l (páginas restantes del "
+"capítulo). Desactivado (predeterminado): 'n−1 → 0'. Activado: 'n → 1'."
 
 #: menu/main_menu.lua:380
 msgid "Notify on wake when update available"
@@ -1253,160 +1283,184 @@ msgstr "Margen izquierdo extra"
 msgid "Extra right margin"
 msgstr "Margen derecho extra"
 
-#: menu/preset_manager_modal.lua:290
+#: menu/preset_manager_modal.lua:295
 msgid "+ New blank preset"
 msgstr "+ Nuevo preset en blanco"
 
-#: menu/preset_manager_modal.lua:306
+#: menu/preset_manager_modal.lua:311
 msgid "Discover more presets"
 msgstr "Descubrir más presets"
 
-#: menu/preset_manager_modal.lua:312
-msgid "Browse presets others have shared, preview them on your own status bar, and install the ones you like. Once installed, you can edit each preset freely on the My presets tab."
-msgstr "Explora los presets que otros han compartido, previsualízalos en tu propia barra de estado e instala los que te gusten. Una vez instalados, puedes editar cada preset libremente en la pestaña Mis presets."
+#: menu/preset_manager_modal.lua:317
+msgid ""
+"Browse presets others have shared, preview them on your own status bar, and "
+"install the ones you like. Once installed, you can edit each preset freely "
+"on the My presets tab."
+msgstr ""
+"Explora los presets que otros han compartido, previsualízalos en tu propia "
+"barra de estado e instala los que te gusten. Una vez instalados, puedes "
+"editar cada preset libremente en la pestaña Mis presets."
 
-#: menu/preset_manager_modal.lua:319
-msgid "Made something worth sharing? Submit it with the Manage button while viewing one of your own presets."
-msgstr "¿Has creado algo que merece compartirse? Envíalo con el botón Gestionar mientras visualizas uno de tus propios presets."
+#: menu/preset_manager_modal.lua:324
+msgid ""
+"Made something worth sharing? Submit it with the Manage button while viewing "
+"one of your own presets."
+msgstr ""
+"¿Has creado algo que merece compartirse? Envíalo con el botón Gestionar "
+"mientras visualizas uno de tus propios presets."
 
-#: menu/preset_manager_modal.lua:326
+#: menu/preset_manager_modal.lua:331
 msgid "Tap Latest or Popular above to load the gallery."
 msgstr "Toca Recientes o Populares arriba para cargar la galería."
 
-#: menu/preset_manager_modal.lua:465
+#: menu/preset_manager_modal.lua:470
 msgid "Preset library"
 msgstr "Biblioteca de presets"
 
-#: menu/preset_manager_modal.lua:467
+#: menu/preset_manager_modal.lua:472
 msgid "My presets"
 msgstr "Mis presets"
 
-#: menu/preset_manager_modal.lua:468
+#: menu/preset_manager_modal.lua:473
 msgid "Gallery"
 msgstr "Galería"
 
-#: menu/preset_manager_modal.lua:478 menu/preset_manager_modal.lua:490
+#: menu/preset_manager_modal.lua:483 menu/preset_manager_modal.lua:495
 msgid "Latest"
 msgstr "Recientes"
 
-#: menu/preset_manager_modal.lua:479
+#: menu/preset_manager_modal.lua:484
 msgid "Starred"
 msgstr "Destacados"
 
-#: menu/preset_manager_modal.lua:492
+#: menu/preset_manager_modal.lua:497
 msgid "Popular"
 msgstr "Populares"
 
-#: menu/preset_manager_modal.lua:504
+#: menu/preset_manager_modal.lua:509
 msgid "Loading gallery…"
 msgstr "Cargando galería…"
 
-#: menu/preset_manager_modal.lua:517
+#: menu/preset_manager_modal.lua:522
 msgid "Search my presets by name or author…"
 msgstr "Buscar mis presets por nombre o autor…"
 
-#: menu/preset_manager_modal.lua:519
+#: menu/preset_manager_modal.lua:524
 msgid "Search gallery presets by name or author…"
 msgstr "Buscar presets de la galería por nombre o autor…"
 
-#: menu/preset_manager_modal.lua:561
+#: menu/preset_manager_modal.lua:566
 msgid "Manage…"
 msgstr "Gestionar…"
 
-#: menu/preset_manager_modal.lua:579 menu/preset_manager_modal.lua:582
-#: menu/preset_manager_modal.lua:1686
+#: menu/preset_manager_modal.lua:584 menu/preset_manager_modal.lua:587
+#: menu/preset_manager_modal.lua:1691
 msgid "Install"
 msgstr "Instalar"
 
-#: menu/preset_manager_modal.lua:812 menu/preset_manager_modal.lua:1644
+#: menu/preset_manager_modal.lua:817 menu/preset_manager_modal.lua:1649
 msgid "Could not preview preset"
 msgstr "No se pudo previsualizar el preset"
 
-#: menu/preset_manager_modal.lua:927
+#: menu/preset_manager_modal.lua:932
 msgid "by"
 msgstr "por"
 
-#: menu/preset_manager_modal.lua:1146 menu/preset_manager_modal.lua:1460
+#: menu/preset_manager_modal.lua:1151 menu/preset_manager_modal.lua:1465
 msgid "Untitled"
 msgstr "Sin título"
 
-#: menu/preset_manager_modal.lua:1175
+#: menu/preset_manager_modal.lua:1180
 msgid "Rename…"
 msgstr "Renombrar…"
 
-#: menu/preset_manager_modal.lua:1179
+#: menu/preset_manager_modal.lua:1184
 msgid "Edit description…"
 msgstr "Editar descripción…"
 
-#: menu/preset_manager_modal.lua:1183
+#: menu/preset_manager_modal.lua:1188
 msgid "Edit author…"
 msgstr "Editar autor…"
 
-#: menu/preset_manager_modal.lua:1187
+#: menu/preset_manager_modal.lua:1192
 msgid "Duplicate"
 msgstr "Duplicar"
 
-#: menu/preset_manager_modal.lua:1191
+#: menu/preset_manager_modal.lua:1196
 msgid "Submit to gallery…"
 msgstr "Enviar a la galería…"
 
-#: menu/preset_manager_modal.lua:1301
+#: menu/preset_manager_modal.lua:1306
 msgid "%1, line %2"
 msgstr "%1, línea %2"
 
-#: menu/preset_manager_modal.lua:1338
+#: menu/preset_manager_modal.lua:1343
 msgid "Edit description"
 msgstr "Editar descripción"
 
-#: menu/preset_manager_modal.lua:1342
+#: menu/preset_manager_modal.lua:1347
 msgid "Edit author"
 msgstr "Editar autor"
 
-#: menu/preset_manager_modal.lua:1346
+#: menu/preset_manager_modal.lua:1351
 msgid "copy"
 msgstr "copia"
 
-#: menu/preset_manager_modal.lua:1349
+#: menu/preset_manager_modal.lua:1354
 msgid "Duplicate preset"
 msgstr "Duplicar preset"
 
-#: menu/preset_manager_modal.lua:1392
+#: menu/preset_manager_modal.lua:1397
 msgid "Rename before sharing"
 msgstr "Renombrar antes de compartir"
 
-#: menu/preset_manager_modal.lua:1443
+#: menu/preset_manager_modal.lua:1448
 msgid "Who should we credit as the author?"
 msgstr "¿A quién debemos acreditar como autor?"
 
-#: menu/preset_manager_modal.lua:1448
+#: menu/preset_manager_modal.lua:1453
 msgid "One-line description of this preset"
 msgstr "Descripción de una línea de este preset"
 
-#: menu/preset_manager_modal.lua:1467
-msgid "'%1' is one of Bookends' default placeholder names. Give your preset something distinctive — that's how it'll appear in the gallery."
-msgstr "'%1' es uno de los nombres genéricos predeterminados de Bookends. Dale a tu preset un nombre distintivo — así aparecerá en la galería."
+#: menu/preset_manager_modal.lua:1472
+msgid ""
+"'%1' is one of Bookends' default placeholder names. Give your preset "
+"something distinctive — that's how it'll appear in the gallery."
+msgstr ""
+"'%1' es uno de los nombres genéricos predeterminados de Bookends. Dale a tu "
+"preset un nombre distintivo — así aparecerá en la galería."
 
-#: menu/preset_manager_modal.lua:1473
-msgid "Write a short description that tells gallery users what your preset shows"
-msgstr "Escribe una breve descripción que indique a los usuarios de la galería qué muestra tu preset"
+#: menu/preset_manager_modal.lua:1478
+msgid ""
+"Write a short description that tells gallery users what your preset shows"
+msgstr ""
+"Escribe una breve descripción que indique a los usuarios de la galería qué "
+"muestra tu preset"
 
-#: menu/preset_manager_modal.lua:1495
-msgid "Submit '%1' by %2 to the gallery? A pull request will be opened for review."
-msgstr "¿Enviar '%1' por %2 a la galería? Se abrirá un pull request para revisión."
+#: menu/preset_manager_modal.lua:1500
+msgid ""
+"Submit '%1' by %2 to the gallery? A pull request will be opened for review."
+msgstr ""
+"¿Enviar '%1' por %2 a la galería? Se abrirá un pull request para revisión."
 
-#: menu/preset_manager_modal.lua:1497
+#: menu/preset_manager_modal.lua:1502
 msgid "Submit"
 msgstr "Enviar"
 
-#: menu/preset_manager_modal.lua:1507
-msgid "A preset called '%1' is already in the gallery. Rename your preset (Manage… → Rename…) before submitting, so it doesn't collide with the existing entry."
-msgstr "Ya hay un preset llamado '%1' en la galería. Renombra tu preset (Gestionar… → Renombrar…) antes de enviarlo, para que no entre en conflicto con la entrada existente."
+#: menu/preset_manager_modal.lua:1512
+msgid ""
+"A preset called '%1' is already in the gallery. Rename your preset (Manage… "
+"→ Rename…) before submitting, so it doesn't collide with the existing entry."
+msgstr ""
+"Ya hay un preset llamado '%1' en la galería. Renombra tu preset (Gestionar… "
+"→ Renombrar…) antes de enviarlo, para que no entre en conflicto con la "
+"entrada existente."
 
-#: menu/preset_manager_modal.lua:1514
+#: menu/preset_manager_modal.lua:1519
 msgid "Submitting to gallery…"
 msgstr "Enviando a la galería…"
 
-#: menu/preset_manager_modal.lua:1526
+#: menu/preset_manager_modal.lua:1531
 msgid ""
 "Thanks! Your submission is PR #%1.\n"
 "\n"
@@ -1416,77 +1470,98 @@ msgstr ""
 "\n"
 "El mantenedor lo revisará antes de que aparezca en la Galería."
 
-#: menu/preset_manager_modal.lua:1535
-msgid "A preset called '%1' is already in the gallery. Rename your preset (Manage… → Rename…) before submitting."
-msgstr "Ya hay un preset llamado '%1' en la galería. Renombra tu preset (Gestionar… → Renombrar…) antes de enviarlo."
+#: menu/preset_manager_modal.lua:1540
+msgid ""
+"A preset called '%1' is already in the gallery. Rename your preset (Manage… "
+"→ Rename…) before submitting."
+msgstr ""
+"Ya hay un preset llamado '%1' en la galería. Renombra tu preset (Gestionar… "
+"→ Renombrar…) antes de enviarlo."
 
-#: menu/preset_manager_modal.lua:1538
-msgid "A submission for '%1' is already awaiting review. Wait for that one to be reviewed, or rename your preset to submit under a different name."
-msgstr "Ya hay un envío de '%1' esperando revisión. Espera a que se revise, o renombra tu preset para enviarlo con otro nombre."
+#: menu/preset_manager_modal.lua:1543
+msgid ""
+"A submission for '%1' is already awaiting review. Wait for that one to be "
+"reviewed, or rename your preset to submit under a different name."
+msgstr ""
+"Ya hay un envío de '%1' esperando revisión. Espera a que se revise, o "
+"renombra tu preset para enviarlo con otro nombre."
 
-#: menu/preset_manager_modal.lua:1541
+#: menu/preset_manager_modal.lua:1546
 msgid "Submission failed: %1"
 msgstr "Envío fallido: %1"
 
-#: menu/preset_manager_modal.lua:1553
-msgid "This preset uses specific fonts that won't exist on other devices. These overrides will be stripped from your submission so other users see their own default font."
-msgstr "Este preset usa fuentes específicas que no existirán en otros dispositivos. Estas sustituciones se eliminarán de tu envío para que otros usuarios vean su propia fuente predeterminada."
+#: menu/preset_manager_modal.lua:1558
+msgid ""
+"This preset uses specific fonts that won't exist on other devices. These "
+"overrides will be stripped from your submission so other users see their own "
+"default font."
+msgstr ""
+"Este preset usa fuentes específicas que no existirán en otros dispositivos. "
+"Estas sustituciones se eliminarán de tu envío para que otros usuarios vean "
+"su propia fuente predeterminada."
 
-#: menu/preset_manager_modal.lua:1555
+#: menu/preset_manager_modal.lua:1560
 msgid "Custom fonts in this preset:"
 msgstr "Fuentes personalizadas en este preset:"
 
-#: menu/preset_manager_modal.lua:1561
-msgid "Tip: for portable presets, pick a Font-family font (Serif, Sans-serif, etc.) instead of a specific one — those adapt to each user's font settings."
-msgstr "Consejo: para presets portables, elige una fuente por familia (Serif, Sans-serif, etc.) en lugar de una específica — estas se adaptan a la configuración de fuente de cada usuario."
+#: menu/preset_manager_modal.lua:1566
+msgid ""
+"Tip: for portable presets, pick a Font-family font (Serif, Sans-serif, etc.) "
+"instead of a specific one — those adapt to each user's font settings."
+msgstr ""
+"Consejo: para presets portables, elige una fuente por familia (Serif, Sans-"
+"serif, etc.) en lugar de una específica — estas se adaptan a la "
+"configuración de fuente de cada usuario."
 
-#: menu/preset_manager_modal.lua:1564
+#: menu/preset_manager_modal.lua:1569
 msgid "Submit anyway"
 msgstr "Enviar de todos modos"
 
-#: menu/preset_manager_modal.lua:1577
+#: menu/preset_manager_modal.lua:1582
 msgid "Submission failed — details in the KOReader log."
 msgstr "Envío fallido — detalles en el registro de KOReader."
 
-#: menu/preset_manager_modal.lua:1583
+#: menu/preset_manager_modal.lua:1588
 msgid "Delete preset '%1'?"
 msgstr "¿Eliminar el preset '%1'?"
 
-#: menu/preset_manager_modal.lua:1626
+#: menu/preset_manager_modal.lua:1631
 msgid "Offline — connect to preview this preset."
 msgstr "Sin conexión — conéctate para previsualizar este preset."
 
-#: menu/preset_manager_modal.lua:1628
+#: menu/preset_manager_modal.lua:1633
 msgid "Couldn't download '%1'."
 msgstr "No se pudo descargar '%1'."
 
-#: menu/preset_manager_modal.lua:1634
+#: menu/preset_manager_modal.lua:1639
 msgid "This preset appears invalid; skipping."
 msgstr "Este preset parece no ser válido; se omite."
 
-#: menu/preset_manager_modal.lua:1657
+#: menu/preset_manager_modal.lua:1662
 msgid ""
 "'%1' already exists in your library.\n"
 "\n"
-"Replacing it will overwrite your local copy with the current gallery version. Any local edits will be lost.\n"
+"Replacing it will overwrite your local copy with the current gallery "
+"version. Any local edits will be lost.\n"
 "\n"
 "Install under a new name to keep both."
 msgstr ""
 "'%1' ya existe en tu biblioteca.\n"
 "\n"
-"Reemplazarlo sobrescribirá tu copia local con la versión actual de la galería. Se perderán las ediciones locales.\n"
+"Reemplazarlo sobrescribirá tu copia local con la versión actual de la "
+"galería. Se perderán las ediciones locales.\n"
 "\n"
 "Instálalo con un nombre nuevo para conservar ambos."
 
-#: menu/preset_manager_modal.lua:1663
+#: menu/preset_manager_modal.lua:1668
 msgid "Replace"
 msgstr "Reemplazar"
 
-#: menu/preset_manager_modal.lua:1677
+#: menu/preset_manager_modal.lua:1682
 msgid "Install as new name…"
 msgstr "Instalar con un nombre nuevo…"
 
-#: menu/preset_manager_modal.lua:1681
+#: menu/preset_manager_modal.lua:1686
 msgid "Install as"
 msgstr "Instalar como"
 
@@ -2150,13 +2225,16 @@ msgstr "Tokens y condicionales"
 msgid ""
 "TOKENS\n"
 "\n"
-"Tokens are placeholders that get replaced with live data each time the preset renders. Each entry in the Book / Progress / Time / Session / Device chips is a token, written as %name. They expand inline:\n"
+"Tokens are placeholders that get replaced with live data each time the "
+"preset renders. Each entry in the Book / Progress / Time / Session / Device "
+"chips is a token, written as %name. They expand inline:\n"
 "  %title — %page_num/%page_count\n"
 "  → 1984 — 12/268\n"
 "\n"
 "CONDITIONALS\n"
 "\n"
-"Wrap content in [if:condition]…[/if] to show it only when the condition is true. Add an [else]…[/if] branch for an alternative.\n"
+"Wrap content in [if:condition]…[/if] to show it only when the condition is "
+"true. Add an [else]…[/if] branch for an alternative.\n"
 "\n"
 "OPERATORS\n"
 "  =    equals               !=  not equals\n"
@@ -2166,11 +2244,17 @@ msgid ""
 "\n"
 "  Example:  [if:batt<20 and not charging]LOW[/if]\n"
 "\n"
-"Truthy check: a bare [if:key] tests whether the key is set, non-zero, and not \"off\"/\"no\". Useful for [if:title]…[/if], [if:author]…[/if], [if:series]…[/if].\n"
+"Truthy check: a bare [if:key] tests whether the key is set, non-zero, and "
+"not \"off\"/\"no\". Useful for [if:title]…[/if], [if:author]…[/if], "
+"[if:series]…[/if].\n"
 "\n"
-"Token-reference comparison: =@token compares against another token's current value, e.g. [if:chap_title_1!=@title]…[/if] hides the chapter title when it equals the book title.\n"
+"Token-reference comparison: =@token compares against another token's current "
+"value, e.g. [if:chap_title_1!=@title]…[/if] hides the chapter title when it "
+"equals the book title.\n"
 "\n"
-"For the full list of conditional state keys (wifi, batt, light_pct, night, time, format, …) browse the If/else chip — every reference entry there shows the exact key and operator syntax for one condition.\n"
+"For the full list of conditional state keys (wifi, batt, light_pct, night, "
+"time, format, …) browse the If/else chip — every reference entry there shows "
+"the exact key and operator syntax for one condition.\n"
 "\n"
 "EXAMPLES\n"
 "\n"
@@ -2181,13 +2265,17 @@ msgid ""
 msgstr ""
 "TOKENS\n"
 "\n"
-"Los tokens son marcadores que se reemplazan con datos en vivo cada vez que se renderiza el preset. Cada entrada de las pestañas Libro / Progreso / Tiempo / Sesión / Dispositivo es un token, escrito como %name. Se expanden en línea:\n"
+"Los tokens son marcadores que se reemplazan con datos en vivo cada vez que "
+"se renderiza el preset. Cada entrada de las pestañas Libro / Progreso / "
+"Tiempo / Sesión / Dispositivo es un token, escrito como %name. Se expanden "
+"en línea:\n"
 "  %title — %page_num/%page_count\n"
 "  → 1984 — 12/268\n"
 "\n"
 "CONDICIONALES\n"
 "\n"
-"Envuelve el contenido en [if:condición]…[/if] para mostrarlo solo cuando la condición sea verdadera. Añade una rama [else]…[/if] para una alternativa.\n"
+"Envuelve el contenido en [if:condición]…[/if] para mostrarlo solo cuando la "
+"condición sea verdadera. Añade una rama [else]…[/if] para una alternativa.\n"
 "\n"
 "OPERADORES\n"
 "  =    igual                 !=  distinto\n"
@@ -2197,11 +2285,18 @@ msgstr ""
 "\n"
 "  Ejemplo:  [if:batt<20 and not charging]LOW[/if]\n"
 "\n"
-"Comprobación truthy: un [if:clave] sin operador comprueba si la clave está definida, no es cero y no es \"off\"/\"no\". Útil para [if:title]…[/if], [if:author]…[/if], [if:series]…[/if].\n"
+"Comprobación truthy: un [if:clave] sin operador comprueba si la clave está "
+"definida, no es cero y no es \"off\"/\"no\". Útil para [if:title]…[/if], "
+"[if:author]…[/if], [if:series]…[/if].\n"
 "\n"
-"Comparación con referencia a token: =@token compara con el valor actual de otro token, p. ej. [if:chap_title_1!=@title]…[/if] oculta el título del capítulo cuando coincide con el título del libro.\n"
+"Comparación con referencia a token: =@token compara con el valor actual de "
+"otro token, p. ej. [if:chap_title_1!=@title]…[/if] oculta el título del "
+"capítulo cuando coincide con el título del libro.\n"
 "\n"
-"Para la lista completa de claves de estado condicional (wifi, batt, light_pct, night, time, format, …) explora la pestaña Si/sino — cada entrada de referencia muestra la clave exacta y la sintaxis del operador para una condición.\n"
+"Para la lista completa de claves de estado condicional (wifi, batt, "
+"light_pct, night, time, format, …) explora la pestaña Si/sino — cada entrada "
+"de referencia muestra la clave exacta y la sintaxis del operador para una "
+"condición.\n"
 "\n"
 "EJEMPLOS\n"
 "\n"
@@ -2219,8 +2314,15 @@ msgid "Help"
 msgstr "Ayuda"
 
 #: _meta.lua:5
-msgid "Configurable text overlays at screen corners and edges with token expansion and icon support."
-msgstr "Superposiciones de texto configurables en las esquinas y bordes de la pantalla con expansión de tokens y soporte para iconos."
+msgid ""
+"Configurable text overlays at screen corners and edges with token expansion "
+"and icon support."
+msgstr ""
+"Superposiciones de texto configurables en las esquinas y bordes de la "
+"pantalla con expansión de tokens y soporte para iconos."
+
+#~ msgid "Do nothing"
+#~ msgstr "Ninguna acción"
 
 #~ msgid "Read thickness"
 #~ msgstr "Grosor leído"
