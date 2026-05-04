@@ -86,10 +86,10 @@ local function nullTile(label, selected, side, on_tap)
     local tw = TextWidget:new{
         text      = label,
         face      = Font:getFace("ffont", 12),
-        max_width = side - 8,
+        max_width = side - 2 * Size.padding.small,
     }
     local frame = FrameContainer:new{
-        bordersize = selected and 3 or 1,
+        bordersize = selected and Size.border.thick or Size.border.thin,
         padding    = 0,
         margin     = 0,
         radius     = 0,
