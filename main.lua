@@ -214,11 +214,14 @@ function Bookends:init()
     -- Background update check on book open (opt-in only, throttled to once/hour)
     self:backgroundUpdateCheck()
 
-    -- Register the flipping-halo toast overlay (see FlippingHaloOverlay above).
-    if not self._flipping_halo then
-        self._flipping_halo = FlippingHaloOverlay:new{ _bookends = self }
-        UIManager:show(self._flipping_halo)
-    end
+    -- TEST BRANCH (pencil-compat): the flipping-halo toast overlay is
+    -- intentionally NOT registered here. pencil.koplugin's isOverlayActive()
+    -- (pencil/main.lua:800) reads UIManager._window_stack[#stack] directly
+    -- and treats anything other than ReaderUI as an active overlay, ignoring
+    -- the toast/invisible flags. With our halo on the stack, pencil disables
+    -- inking globally. This branch removes the halo to confirm that's the
+    -- cause; the visible cost is no page-coloured circle behind ReaderFlipping's
+    -- top-left icon during page-flip / re-render / highlight modes.
 
     -- Skip overlay painting in any forked subprocess (page-browser thumbnail
     -- generation). The hook fires inside the child immediately after fork(),
