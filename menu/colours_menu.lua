@@ -429,6 +429,19 @@ function Bookends:buildTextColourMenu()
         return _("default") .. " (" .. _("text") .. ")"
     end
 
+    local function bgPctLabel()
+        local bg = self.settings:readSetting("background_color")
+        if not bg then
+            return _("off")
+        end
+        if bg.hex then return bg.hex end
+        if bg.grey then
+            local pct = math.floor((0xFF - bg.grey) * 100 / 0xFF + 0.5)
+            return pct .. "%"
+        end
+        return _("off")
+    end
+
     return {
         {
             text_func = function()
@@ -455,6 +468,21 @@ function Bookends:buildTextColourMenu()
             end,
             hold_callback = function(touchmenu_instance)
                 self.settings:delSetting("symbol_color")
+                self:markDirty()
+                if touchmenu_instance then touchmenu_instance:updateItems() end
+            end,
+        },
+        {
+            text_func = function()
+                return _("Background colour") .. ": " .. bgPctLabel()
+            end,
+            help_text = _("Solid fill drawn behind the top and bottom overlay regions, edge to edge across the screen. Choose a colour to enable, hold this row or tap Default in the picker to turn off."),
+            keep_menu_open = true,
+            callback = function(touchmenu_instance)
+                textColorNudge("background_color", _("Background colour"), _("off"), touchmenu_instance)
+            end,
+            hold_callback = function(touchmenu_instance)
+                self.settings:delSetting("background_color")
                 self:markDirty()
                 if touchmenu_instance then touchmenu_instance:updateItems() end
             end,
