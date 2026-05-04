@@ -442,10 +442,8 @@ function Bookends:setupTouchZones()
                     self:onOpenPresetManager()
                     return true
                 end
-                -- Block the stock footer from re-appearing when we've disabled it
-                if self.stock_bar_disabled then
-                    return true
-                end
+                -- Pass through: let KOReader's other tap zones (page turn etc.) handle this.
+                -- The stock footer stays hidden via our overrides on readerfooter_tap.
             end,
             overrides = {
                 "readerfooter_tap",
