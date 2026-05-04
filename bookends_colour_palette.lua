@@ -178,7 +178,8 @@ function ColourPaletteWidget:init()
     -- horizontal padding here is matched against the vertical span above /
     -- below the palette in update(), so the grid sits inside even gutters
     -- on all four sides.
-    self.palette_width = SWATCH_SIDE * 5 + SWATCH_GAP * 4
+    local ncols = self.null_tile and 6 or 5
+    self.palette_width = SWATCH_SIDE * ncols + SWATCH_GAP * (ncols - 1)
     self.inner_width   = self.palette_width + Size.padding.fullscreen * 2
     self.dialog_width  = self.inner_width + 2 * Size.border.thin
 
