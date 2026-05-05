@@ -1395,11 +1395,15 @@ end
 
 --- Assemble a per-position snapshot for OverlayWidget.computeEndFillExtents.
 --- Returns a table keyed by position key (tl/tc/tr/bl/bc/br); each entry has
---- { disabled, height_px, v_offset, v_margin } where height_px is the
---- approximate pixel height of the rendered line stack (#lines × scaled font
---- size × 1.2 line-height factor). Disabled positions are included so the fill
---- geometry is stable when a position is toggled off.
-function Bookends:_assembleFillPositionsData()
+--- { disabled, height_px, v_offset, v_margin, first_line_h, last_line_h }.
+--- @param active_line_indices table|nil  per-key array of line indices that
+---   actually paint (from Phase 1). When supplied, only those lines contribute
+---   to height_px so the fill matches the rendered band — empty conditional
+---   lines and parity-filtered lines drop out. Falls back to walking all
+---   #lines when omitted, which preserves the original "fill is invariant
+---   under enabled-toggle" property for disabled positions (Phase 1 skips
+---   them, so they have no entry in active_line_indices).
+function Bookends:_assembleFillPositionsData(active_line_indices)
     local Screen_local = Device.screen
     local font_scale = self.defaults.font_scale or 100
     local data = {}
@@ -1411,11 +1415,28 @@ function Bookends:_assembleFillPositionsData()
         -- else the position default. Match the paint path's scale formula
         -- (main.lua:1614) so the fill band lines up with rendered text on any
         -- font_scale setting.
-        local total_height = 0
-        for i = 1, #lines do
+        local function line_h_at(i)
             local line_font = (p.line_font_size and p.line_font_size[i]) or default_font_size
             local effective = math.max(1, math.floor(line_font * font_scale / 100 + 0.5))
-            total_height = total_height + math.floor(Screen_local:scaleBySize(effective) * 1.2 + 0.5)
+            return math.floor(Screen_local:scaleBySize(effective) * 1.2 + 0.5)
+        end
+        local total_height = 0
+        local first_line_h, last_line_h = 0, 0
+        local indices = active_line_indices and active_line_indices[pos.key]
+        if indices then
+            for n, i in ipairs(indices) do
+                local h = line_h_at(i)
+                total_height = total_height + h
+                if n == 1 then first_line_h = h end
+                last_line_h = h
+            end
+        else
+            for i = 1, #lines do
+                local h = line_h_at(i)
+                total_height = total_height + h
+                if i == 1 then first_line_h = h end
+                last_line_h = h
+            end
         end
         local v_margin = self:getMargin(pos.key)
         local v_offset = self:getPositionSetting(pos.key, "v_offset")
@@ -1424,6 +1445,8 @@ function Bookends:_assembleFillPositionsData()
             height_px = total_height,
             v_offset = v_offset,
             v_margin = v_margin,
+            first_line_h = first_line_h,
+            last_line_h = last_line_h,
         }
     end
     return data
@@ -1432,35 +1455,15 @@ end
 function Bookends:_paintToInner(bb, x, y)
     self._hold_rects = {}
 
-    -- Background fill: paint behind progress bars and text. See spec
-    -- docs/superpowers/specs/2026-05-04-bookends-background-fill-design.md
-    do
-        local bg = self.settings:readSetting("background_color")
-        if bg then
-            local bg_color = Colour.parseColorValue(bg, Screen:isColorEnabled())
-            if bg_color then
-                local screen_size_local = Screen:getSize()
-                local screen_w_local = screen_size_local.w
-                local screen_h_local = screen_size_local.h
-                local positions_data = self:_assembleFillPositionsData()
-                local extents = OverlayWidget.computeEndFillExtents(positions_data, screen_h_local)
-                if extents.top_any_enabled and extents.top_y > 0 then
-                    OverlayWidget.bbPaintRect(bb, x, y, screen_w_local, extents.top_y, bg_color)
-                end
-                if extents.bottom_any_enabled and extents.bottom_y < screen_h_local then
-                    local h = screen_h_local - extents.bottom_y
-                    OverlayWidget.bbPaintRect(bb, x, y + extents.bottom_y, screen_w_local, h, bg_color)
-                end
-            end
-        end
-    end
-
     local screen_size = Screen:getSize()
     local screen_w = screen_size.w
     local screen_h = screen_size.h
 
-    -- Phase 0: Render full-width progress bars (drawn behind text)
-    local bar_colors, text_color, symbol_color = self:_renderProgressBars(bb, x, y, screen_w, screen_h)
+    -- Hoisted from _renderProgressBars so Phase 1 can run before bar paint
+    -- (BG fill in turn needs Phase 1's active_line_indices to size to the
+    -- actually-rendered band rather than the configured #lines).
+    local text_color = self.settings:readSetting("text_color")
+    local symbol_color = self.settings:readSetting("symbol_color")
 
     -- Phase 1: Expand tokens for all active positions
     -- Filter lines by page parity, join with \n, then expand tokens
@@ -1560,6 +1563,34 @@ function Bookends:_paintToInner(bb, x, y)
             end
         end
     end
+
+    -- Background fill: paint behind progress bars and text. See spec
+    -- docs/superpowers/specs/2026-05-04-bookends-background-fill-design.md.
+    -- Sits between Phase 1 (which determines which lines actually render) and
+    -- Phase 0/2 (which paint bars and widgets on top), so the fill height
+    -- excludes parity-filtered and empty-conditional lines.
+    do
+        local bg = self.settings:readSetting("background_color")
+        if bg then
+            local bg_color = Colour.parseColorValue(bg, Screen:isColorEnabled())
+            if bg_color then
+                local positions_data = self:_assembleFillPositionsData(active_line_indices)
+                local extents = OverlayWidget.computeEndFillExtents(positions_data, screen_h)
+                if extents.top_any_enabled and extents.top_y > 0 then
+                    OverlayWidget.bbPaintRect(bb, x, y, screen_w, extents.top_y, bg_color)
+                end
+                if extents.bottom_any_enabled and extents.bottom_y < screen_h then
+                    local h = screen_h - extents.bottom_y
+                    OverlayWidget.bbPaintRect(bb, x, y + extents.bottom_y, screen_w, h, bg_color)
+                end
+            end
+        end
+    end
+
+    -- Phase 0: Render full-width progress bars (drawn behind text, on top
+    -- of BG fill). Discard the returned text_color/symbol_color — they're
+    -- duplicates of the hoisted reads at the top of this function.
+    local bar_colors = self:_renderProgressBars(bb, x, y, screen_w, screen_h)
 
     -- Check if anything changed
     -- Bar positions depend on page number; only rebuild when page changes
@@ -1963,7 +1994,12 @@ function Bookends:hideMenu(touchmenu_instance)
     return DialogHelpers.hideParentMenu(touchmenu_instance)
 end
 
-function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, unit, on_change, on_close, small_step, large_step, touchmenu_instance, on_default, default_label)
+--- @param extra_button table|nil  Optional shortcut button rendered between
+---   Default and Apply, shape `{ text = string, value = number }`. When tapped,
+---   the dialog sets `value` to the supplied number, fires on_change, then
+---   closes — matching the one-tap-commit feel of the colour picker's White
+---   shortcut on the greyscale nudge for background_color.
+function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, unit, on_change, on_close, small_step, large_step, touchmenu_instance, on_default, default_label, extra_button)
     local ButtonDialog = require("ui/widget/buttondialog")
     local restoreMenu = self:hideMenu(touchmenu_instance)
     local orig_on_close = on_close
@@ -2004,9 +2040,8 @@ function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, u
             end
             if on_close then on_close() end
         end,
-        buttons = {
-            nudge_buttons,
-            {
+        buttons = (function()
+            local footer = {
                 {
                     text = _("Cancel"),
                     callback = function()
@@ -2027,16 +2062,28 @@ function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, u
                         value = default_val; on_change(value); dialog:reinit()
                     end
                 end },
-                {
-                    text = _("Apply"),
-                    is_enter_default = true,
+            }
+            if extra_button then
+                table.insert(footer, {
+                    text = extra_button.text,
                     callback = function()
+                        value = extra_button.value
+                        on_change(value)
                         UIManager:close(dialog)
                         if on_close then on_close() end
                     end,
-                },
-            },
-        },
+                })
+            end
+            table.insert(footer, {
+                text = _("Apply"),
+                is_enter_default = true,
+                callback = function()
+                    UIManager:close(dialog)
+                    if on_close then on_close() end
+                end,
+            })
+            return { nudge_buttons, footer }
+        end)(),
     }
     UIManager:show(dialog)
 end

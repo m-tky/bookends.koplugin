@@ -99,5 +99,47 @@ test("v_offset and v_margin shift the fill edge outward", function()
     eq(r.top_y, 5 + 10 + 48)  -- 63
 end)
 
+-- Padding tests: the propping position contributes 0.5 × inner-edge line-height
+-- as breathing room between the text and the EPUB content area.
+local function pos_lh(height_px, first_line_h, last_line_h)
+    return { height_px = height_px, v_offset = 0, v_margin = 0,
+             disabled = false, first_line_h = first_line_h, last_line_h = last_line_h }
+end
+
+test("padding: top_y extends by 0.5 × last_line_h of the propping position", function()
+    local r = OverlayWidget.computeEndFillExtents({
+        tl = pos(0), tc = pos_lh(72, 30, 20), tr = pos(0),  -- last_line_h=20 → +10
+        bl = pos(0), bc = pos(0), br = pos(0),
+    }, SCREEN_H)
+    eq(r.top_y, 72 + 10)
+end)
+
+test("padding: bottom_y extends by 0.5 × first_line_h of the propping position", function()
+    local r = OverlayWidget.computeEndFillExtents({
+        tl = pos(0), tc = pos(0), tr = pos(0),
+        bl = pos(0), bc = pos_lh(72, 30, 20), br = pos(0),  -- first_line_h=30 → +15
+    }, SCREEN_H)
+    eq(r.bottom_y, SCREEN_H - 72 - 15)
+end)
+
+test("padding: tie at same edge picks the larger basis", function()
+    -- Both tc and tr land at edge=72; tr's last_line_h=24 should win over tc's 12.
+    local r = OverlayWidget.computeEndFillExtents({
+        tl = pos(0), tc = pos_lh(72, 12, 12), tr = pos_lh(72, 24, 24),
+        bl = pos(0), bc = pos(0), br = pos(0),
+    }, SCREEN_H)
+    eq(r.top_y, 72 + 12)  -- floor(24 * 0.5 + 0.5) = 12
+end)
+
+test("padding: positions without line-height fields default to 0 (back-compat)", function()
+    -- pos() omits first_line_h / last_line_h — the helper must treat these
+    -- as 0 so existing call shapes keep working.
+    local r = OverlayWidget.computeEndFillExtents({
+        tl = pos(0), tc = pos(48), tr = pos(0),
+        bl = pos(0), bc = pos(0), br = pos(0),
+    }, SCREEN_H)
+    eq(r.top_y, 48)
+end)
+
 io.write(string.format("%d pass / %d fail\n", pass, fail))
 os.exit(fail == 0 and 0 or 1)

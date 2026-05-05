@@ -366,7 +366,9 @@ function Bookends:buildTextColourMenu()
                 local g = string.format("%02X", stored.grey)
                 current_hex = "#" .. g .. g .. g
             end
-            local null_tile_label = (field == "background_color") and _("No background") or nil
+            local is_bg = (field == "background_color")
+            local null_tile_label = is_bg and _("No background") or nil
+            local white_hex = is_bg and "#FFFFFF" or nil
             self:showColourPicker(title, current_hex, Colour.defaultHexFor(field),
                 function(new_hex)
                     self.settings:saveSetting(field, Colour.toStorageShape(new_hex))
@@ -385,11 +387,20 @@ function Bookends:buildTextColourMenu()
                     self:markDirty()
                 end,
                 touchmenu_instance,
-                null_tile_label)
+                null_tile_label,
+                white_hex)
             return
         end
         local byte = (stored and stored.grey) or nil
         local current = byte and math.floor((0xFF - byte) * 100 / 0xFF + 0.5) or 100
+        -- background_color gets a one-tap "White" shortcut (val=0 → grey=0xFF),
+        -- mirroring the colour-picker's White footer button. Distinct from
+        -- "Default (off)": Off draws no fill (page shows through); White paints
+        -- solid white pixels, masking dark page content like CBZ artwork.
+        local extra_button
+        if field == "background_color" then
+            extra_button = { text = _("White"), value = 0 }
+        end
         self:showNudgeDialog(title, current, 0, 100, 100, "%",
             function(val)
                 self.settings:saveSetting(field, { grey = 0xFF - math.floor(val * 0xFF / 100 + 0.5) })
@@ -400,7 +411,8 @@ function Bookends:buildTextColourMenu()
                 self.settings:delSetting(field)
                 self:markDirty()
             end,
-            _("Default") .. " (" .. default_label_suffix .. ")")
+            _("Default") .. " (" .. default_label_suffix .. ")",
+            extra_button)
     end
 
     local function textPctLabel()

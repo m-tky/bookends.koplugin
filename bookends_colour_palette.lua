@@ -168,6 +168,11 @@ local ColourPaletteWidget = FocusManager:extend{
     revert_callback  = nil,
     ok_callback      = nil,
     null_tile        = nil,
+    -- When set, a "White" footer button appears that taps apply_callback with
+    -- this hex and closes the picker (one-tap commit, like Default but to
+    -- a fixed colour rather than off). Used by the background-colour picker
+    -- as a shortcut to the page-background colour.
+    white_callback   = nil,
 }
 
 function ColourPaletteWidget:init()
@@ -332,16 +337,21 @@ function ColourPaletteWidget:update()
         self.preview_swatch,
     }
 
-    -- Footer row: Cancel | Default | Apply, matching the preset-library modal's
-    -- Close | Manage… | Apply pattern (no button borders, LineWidget dividers).
+    -- Footer row: Cancel | Default | [White] | Apply, matching the preset-library
+    -- modal's Close | Manage… | Apply pattern (no button borders, LineWidget
+    -- dividers). White is conditional — present only when white_callback is set
+    -- (currently the background-colour picker).
     local footer_h = Screen:scaleBySize(44)
-    local btn_w    = math.floor(iw / 3)
+    local n_btns   = self.white_callback and 4 or 3
+    local btn_w    = math.floor(iw / n_btns)
     local cancel_btn  = makeFooterBtn(_("Cancel"),  btn_w, footer_h,
         function() if self.revert_callback  then self.revert_callback()  end end)
     local default_btn = makeFooterBtn(_("Default"), btn_w, footer_h,
         function() if self.default_callback then self.default_callback() end end)
     local apply_btn   = makeFooterBtn(_("Apply"),   btn_w, footer_h,
         function() if self.ok_callback      then self.ok_callback()      end end)
+    local white_btn   = self.white_callback and makeFooterBtn(_("White"), btn_w, footer_h,
+        function() self.white_callback() end) or nil
 
     local vdiv_inset = Screen:scaleBySize(10)
     local vdiv = function() return CenterContainer:new{
@@ -352,9 +362,16 @@ function ColourPaletteWidget:update()
         },
     } end
 
-    local footer_row = HorizontalGroup:new{
-        cancel_btn, vdiv(), default_btn, vdiv(), apply_btn,
-    }
+    local footer_row
+    if white_btn then
+        footer_row = HorizontalGroup:new{
+            cancel_btn, vdiv(), default_btn, vdiv(), white_btn, vdiv(), apply_btn,
+        }
+    else
+        footer_row = HorizontalGroup:new{
+            cancel_btn, vdiv(), default_btn, vdiv(), apply_btn,
+        }
+    end
     local footer_separator = LineWidget:new{
         background = Blitbuffer.COLOR_DARK_GRAY,
         dimen      = Geom:new{ w = iw, h = Size.line.thin },
@@ -465,7 +482,7 @@ function ColourPaletteWidget:onShow()
 end
 
 -- Public entry point.
-local function showColourPicker(bookends, title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label)
+local function showColourPicker(bookends, title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label, white_hex)
     local restoreMenu = bookends:hideMenu(touchmenu_instance)
 
     local closed = false
@@ -502,14 +519,19 @@ local function showColourPicker(bookends, title, current_hex, default_hex, on_ap
                 finish()
             end,
         } or nil,
+        white_callback   = white_hex and function()
+            if on_apply then on_apply(white_hex) end
+            UIManager:close(widget, "ui")
+            finish()
+        end or nil,
     }
     UIManager:show(widget)
 end
 
 local M = {}
 function M.attach(Bookends)
-    function Bookends:showColourPicker(title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label)
-        showColourPicker(self, title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label)
+    function Bookends:showColourPicker(title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label, white_hex)
+        showColourPicker(self, title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label, white_hex)
     end
 end
 return M
