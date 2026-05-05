@@ -56,7 +56,7 @@ Config.DEFAULTS_KEYS = {
 --- `font_face` — the user's default font is never overridden by a preset.
 Config.PRESET_OPTIONAL_KEYS = {
     "bar_colors", "tick_width_multiplier", "tick_height_pct",
-    "text_color", "symbol_color",
+    "text_color", "symbol_color", "background_color",
 }
 
 --- Legacy G_reader_settings keys migrated into the plugin's own settings
