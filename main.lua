@@ -1981,7 +1981,19 @@ function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, u
     UIManager:show(dialog)
 end
 
-function Bookends:showFontPicker(current_face, on_select, default_face)
+-- showFontPicker(current_face, on_select, default_face, opts)
+-- opts (optional table):
+--   include_family (default true): when false, suppresses the
+--     "@family:serif / sans / cursive / fantasy" sentinel rows. Callers
+--     that run outside the Reader (e.g. bookshelf.koplugin's hero-line
+--     editor running in the FileManager context) can't resolve those
+--     sentinels because CRengine isn't loaded — picking one leaves the
+--     caller with a font-id Font:getFace can't honour. Passing
+--     include_family = false hides them at source so the picker only
+--     shows fonts that work in the caller's runtime.
+function Bookends:showFontPicker(current_face, on_select, default_face, opts)
+    opts = opts or {}
+    local include_family = opts.include_family ~= false  -- default true
     local Blitbuffer = require("ffi/blitbuffer")
     local Button = require("ui/widget/button")
     local ButtonTable = require("ui/widget/buttontable")
@@ -2077,9 +2089,11 @@ function Bookends:showFontPicker(current_face, on_select, default_face)
             skipped_count))
     end
 
-    -- Prepend family entries (page 1 only, before the specific-font list)
+    -- Prepend family entries (page 1 only, before the specific-font list).
+    -- Suppressed when the caller passed include_family = false — those
+    -- callers run outside the Reader and can't resolve "@family:" sentinels.
     local family_entries = {}
-    for _, fkey in ipairs(Utils.FONT_FAMILY_ORDER) do
+    for _, fkey in ipairs(include_family and Utils.FONT_FAMILY_ORDER or {}) do
         local sentinel = "@family:" .. fkey
         local fam_label = Utils.getFontFamilyLabel(sentinel)
         if fam_label then
