@@ -806,7 +806,12 @@ end
 
 --- Returns true if any active line's format string references one of the
 --- given v5 bareword tokens (e.g. {"light", "warmth"}). Mirrors the
---- non-ident word-boundary rule used by Tokens.expand's `needs()` helper.
+--- non-ident word-boundary rule used by Tokens.expand's `needs()` /
+--- `refs()` helpers, scanning both %name substitutions and [if:cond]
+--- condition keys. Issue #42: a line containing only [if:light=on]L[/if]
+--- references `light` but has no %light, so the substitution-only check
+--- skipped the gated repaint and the conditional only re-evaluated on
+--- the next page turn.
 function Bookends:anyActiveLineUses(token_names)
     if not self.enabled then return false end
     for _, pos in ipairs(self.POSITIONS) do
@@ -815,6 +820,20 @@ function Bookends:anyActiveLineUses(token_names)
                 for _, name in ipairs(token_names) do
                     if line:find("%%" .. name .. "[^%w_]") or line:match("%%" .. name .. "$") then
                         return true
+                    end
+                end
+                -- [if:cond] bodies reference token names as condition keys,
+                -- not as %name substitutions. Pad with \0 so names at the
+                -- start/end of the body still get the boundary check, then
+                -- mirror Tokens.expand's `refs()` non-ident boundary rule
+                -- (bookends_tokens.lua:893-902) so a substring like
+                -- "warmth" inside "warmth_pct" doesn't false-positive.
+                for cond in line:gmatch("%[if:([^%]]+)%]") do
+                    local padded = "\0" .. cond .. "\0"
+                    for _, name in ipairs(token_names) do
+                        if padded:find("[^%w_]" .. name .. "[^%w_]", 1, false) then
+                            return true
+                        end
                     end
                 end
             end
@@ -1034,8 +1053,14 @@ local FRONTLIGHT_TOKENS     = {
     "light", "light_pct", "light_icon",
     "warmth", "warmth_pct", "warmth_icon",
 }
-local BATTERY_TOKENS        = { "batt", "batt_icon" }
-local WIFI_TOKENS           = { "wifi" }
+-- "charging" / "connected" are bareword condition states that change only
+-- on these events (not on the heartbeat tick), so they belong here even
+-- though there's no %charging or %connected substitution token. Without
+-- them, [if:charging=yes]…[/if] / [if:connected=yes]…[/if] on a line
+-- without %batt or %wifi would skip the gated repaint and only update
+-- on the next page turn (same shape as issue #42).
+local BATTERY_TOKENS        = { "batt", "batt_icon", "charging" }
+local WIFI_TOKENS           = { "wifi", "connected" }
 local PLUGIN_CONTENT_TOKENS = { "plugin_content" }
 
 -- 0.3s is a coalescing-only debounce: long enough to merge slider-drag
