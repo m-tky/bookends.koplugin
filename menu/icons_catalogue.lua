@@ -48,6 +48,7 @@ M.CURATED_BY_CHIP = {
         { code = 0xE7AE },   -- bluetooth
         { code = 0xE81B },   -- cellphone
         { code = 0xE266 },   -- chip
+        { code = 0xF0A0 },   -- hdd
         { code = 0xECED },   -- disk
         { code = 0xE268 },   -- cloud
         { code = 0xF013 },   -- cog
