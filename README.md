@@ -467,6 +467,10 @@ Or use the built-in **Check for updates** feature in Settings to update from wit
 
 Restart KOReader after installing.
 
+## See also
+
+**[Bookshelf](https://github.com/AndyHazz/bookshelf.koplugin)** — a customisable home screen for KOReader, letting you browse and pick books from your library with configurable book preview info.
+
 ## License
 
 AGPL-3.0 — see [LICENSE](LICENSE)
