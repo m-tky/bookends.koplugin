@@ -781,16 +781,29 @@ test("book_pct_left: {2} derived from the same raw fraction as book_pct", functi
 end)
 
 test("book_pct: invalid brace value falls back to 0 decimals", function()
-    -- {x}, {3} (not in {0,1,2,4}) should be ignored → integer default
+    -- {x} (non-numeric) and {5}+ (out of range) should be ignored → integer default.
     local ui = stubUi(5, 100)
     local r = Tokens.expand("%book_pct{x}", ui, 0, 0, false, 2, nil)
     eq(r, "5%")
 end)
 
-test("book_pct: {3} not in allowed set, falls back to 0 decimals", function()
+test("book_pct: {3} shows 3 decimal places (trailing zeros stripped)", function()
     local ui = stubUi(5, 100)
     local r = Tokens.expand("%book_pct{3}", ui, 0, 0, false, 2, nil)
     eq(r, "5%")
+end)
+
+test("book_pct: {5} out of range, falls back to 0 decimals", function()
+    local ui = stubUi(5, 100)
+    local r = Tokens.expand("%book_pct{5}", ui, 0, 0, false, 2, nil)
+    eq(r, "5%")
+end)
+
+test("book_pct + book_pct_left: default integer pair sums to 100 at half-integer raw", function()
+    -- 101 of 200 → pct_raw = 50.5; independent rounding would give 51% + 50% = 101%.
+    local ui = stubUi(101, 200)
+    local r = Tokens.expand("%book_pct %book_pct_left", ui, 0, 0, false, 2, nil)
+    eq(r, "51% 49%")
 end)
 
 test("days_reading_book: 14 days from cached first-open ts", function()

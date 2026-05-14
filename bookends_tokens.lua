@@ -1430,12 +1430,12 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             if saved_locale then os.setlocale(saved_locale, "time") end
             return formatted
         end
-        -- %book_pct{N} / %book_pct_left{N}: decimal places (0, 1, 2, or 4).
+        -- %book_pct{N} / %book_pct_left{N}: decimal places (0–4).
         if name == "book_pct" or name == "book_pct_left" then
             local d = content:match("^(%d+)$")
             if d then
                 local n = tonumber(d)
-                if n == 0 or n == 1 or n == 2 or n == 4 then
+                if n and n >= 0 and n <= 4 then
                     pct_decimals[name] = n
                 end
             end
@@ -1595,9 +1595,11 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
 
         -- Book percent: flow-aware when hidden flows active, raw pages otherwise.
-        -- percent_left is derived from the same raw value so they sum to exactly
-        -- 100 at every precision (the division is shared; only the display format
-        -- differs per the %book_pct{N} / %book_pct_left{N} brace settings).
+        -- When both tokens render as integers (the common case), percent_left is
+        -- derived from the rounded percent so the pair always sums to 100. When
+        -- decimals are requested via %book_pct{N} / %book_pct_left{N}, both
+        -- values are formatted independently from the shared raw float; this
+        -- keeps the pair within ±0.1% at the displayed precision.
         local pct_dec = pct_decimals.book_pct or 0
         local left_dec = pct_decimals.book_pct_left or pct_dec
         local pct_raw  -- raw float 0-100
@@ -1616,18 +1618,28 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
         if pct_raw then
             pct_raw = math.max(0, math.min(100, pct_raw))
-            if pct_dec > 0 then
-                local s = string.format("%." .. pct_dec .. "f", pct_raw)
-                percent = (s:gsub("(%..-)0+$", "%1"):gsub("%.$", "")) .. "%"
-            else
-                percent = math.floor(pct_raw + 0.5) .. "%"
-            end
             local left_raw = math.max(0, 100 - pct_raw)
-            if left_dec > 0 then
-                local s = string.format("%." .. left_dec .. "f", left_raw)
-                percent_left = (s:gsub("(%..-)0+$", "%1"):gsub("%.$", "")) .. "%"
+            -- Default (both integer): derive percent_left from percent_int so the
+            -- pair always sums to 100, even at half-integer raw percentages where
+            -- two independent floor(x + 0.5) calls would round both up (e.g.
+            -- pct_raw=50.5 → 51% and 50% summing to 101%).
+            if pct_dec == 0 and left_dec == 0 then
+                local percent_int = math.floor(pct_raw + 0.5)
+                percent = percent_int .. "%"
+                percent_left = math.max(0, 100 - percent_int) .. "%"
             else
-                percent_left = math.floor(left_raw + 0.5) .. "%"
+                if pct_dec > 0 then
+                    local s = string.format("%." .. pct_dec .. "f", pct_raw)
+                    percent = (s:gsub("(%..-)0+$", "%1"):gsub("%.$", "")) .. "%"
+                else
+                    percent = math.floor(pct_raw + 0.5) .. "%"
+                end
+                if left_dec > 0 then
+                    local s = string.format("%." .. left_dec .. "f", left_raw)
+                    percent_left = (s:gsub("(%..-)0+$", "%1"):gsub("%.$", "")) .. "%"
+                else
+                    percent_left = math.floor(left_raw + 0.5) .. "%"
+                end
             end
         end
         -- Pages left in book: stable page count. Offset controlled by the
