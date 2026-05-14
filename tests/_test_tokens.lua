@@ -806,6 +806,16 @@ test("book_pct + book_pct_left: default integer pair sums to 100 at half-integer
     eq(r, "51% 49%")
 end)
 
+test("page_num: CRE scroll mode uses document:getCurrentPage(), not stale view.state.page", function()
+    -- Issue #46: in CRE scroll mode, ReaderView:onPosUpdate only updates
+    -- state.pos, not state.page. The widget needs to prefer the document's
+    -- getCurrentPage(), which reflects the live page in both modes.
+    local ui = stubUi(5, 100)  -- view.state.page = 5 (stale, as in scroll mode)
+    ui.document.getCurrentPage = function() return 42 end  -- actual current page
+    local r = Tokens.expand("%page_num/%page_count %book_pct", ui, 0, 0, false, 2, nil)
+    eq(r, "42/100 42%")
+end)
+
 test("days_reading_book: 14 days from cached first-open ts", function()
     local fourteen_days_ago = os.time() - (14 * 86400)
     local ui = stubUiWithStats({ first_open_ts = fourteen_days_ago, id_curr_book = 100 })

@@ -1084,7 +1084,7 @@ function Bookends:onAnnotationsModified()
     self:markDirty()
 end
 function Bookends:getSessionPageNumber()
-    local pageno = self.ui.view.state.page
+    local pageno = Tokens.getCurrentPageNumber(self.ui)
     if not pageno then return nil end
     -- Use stable page numbers when available (pagemap index or flow-aware)
     if self.ui.pagemap and self.ui.pagemap:wantsPageLabels() then
@@ -1357,7 +1357,7 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
         if bar_cfg.enabled then
             local bar_x, bar_y, bar_w, bar_h, vertical = computeBarRect(bar_cfg, x, y, screen_w, screen_h)
             if bar_w > 0 and bar_h > 0 then
-                local pageno_local = self.ui.view.state.page or 0
+                local pageno_local = Tokens.getCurrentPageNumber(self.ui) or 0
                 local pct, ticks = self:_computeBarProgress(bar_cfg, pageno_local)
 
                 local direction = bar_cfg.direction or (vertical and "ttb" or "ltr")
@@ -1492,7 +1492,7 @@ function Bookends:_paintToInner(bb, x, y)
 
     -- Phase 1: Expand tokens for all active positions
     -- Filter lines by page parity, join with \n, then expand tokens
-    local pageno = self.ui.view.state.page or 0
+    local pageno = Tokens.getCurrentPageNumber(self.ui) or 0
     local is_odd_page = (pageno % 2) == 1
     local expanded = {}             -- key -> joined string (cache comparison only)
     local expanded_arrays = {}      -- key -> array of per-config-line expansions (for buildTextWidget)

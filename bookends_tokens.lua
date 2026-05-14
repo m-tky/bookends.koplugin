@@ -9,6 +9,22 @@ local Tokens = {}
 -- Default false matches stock KOReader's default behaviour.
 Tokens.pages_left_includes_current = false
 
+-- Returns the current page number across page-mode and scroll-mode for both
+-- CRE and KOPT. In CRE scroll mode, ReaderView:onPosUpdate only updates
+-- state.pos, not state.page (see KOReader readerview.lua:onPosUpdate), so
+-- reading ui.view.state.page directly gives a stale value. CRE's document
+-- object exposes getCurrentPage() which always reflects the current page in
+-- either mode; KOPT only fires PageUpdate (so view.state.page stays current)
+-- and doesn't expose getCurrentPage, so the fallback covers it.
+local function getCurrentPageNumber(ui)
+    if ui and ui.document and ui.document.getCurrentPage then
+        local ok, p = pcall(function() return ui.document:getCurrentPage() end)
+        if ok and p then return p end
+    end
+    return ui and ui.view and ui.view.state and ui.view.state.page
+end
+Tokens.getCurrentPageNumber = getCurrentPageNumber
+
 -- Legacy token → new-name alias map. See
 -- docs/superpowers/specs/2026-04-23-v5-token-system-design.md for full rationale.
 -- Single-letter keys only; %C1/%C2/%C3 handled via pattern in rewriteLegacyTokens.
@@ -949,7 +965,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     state.night = G_reader_settings:isTrue("night_mode") and "on" or "off"
 
     -- Page-based state
-    local pageno = ui.view and ui.view.state and ui.view.state.page
+    local pageno = getCurrentPageNumber(ui)
     local doc = ui.document
     if pageno and doc then
         -- Page number / count / remaining — exposed as conditional state so
@@ -1560,7 +1576,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
 
     local has_bar = format_str:find("%%bar") ~= nil
 
-    local pageno = ui.view.state.page
+    local pageno = getCurrentPageNumber(ui)
     local doc = ui.document
 
     -- Page numbers (respects hidden flows + pagemap)
