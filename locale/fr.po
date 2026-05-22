@@ -2,11 +2,19 @@
 # Français translation
 msgid ""
 msgstr ""
-"POT-Creation-Date: 2026-05-14 19:50+0100\n"
+"POT-Creation-Date: 2026-05-22 23:58+0100\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+
+#: _meta.lua:4 menu/main_menu.lua:12
+msgid "Bookends"
+msgstr "Bookends"
+
+#: _meta.lua:5
+msgid "Configurable text overlays at screen corners and edges with token expansion and icon support."
+msgstr "Surcouches de texte configurables aux coins et bords de l'écran avec expansion des jetons et prise en charge des icônes."
 
 #: bookends_colour_palette.lua:347 bookends_dialog_helpers.lua:88
 #: bookends_line_editor.lua:343 bookends_line_editor.lua:601 main.lua:2071
@@ -73,10 +81,6 @@ msgid "All pg"
 msgstr "Ts pg"
 
 #: bookends_line_editor.lua:161 menu/progress_bar_menu.lua:109
-msgid "Chapter"
-msgstr "Chapitre"
-
-#: bookends_line_editor.lua:161 menu/progress_bar_menu.lua:109
 #: menu/tokens_catalogue.lua:21
 msgid "Book"
 msgstr "Livre"
@@ -93,13 +97,17 @@ msgstr "Livre++"
 msgid "Book+++"
 msgstr "Livre+++"
 
-#: bookends_line_editor.lua:165
-msgid "- Progress bar"
-msgstr "- Barre de progression"
+#: bookends_line_editor.lua:161 menu/progress_bar_menu.lua:109
+msgid "Chapter"
+msgstr "Chapitre"
 
 #: bookends_line_editor.lua:165
 msgid "+ Progress bar"
 msgstr "+ Barre de progression"
+
+#: bookends_line_editor.lua:165
+msgid "- Progress bar"
+msgstr "- Barre de progression"
 
 #: bookends_line_editor.lua:172
 msgid "Ch."
@@ -109,30 +117,34 @@ msgstr "Ch."
 msgid "Border"
 msgstr "Bordure"
 
-#: bookends_line_editor.lua:180 menu/progress_bar_menu.lua:141
-#: menu/progress_bar_menu.lua:142
-msgid "Solid"
-msgstr "Plein"
-
 #: bookends_line_editor.lua:180
-msgid "Round"
-msgstr "Rond"
+msgid "Hollow"
+msgstr "Creux"
 
 #: bookends_line_editor.lua:180 menu/progress_bar_menu.lua:141
 msgid "Metro"
 msgstr "Metro"
 
 #: bookends_line_editor.lua:180 menu/progress_bar_menu.lua:141
-msgid "Wave"
-msgstr "Vague"
+msgid "Pacman"
+msgstr ""
 
 #: bookends_line_editor.lua:180 menu/progress_bar_menu.lua:141
 msgid "Radial"
 msgstr "Radial"
 
 #: bookends_line_editor.lua:180
-msgid "Hollow"
-msgstr "Creux"
+msgid "Round"
+msgstr "Rond"
+
+#: bookends_line_editor.lua:180 menu/progress_bar_menu.lua:141
+#: menu/progress_bar_menu.lua:142
+msgid "Solid"
+msgstr "Plein"
+
+#: bookends_line_editor.lua:180 menu/progress_bar_menu.lua:141
+msgid "Wave"
+msgstr "Vague"
 
 #: bookends_line_editor.lua:239
 msgid "Font size"
@@ -342,14 +354,14 @@ msgstr "Bookends : preset suivant"
 msgid "Bookends: set visibility"
 msgstr "Bookends : définir la visibilité"
 
-#: main.lua:266
-msgid "on"
-msgstr "activé"
-
 #: main.lua:266 menu/colours_menu.lua:447 menu/colours_menu.lua:454
 #: menu/colours_menu.lua:494
 msgid "off"
 msgstr "désactivé"
+
+#: main.lua:266
+msgid "on"
+msgstr "activé"
 
 #: main.lua:271
 msgid "Bookends: open preset library"
@@ -1072,10 +1084,6 @@ msgstr "Rechercher…"
 msgid "Search"
 msgstr "Rechercher"
 
-#: menu/main_menu.lua:12 _meta.lua:4
-msgid "Bookends"
-msgstr "Bookends"
-
 #: menu/main_menu.lua:28 menu/preset_manager_modal.lua:1090
 msgid "Save preset"
 msgstr "Enregistrer le preset"
@@ -1255,12 +1263,12 @@ msgid "long press lines to manage"
 msgstr "appui long sur une ligne pour gérer"
 
 #: menu/position_menu.lua:71
-msgid "Extra top margin"
-msgstr "Marge haute supplémentaire"
-
-#: menu/position_menu.lua:71
 msgid "Extra bottom margin"
 msgstr "Marge basse supplémentaire"
+
+#: menu/position_menu.lua:71
+msgid "Extra top margin"
+msgstr "Marge haute supplémentaire"
 
 #: menu/position_menu.lua:94
 msgid "Extra left margin"
@@ -1516,10 +1524,6 @@ msgid "chapter"
 msgstr "chapitre"
 
 #: menu/progress_bar_menu.lua:33
-msgid "top"
-msgstr "haut"
-
-#: menu/progress_bar_menu.lua:33
 msgid "bottom"
 msgstr "bas"
 
@@ -1530,6 +1534,10 @@ msgstr "gauche"
 #: menu/progress_bar_menu.lua:33
 msgid "right"
 msgstr "droite"
+
+#: menu/progress_bar_menu.lua:33
+msgid "top"
+msgstr "haut"
 
 #: menu/progress_bar_menu.lua:69
 msgid "Bar %1"
@@ -1572,12 +1580,12 @@ msgid "Bordered"
 msgstr "Bordé"
 
 #: menu/progress_bar_menu.lua:141
-msgid "Rounded"
-msgstr "Arrondi"
-
-#: menu/progress_bar_menu.lua:141
 msgid "Radial hollow"
 msgstr "Radial creux"
+
+#: menu/progress_bar_menu.lua:141
+msgid "Rounded"
+msgstr "Arrondi"
 
 #: menu/progress_bar_menu.lua:142
 msgid "Style"
@@ -2266,10 +2274,6 @@ msgstr "Rechercher des jetons par nom, valeur ou expression…"
 #: menu/tokens_library.lua:308
 msgid "Help"
 msgstr "Aide"
-
-#: _meta.lua:5
-msgid "Configurable text overlays at screen corners and edges with token expansion and icon support."
-msgstr "Surcouches de texte configurables aux coins et bords de l'écran avec expansion des jetons et prise en charge des icônes."
 
 #~ msgid "Do nothing"
 #~ msgstr "Aucune action"
