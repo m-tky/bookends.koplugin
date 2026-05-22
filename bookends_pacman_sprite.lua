@@ -89,7 +89,7 @@ function Pacman.rotate(frame, steps)
         return out
     end
     local current = frame
-    for _ = 1, steps do
+    for _step = 1, steps do
         local next_rows = {}
         for y = 0, 12 do next_rows[y + 1] = 0 end
         for y = 0, 12 do
@@ -140,9 +140,9 @@ function Pacman.layoutDots(length, dot_block, pellet_block)
     result.pellet = length - pellet_block
 
     local pitch = math.max(dot_block * 3, math.floor(length * 0.6))
-    -- Start one dot_block in from the left so the strip doesn't kiss the
-    -- pacman sprite. Then stride by pitch.
-    local cursor = dot_block
+    -- Start half a pitch in (floored to at least one dot width) so the
+    -- strip breathes from the sprite. Then stride by pitch.
+    local cursor = math.max(dot_block, math.floor(pitch / 2))
     while cursor + dot_block <= result.pellet do
         table.insert(result.dots, cursor)
         cursor = cursor + pitch

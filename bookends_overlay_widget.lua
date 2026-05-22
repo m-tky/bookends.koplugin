@@ -1409,8 +1409,7 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
         local block = math.max(1, math.floor(thickness / 14))
         local sprite_px = 13 * block
 
-        -- Compute the fill axis (along the bar length).
-        local length = vertical and h or w
+        -- `length` and `thickness` are already in scope from the function preamble.
         local fraction_px = math.floor(fraction * length)
 
         -- Sprite leading-edge position along the fill axis. The sprite
@@ -1432,19 +1431,18 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                     if (math.floor(sprite[row + 1] / mask) % 2) == 1 then
                         local axis_off = sprite_start + col * block
                         local cross_off = cross_offset + row * block
-                        local rect_x, rect_y, rect_w, rect_h
+                        -- `ox` is the progress-axis origin, `oy` the cross-axis
+                        -- origin: in vertical mode `ox` == screen y and `oy` ==
+                        -- screen x, so `rect_x` gets `oy` and `rect_y` gets `ox`.
+                        local rect_x, rect_y
                         if vertical then
-                            rect_x = ox + cross_off
-                            rect_y = oy + axis_off
-                            rect_w = block
-                            rect_h = block
+                            rect_x = oy + cross_off
+                            rect_y = ox + axis_off
                         else
                             rect_x = ox + axis_off
                             rect_y = oy + cross_off
-                            rect_w = block
-                            rect_h = block
                         end
-                        bbPaintRect(bb, rect_x, rect_y, rect_w, rect_h, pac_fill)
+                        bbPaintRect(bb, rect_x, rect_y, block, block, pac_fill)
                     end
                 end
             end
@@ -1483,12 +1481,12 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
             end
 
             -- Paint dots.
-            for _, offset in ipairs(layout.dots) do
+            for _idx, offset in ipairs(layout.dots) do
                 local axis = placePos(offset, dot_block)
                 local rect_x, rect_y
                 if vertical then
-                    rect_x = ox + dot_cross
-                    rect_y = oy + axis
+                    rect_x = oy + dot_cross
+                    rect_y = ox + axis
                 else
                     rect_x = ox + axis
                     rect_y = oy + dot_cross
@@ -1501,8 +1499,8 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                 local axis = placePos(layout.pellet, pellet_block)
                 local rect_x, rect_y
                 if vertical then
-                    rect_x = ox + pellet_cross
-                    rect_y = oy + axis
+                    rect_x = oy + pellet_cross
+                    rect_y = ox + axis
                 else
                     rect_x = ox + axis
                     rect_y = oy + pellet_cross
