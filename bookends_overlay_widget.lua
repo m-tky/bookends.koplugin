@@ -1381,8 +1381,6 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
         -- Resolve colours. Authentic arcade hex on colour-enabled devices;
         -- strong greyscale defaults on B&W. Custom overrides via the existing
         -- per-bar colors table flow through resolveColor as elsewhere.
-        local Colour = require("bookends_colour")
-        local Screen = require("device").screen
         local is_colour = Screen and Screen.isColorEnabled and Screen:isColorEnabled()
         local default_fill, default_dot
         if is_colour then
