@@ -1500,10 +1500,13 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                 end
             end
 
-            -- Paint dots whose canonical position is still ahead of
-            -- pacman's leading edge.
+            -- Paint dots whose canonical position is still ahead of —
+            -- or overlaps pacman's leading edge by at most one pixel.
+            -- Without the +1 grace, a dot vanishes the instant pacman's
+            -- leading edge reaches it, so the "bite" never lands on
+            -- screen.
             for _idx, canonical_dot in ipairs(layout.dots) do
-                if canonical_dot >= pacman_canonical_lead then
+                if canonical_dot + 1 >= pacman_canonical_lead then
                     local axis = toActual(canonical_dot, dot_block)
                     local rect_x, rect_y
                     if vertical then
