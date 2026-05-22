@@ -171,5 +171,50 @@ test("directionToSteps maps direction strings to 0..3", function()
     eq(Pacman.directionToSteps("up"), 3)
 end)
 
+test("layoutDots: empty when length is too small", function()
+    local layout = Pacman.layoutDots(5, 2, 4)
+    eq(#layout.dots, 0)
+    eq(layout.pellet, nil)
+end)
+
+test("layoutDots: returns pellet at the far end", function()
+    local layout = Pacman.layoutDots(100, 3, 6)
+    truthy(layout.pellet ~= nil, "expected a pellet")
+    -- Pellet's far edge sits at length; its start is length - pellet_block.
+    eq(layout.pellet, 100 - 6)
+end)
+
+test("layoutDots: returns at least one dot in a reasonably long region", function()
+    local layout = Pacman.layoutDots(100, 3, 6)
+    truthy(#layout.dots >= 1, "expected at least one dot, got " .. #layout.dots)
+end)
+
+test("layoutDots: dots are sorted ascending", function()
+    local layout = Pacman.layoutDots(200, 3, 6)
+    for i = 2, #layout.dots do
+        truthy(layout.dots[i] > layout.dots[i - 1],
+            "dot " .. i .. " not after dot " .. (i - 1))
+    end
+end)
+
+test("layoutDots: no dot overlaps the pellet footprint", function()
+    local layout = Pacman.layoutDots(200, 3, 6)
+    local pellet_start = layout.pellet
+    local pellet_end = pellet_start + 6
+    for _, dot_start in ipairs(layout.dots) do
+        local dot_end = dot_start + 3
+        local overlaps = not (dot_end <= pellet_start or dot_start >= pellet_end)
+        eq(overlaps, false, "dot at " .. dot_start .. " overlaps pellet")
+    end
+end)
+
+test("layoutDots: pitch is at least dot_block * 3", function()
+    local layout = Pacman.layoutDots(300, 4, 8)
+    if #layout.dots >= 2 then
+        local gap = layout.dots[2] - layout.dots[1]
+        truthy(gap >= 4 * 3, "pitch too tight: " .. gap)
+    end
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))
 os.exit(fail > 0 and 1 or 0)

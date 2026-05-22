@@ -114,4 +114,41 @@ function Pacman.directionToSteps(direction)
     return 0
 end
 
+-- Lay out dots and a power pellet along an unread region of `length` device
+-- pixels. Returns:
+--   { dots   = { d1, d2, ... },   -- ascending start offsets of each dot
+--     pellet = p_start | nil }     -- start offset of the pellet (nil if no room)
+--
+-- length        total length of the unread region (px)
+-- dot_block     dot side length (px), square
+-- pellet_block  pellet side length (px), square; should be >= dot_block
+--
+-- Layout rules:
+--   * pellet sits flush against the far end:   pellet = length - pellet_block
+--   * dots placed at pitch = max(dot_block*3, floor(length*0.6))
+--     ...except the helper picks a pitch that lets at least one dot fit
+--     when length is short. Concretely: pitch = max(dot_block*3, floor(length*0.6))
+--     evaluated once; dots stride from dot_block (small margin from start)
+--     to first overlap with pellet.
+--   * any dot whose footprint would overlap the pellet is skipped.
+function Pacman.layoutDots(length, dot_block, pellet_block)
+    local result = { dots = {} }
+    if length < dot_block + pellet_block then
+        -- No room for both a dot and a pellet.
+        return result
+    end
+    result.pellet = length - pellet_block
+
+    local pitch = math.max(dot_block * 3, math.floor(length * 0.6))
+    -- Start one dot_block in from the left so the strip doesn't kiss the
+    -- pacman sprite. Then stride by pitch.
+    local cursor = dot_block
+    while cursor + dot_block <= result.pellet do
+        table.insert(result.dots, cursor)
+        cursor = cursor + pitch
+    end
+
+    return result
+end
+
 return Pacman
