@@ -1388,10 +1388,12 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
             default_dot  = Colour.parseColorValue({ hex = "#FFB897" }, true)
         else
             -- On greyscale screens, lean into "softer than black" — a hard
-            -- black silhouette reads harsh next to text. Pacman sits one
-            -- shade darker than the dots so it still leads visually.
-            default_fill = Blitbuffer.COLOR_DARK_GRAY
-            default_dot  = Blitbuffer.COLOR_GRAY
+            -- black silhouette reads harsh next to text. Pacman sits a
+            -- couple of shades darker than the dots so it still leads
+            -- visually. Explicit Color8 bytes so the values don't drift
+            -- if Blitbuffer renames its named constants.
+            default_fill = Blitbuffer.Color8(0x22)
+            default_dot  = Blitbuffer.COLOR_DARK_GRAY
         end
         local pac_fill = resolveColor(custom_fill, default_fill)
         local pac_dot  = resolveColor(custom_bg, default_dot)
