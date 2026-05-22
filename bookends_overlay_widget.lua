@@ -1450,7 +1450,7 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
 
         -- Dot strip + pellet: unread region runs from sprite_end to length.
         -- For reversed bars, mirror the layout to the other side.
-        local dot_block = math.max(2, math.floor(thickness / 8))
+        local dot_block = math.max(3, math.floor(thickness / 6))
         local pellet_block = dot_block * 2
         local sprite_end_axis = sprite_start + sprite_px
         local unread_start, unread_length

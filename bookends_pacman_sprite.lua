@@ -51,11 +51,21 @@ local function inOpenWedge(x, y)
     return math.abs(dy) <= dx * 0.7
 end
 
+-- Closed frame seam: a short horizontal notch at the leading edge,
+-- mid-row, so the closed silhouette reads as "mouth closed" instead of
+-- a perfect circle. Three cells: (10,6), (11,6), (12,6).
+local function inClosedSeam(x, y)
+    local dx, dy = x - 6, y - 6
+    return dy == 0 and dx >= 4
+end
+
 local OPEN_FRAME = buildFrame(function(x, y)
     return inDisc(x, y) and not inOpenWedge(x, y)
 end)
 
-local CLOSED_FRAME = buildFrame(inDisc)
+local CLOSED_FRAME = buildFrame(function(x, y)
+    return inDisc(x, y) and not inClosedSeam(x, y)
+end)
 
 -- Read-only sprite accessor. Returns the array directly; callers must not
 -- mutate it.
@@ -139,7 +149,10 @@ function Pacman.layoutDots(length, dot_block, pellet_block)
     end
     result.pellet = length - pellet_block
 
-    local pitch = math.max(dot_block * 3, math.floor(length * 0.6))
+    -- Pitch is a fixed multiple of dot size, not scaled with bar length
+    -- (length-scaling was too aggressive on long bars and read as huge
+    -- empty gaps between dots).
+    local pitch = dot_block * 4
     -- Start half a pitch in (floored to at least one dot width) so the
     -- strip breathes from the sprite. Then stride by pitch.
     local cursor = math.max(dot_block, math.floor(pitch / 2))

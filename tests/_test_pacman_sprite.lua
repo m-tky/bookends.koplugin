@@ -67,14 +67,13 @@ test("closed frame: vertically symmetric (disc is symmetric)", function()
     end
 end)
 
-test("closed frame: horizontally symmetric (disc is symmetric)", function()
+test("closed frame: has a seam at the leading edge mid-row", function()
+    -- The closed frame's seam is a 3-cell horizontal notch at the
+    -- right-edge midline, marking "mouth closed" vs a perfect circle.
     local f = Pacman.getFrame("closed")
-    for y = 0, 12 do
-        for x = 0, 12 do
-            eq(bit(f, x, y), bit(f, 12 - x, y),
-                "asymmetric at (" .. x .. "," .. y .. ")")
-        end
-    end
+    eq(bit(f, 10, 6), false, "(10,6) should be off (seam)")
+    eq(bit(f, 11, 6), false, "(11,6) should be off (seam)")
+    eq(bit(f, 12, 6), false, "(12,6) should be off (seam)")
 end)
 
 test("open frame: same row count as closed", function()
