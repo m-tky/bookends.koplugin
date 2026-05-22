@@ -126,7 +126,7 @@ function Bookends:buildSingleBarMenu(bar_idx, bar_cfg)
                 }
                 return labels[bar_cfg.chapter_ticks or "off"]
             end,
-            enabled_func = function() return bar_cfg.enabled and bar_cfg.type == "book" end,
+            enabled_func = function() return bar_cfg.enabled and bar_cfg.type == "book" and bar_cfg.style ~= "pacman" end,
             keep_menu_open = true,
             callback = function(touchmenu_instance)
                 bar_cfg.chapter_ticks = Utils.cycleNext(
@@ -138,14 +138,14 @@ function Bookends:buildSingleBarMenu(bar_idx, bar_cfg)
         },
         {
             text_func = function()
-                local style_labels = { solid = _("Solid"), bordered = _("Bordered"), rounded = _("Rounded"), metro = _("Metro"), wavy = _("Wave"), radial = _("Radial"), radial_hollow = _("Radial hollow") }
+                local style_labels = { solid = _("Solid"), bordered = _("Bordered"), rounded = _("Rounded"), metro = _("Metro"), wavy = _("Wave"), radial = _("Radial"), radial_hollow = _("Radial hollow"), pacman = _("Pacman") }
                 return _("Style") .. ": " .. (style_labels[bar_cfg.style] or _("Solid"))
             end,
             enabled_func = isEnabled,
             keep_menu_open = true,
             callback = function(touchmenu_instance)
                 bar_cfg.style = Utils.cycleNext(
-                    { "solid", "bordered", "rounded", "metro", "wavy", "radial", "radial_hollow" },
+                    { "solid", "bordered", "rounded", "metro", "wavy", "radial", "radial_hollow", "pacman" },
                     bar_cfg.style or "solid")
                 saveBar()
                 if touchmenu_instance then touchmenu_instance:updateItems() end
