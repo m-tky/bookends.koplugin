@@ -1077,6 +1077,18 @@ function OverlayWidget.freeWidgets(widget_cache)
     end
 end
 
+-- Canonical list of styles paintProgressBar dispatches on. Exported so
+-- downstream consumers (bookshelf's hero bar picker, third-party themes,
+-- etc.) can enumerate the available styles without grepping the
+-- if/elseif chain inside paintProgressBar. Order = the order the styles
+-- were introduced; readers that want a stable cycle should follow this
+-- ordering. Add new entries here when paintProgressBar gains a new
+-- branch — the source of truth for "does bookends support style X?".
+OverlayWidget.BAR_STYLES = {
+    "bordered", "solid", "rounded", "metro", "wavy",
+    "radial", "radial_hollow", "pacman",
+}
+
 --- Paint a progress bar directly to a blitbuffer.
 -- @param orientation "horizontal" (default) or "vertical"
 -- @param reverse boolean: flip fill direction
