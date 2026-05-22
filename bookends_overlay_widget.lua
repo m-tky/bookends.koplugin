@@ -1387,8 +1387,11 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
             default_fill = Colour.parseColorValue({ hex = "#FFCC00" }, true)
             default_dot  = Colour.parseColorValue({ hex = "#FFB897" }, true)
         else
-            default_fill = Blitbuffer.COLOR_BLACK
-            default_dot  = Blitbuffer.COLOR_DARK_GRAY
+            -- On greyscale screens, lean into "softer than black" — a hard
+            -- black silhouette reads harsh next to text. Pacman sits one
+            -- shade darker than the dots so it still leads visually.
+            default_fill = Blitbuffer.COLOR_DARK_GRAY
+            default_dot  = Blitbuffer.COLOR_GRAY
         end
         local pac_fill = resolveColor(custom_fill, default_fill)
         local pac_dot  = resolveColor(custom_bg, default_dot)
@@ -1404,9 +1407,12 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
             PacmanSprite.getFrame(frame_name),
             PacmanSprite.directionToSteps(facing))
 
-        -- Block scale: at least 1 device px per arcade pixel. The sprite
-        -- ends up 13*block device px in size.
-        local block = math.max(1, math.floor(thickness / 14))
+        -- Block scale: minimum 2 device px per arcade pixel so the sprite
+        -- stays legible — at thickness=14 (typical inline) a block=1 sprite
+        -- is only 13 px, which is too small to read. Block=2 gives 26 px,
+        -- which slightly overflows the bar in both directions (see
+        -- `feedback_tick_overflow_intentional`) but is the right minimum.
+        local block = math.max(2, math.floor(thickness / 10))
         local sprite_px = 13 * block
 
         -- `length` and `thickness` are already in scope from the function preamble.
