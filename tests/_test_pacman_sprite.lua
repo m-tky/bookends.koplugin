@@ -121,5 +121,55 @@ test("unknown frame raises", function()
     eq(ok, false, "should have errored on unknown frame")
 end)
 
+test("rotate: 0 steps returns input unchanged", function()
+    local f = Pacman.getFrame("open")
+    local r = Pacman.rotate(f, 0)
+    for y = 0, 12 do eq(r[y + 1], f[y + 1], "row " .. y) end
+end)
+
+test("rotate: 4 steps returns input unchanged (full turn)", function()
+    local f = Pacman.getFrame("open")
+    local r = Pacman.rotate(f, 4)
+    for y = 0, 12 do eq(r[y + 1], f[y + 1], "row " .. y) end
+end)
+
+test("rotate: 1 step (90 CW) puts mouth at bottom", function()
+    -- After CW rotation, what was the right edge becomes the bottom edge.
+    -- The wedge tip cells (7..12, 6) on the open frame become column 6,
+    -- rows 7..12 after 1 CW rotation. They must remain off.
+    local rotated = Pacman.rotate(Pacman.getFrame("open"), 1)
+    for y = 7, 12 do
+        eq(bit(rotated, 6, y), false, "cell (6," .. y .. ") should be off")
+    end
+end)
+
+test("rotate: 2 steps flips horizontally and vertically", function()
+    -- 180 rotation: (x, y) -> (12 - x, 12 - y).
+    local f = Pacman.getFrame("open")
+    local r = Pacman.rotate(f, 2)
+    for y = 0, 12 do
+        for x = 0, 12 do
+            eq(bit(r, x, y), bit(f, 12 - x, 12 - y),
+                "180 mismatch at (" .. x .. "," .. y .. ")")
+        end
+    end
+end)
+
+test("rotate: 3 steps (90 CCW) puts mouth at top", function()
+    -- After 3 CW (= 1 CCW), the right wedge tip becomes the top edge.
+    -- Cells (6, 0..5) of the rotated frame must be off.
+    local rotated = Pacman.rotate(Pacman.getFrame("open"), 3)
+    for y = 0, 5 do
+        eq(bit(rotated, 6, y), false, "cell (6," .. y .. ") should be off")
+    end
+end)
+
+test("directionToSteps maps direction strings to 0..3", function()
+    eq(Pacman.directionToSteps("right"), 0)
+    eq(Pacman.directionToSteps("down"), 1)
+    eq(Pacman.directionToSteps("left"), 2)
+    eq(Pacman.directionToSteps("up"), 3)
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))
 os.exit(fail > 0 and 1 or 0)

@@ -65,4 +65,53 @@ function Pacman.getFrame(frame_name)
     error("Pacman.getFrame: unknown frame " .. tostring(frame_name), 2)
 end
 
+-- Read bit (x, y) from a frame array.
+local function readBit(frame, x, y)
+    local mask = 2 ^ x
+    return (math.floor(frame[y + 1] / mask) % 2) == 1
+end
+
+-- Write bit (x, y) into a row-array under construction. Mutates `rows`.
+local function setBit(rows, x, y)
+    rows[y + 1] = (rows[y + 1] or 0) + 2 ^ x
+end
+
+-- Rotate a 13x13 frame by `steps` 90-degree CW turns.
+-- Returns a new frame; input is not mutated.
+-- Coordinate mapping for one CW step (size 13):
+--   (x, y) -> (12 - y, x)
+function Pacman.rotate(frame, steps)
+    steps = steps % 4
+    if steps == 0 then
+        -- Defensive copy so callers can treat the return as fresh.
+        local out = {}
+        for y = 0, 12 do out[y + 1] = frame[y + 1] end
+        return out
+    end
+    local current = frame
+    for _ = 1, steps do
+        local next_rows = {}
+        for y = 0, 12 do next_rows[y + 1] = 0 end
+        for y = 0, 12 do
+            for x = 0, 12 do
+                if readBit(current, x, y) then
+                    setBit(next_rows, 12 - y, x)
+                end
+            end
+        end
+        current = next_rows
+    end
+    return current
+end
+
+-- Map a direction string ("right" | "down" | "left" | "up") to the number
+-- of 90-degree CW rotations needed to face that direction from a
+-- right-facing base. Unknown directions default to 0.
+function Pacman.directionToSteps(direction)
+    if direction == "down" then return 1 end
+    if direction == "left" then return 2 end
+    if direction == "up" then return 3 end
+    return 0
+end
+
 return Pacman
