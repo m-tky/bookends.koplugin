@@ -86,6 +86,8 @@ M.TOKENS = {
     { description = _("Chapter finish time (clock)"), token = "%chap_time_left_eta", chip = "time" },
     { description = _("Book finish time (clock)"), token = "%book_time_left_eta", chip = "time" },
     { description = _("Chapter finish time (custom format)"), token = "%chap_time_left_eta{%H:%M}", chip = "time" },
+    { description = _("Book finish date (projected)"), token = "%book_finish_date", chip = "time" },
+    { description = _("Book finish date (custom format)"), token = "%book_finish_date{%d %B %Y}", chip = "time" },
     { description = _("Session reading time"), token = "%session_time", chip = "session" },
     { description = _("Session pages read"), token = "%session_pages", chip = "session" },
     { description = _("Pages read today (all books)"), token = "%pages_today", chip = "session" },

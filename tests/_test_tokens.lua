@@ -351,6 +351,34 @@ test("eta: custom format %chap_time_left_eta{%H-%M} respected", function()
 end)
 
 -- ============================================================================
+-- %book_finish_date — calendar projection from reading pace
+-- ============================================================================
+test("finish_date: bare %book_finish_date preview shows placeholder", function()
+    local r = Tokens.expandPreview("%book_finish_date",
+        { view = {} }, nil, nil, 2, nil)
+    eq(r, "[finish]")
+end)
+
+test("finish_date: %book_finish_date{%Y} renders 4-digit year", function()
+    local r = Tokens.expandPreview("%book_finish_date{%Y}",
+        { view = {} }, nil, nil, 2, nil)
+    assert(r:match("^%d%d%d%d$"), "expected YYYY, got: " .. r)
+end)
+
+test("finish_date: preview uses +17-day dummy offset", function()
+    local r = Tokens.expandPreview("%book_finish_date{%Y-%m-%d}",
+        { view = {} }, nil, nil, 2, nil)
+    local expected = os.date("%Y-%m-%d", os.time() + 17 * 86400)
+    eq(r, expected)
+end)
+
+test("finish_date: custom format with literal text", function()
+    local r = Tokens.expandPreview("Finish: %book_finish_date{%d %b}",
+        { view = {} }, nil, nil, 2, nil)
+    assert(r:match("^Finish: %d+ %a+$"), "expected 'Finish: DD MMM', got: " .. r)
+end)
+
+-- ============================================================================
 -- (More tests added by subsequent tasks.)
 -- ============================================================================
 
