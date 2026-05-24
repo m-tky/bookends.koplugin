@@ -1346,7 +1346,11 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
     local bc = self.settings:readSetting("bar_colors") or {}
     bc.tick_height_pct = global_tick_height_pct or bc.tick_height_pct
     local bar_colors
-    if bc.fill or bc.bg or bc.track or bc.tick or bc.invert_read_ticks ~= nil or bc.tick_height_pct or bc.border or bc.invert or bc.border_thickness or bc.metro_fill or bc.read_height_pct or bc.unread_height_pct then
+    -- Gate on "any stored field" (next() is non-nil) rather than truthy-or
+    -- of individual fields: `false` is the explicit-transparent sentinel
+    -- (#43) and is falsy in Lua, so an `or`-chain would skip resolving even
+    -- though the user has stored a real preference. next() catches it.
+    if next(bc) ~= nil then
         bar_colors = resolveBarColors(bc)
     end
 
