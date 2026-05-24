@@ -1266,7 +1266,14 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
         local ring_border = line_thick
         local inner_r = start_r - ring_border
         if inner_r > 0 then
-            paintCircle(start_cx + ring_border, oy + ring_border, inner_r, resolveColor(custom_invert, Blitbuffer.COLOR_WHITE))
+            -- Inner ring is paper-coloured. KOReader's night-mode framebuffer
+            -- inversion maps COLOR_WHITE → COLOR_BLACK at refresh time, so the
+            -- ring stays visually correct on inverted reads. Previously this
+            -- read colors.invert, overloading that field (also used for tick
+            -- inversion). Decoupled here so "Tick inversion colour" in the
+            -- menu only describes tick behaviour.
+            paintCircle(start_cx + ring_border, oy + ring_border, inner_r,
+                Blitbuffer.COLOR_WHITE)
         end
 
         -- End circle (filled, trunk colour, same size as start)
