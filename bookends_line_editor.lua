@@ -1,9 +1,12 @@
 --- Line-level editing: the InputDialog-based format editor and the
 -- long-press manage dialog (delete/reorder/move-to-region).
 
+local ButtonDialog = require("ui/widget/buttondialog")
+local Colour = require("bookends_colour")
 local ConfirmBox = require("ui/widget/confirmbox")
 local Config = require("bookends_config")
 local Device = require("device")
+local DialogHelpers = require("bookends_dialog_helpers")
 local Font = require("ui/font")
 local InputDialog = require("ui/widget/inputdialog")
 local Tokens = require("bookends_tokens")
@@ -59,6 +62,10 @@ function LineEditor.attach(Bookends)
         pos_settings.line_bar_type = pos_settings.line_bar_type or {}
         pos_settings.line_bar_height = pos_settings.line_bar_height or {}
         pos_settings.line_bar_style = pos_settings.line_bar_style or {}
+        pos_settings.line_bar_chapter_ticks = pos_settings.line_bar_chapter_ticks or {}
+        pos_settings.line_bar_direction = pos_settings.line_bar_direction or {}
+        pos_settings.line_bar_unread_height = pos_settings.line_bar_unread_height or {}
+        pos_settings.line_bar_colors = pos_settings.line_bar_colors or {}
 
         -- Snapshot for cancel/restore (style / font / nudge / etc.; the
         -- canonicalise migration above is already baked into this snapshot
@@ -75,6 +82,10 @@ function LineEditor.attach(Bookends)
         local line_bar_type = pos_settings.line_bar_type[line_idx] -- nil = "chapter"
         local line_bar_height = pos_settings.line_bar_height[line_idx] -- nil = use font size
         local line_bar_style = pos_settings.line_bar_style[line_idx] -- nil = "bordered"
+        local line_bar_chapter_ticks = pos_settings.line_bar_chapter_ticks[line_idx] -- nil = "off"
+        local line_bar_direction = pos_settings.line_bar_direction[line_idx] -- nil = "ltr"
+        local line_bar_unread_height = pos_settings.line_bar_unread_height[line_idx] -- nil = symmetric
+        local line_bar_colors = pos_settings.line_bar_colors[line_idx] -- nil = inherit global
 
         -- Live preview: write current local state to settings and repaint.
         local function applyLivePreview()
@@ -88,6 +99,10 @@ function LineEditor.attach(Bookends)
             pos_settings.line_bar_type[line_idx] = line_bar_type
             pos_settings.line_bar_height[line_idx] = line_bar_height
             pos_settings.line_bar_style[line_idx] = line_bar_style
+            pos_settings.line_bar_chapter_ticks[line_idx] = line_bar_chapter_ticks
+            pos_settings.line_bar_direction[line_idx] = line_bar_direction
+            pos_settings.line_bar_unread_height[line_idx] = line_bar_unread_height
+            pos_settings.line_bar_colors[line_idx] = line_bar_colors
             self:markDirty()
         end
 
@@ -157,31 +172,16 @@ function LineEditor.attach(Bookends)
             return t and t:find("%%bar") ~= nil
         end
 
-        local BAR_TYPE_CYCLE = { "chapter", "book", "book_ticks", "book_ticks2", "book_ticks_all" }
-        local BAR_TYPE_LABELS = { chapter = _("Chapter"), book = _("Book"), book_ticks = _("Book+"), book_ticks2 = _("Book++"), book_ticks_all = _("Book+++") }
-
         local bar_insert_button = {
             text_func = function()
                 return hasBarToken() and _("- Progress bar") or _("+ Progress bar")
             end,
             callback = function() end,
         }
-        local bar_type_button = {
-            text_func = function()
-                if not hasBarToken() then return "" end
-                return BAR_TYPE_LABELS[line_bar_type or "chapter"] or _("Ch.")
-            end,
+        local bar_style_menu_button = {
+            text = _("Bar style…"),
             enabled_func = hasBarToken,
-            callback = function() end,
-        }
-        local bar_style_button = {
-            text_func = function()
-                if not hasBarToken() then return "" end
-                local labels = { bordered = _("Border"), solid = _("Solid"), rounded = _("Round"), metro = _("Metro"), wavy = _("Wave"), radial = _("Radial"), radial_hollow = _("Hollow"), pacman = _("Pacman") }
-                return labels[line_bar_style or "bordered"] or _("Border")
-            end,
-            enabled_func = hasBarToken,
-            callback = function() end,
+            callback = function() end,  -- wired below
         }
 
         bar_insert_button.callback = function()
@@ -208,22 +208,247 @@ function LineEditor.attach(Bookends)
             format_dialog:reinit()
         end
 
-        bar_type_button.callback = function()
-            format_dialog:onCloseKeyboard()
-            local next_type = Utils.cycleNext(BAR_TYPE_CYCLE, line_bar_type or "chapter")
-            line_bar_type = next_type ~= "chapter" and next_type or nil
-            applyLivePreview()
-            format_dialog:reinit()
+        local STYLE_CYCLE = { "bordered", "solid", "rounded", "metro", "wavy", "radial", "radial_hollow", "pacman" }
+        local STYLE_LABELS = {
+            bordered = _("Bordered"), solid = _("Solid"), rounded = _("Rounded"),
+            metro = _("Metro"), wavy = _("Wave"), radial = _("Radial"),
+            radial_hollow = _("Radial hollow"), pacman = _("Pacman"),
+        }
+        local TICKS_CYCLE = { "off", "level1", "level2", "all" }
+        local TICKS_LABELS = {
+            off = _("Chapter ticks: off"),
+            level1 = _("Chapter ticks: top level"),
+            level2 = _("Chapter ticks: top 2 levels"),
+            all = _("Chapter ticks: all levels"),
+        }
+
+        local plugin = self  -- captured so nested colour callbacks can reach showColourPicker
+        local _bar_style_dialog
+
+        -- Forward declare so the two menus can call each other.
+        local openBarStyleMenu, openColoursMenu
+
+        openColoursMenu = function()
+            local lc = line_bar_colors or {}
+            local function persist()
+                if next(lc) == nil then
+                    line_bar_colors = nil
+                else
+                    line_bar_colors = lc
+                end
+                applyLivePreview()
+            end
+
+            local function colourRow(title, field)
+                local v = lc[field]
+                local display
+                if v == nil then display = _("default")
+                elseif type(v) == "table" and v.hex then display = v.hex
+                elseif type(v) == "table" and v.grey then display = string.format("#%02X", v.grey)
+                elseif type(v) == "number" then display = string.format("#%02X", v)
+                else display = tostring(v) end
+                return {{
+                    text = title .. ": " .. display,
+                    callback = function()
+                        UIManager:close(_bar_style_dialog)
+                        local current_hex
+                        if type(v) == "table" and v.hex then current_hex = v.hex
+                        elseif type(v) == "table" and v.grey then
+                            local g = string.format("%02X", v.grey)
+                            current_hex = "#" .. g .. g .. g
+                        end
+                        local default_hex = Colour.defaultHexFor(field)
+                        plugin:showColourPicker(title, current_hex, default_hex,
+                            function(new_hex)
+                                lc[field] = Colour.toStorageShape(new_hex)
+                                persist(); openColoursMenu()
+                            end,
+                            function()
+                                lc[field] = nil; persist(); openColoursMenu()
+                            end,
+                            function() openColoursMenu() end,
+                            nil)
+                    end,
+                }}
+            end
+
+            local sub_rows = {}
+            table.insert(sub_rows, {{
+                text = line_bar_colors and _("Disable custom colours") or _("Enable custom colours"),
+                callback = function()
+                    if line_bar_colors then
+                        line_bar_colors = nil
+                    else
+                        line_bar_colors = {}
+                    end
+                    applyLivePreview()
+                    UIManager:close(_bar_style_dialog); openColoursMenu()
+                end,
+            }})
+            if line_bar_colors then
+                table.insert(sub_rows, colourRow(_("Read colour"), "fill"))
+                table.insert(sub_rows, colourRow(_("Track colour"), "bg"))
+            end
+            table.insert(sub_rows, {{
+                text = _("Back"),
+                callback = function()
+                    UIManager:close(_bar_style_dialog); openBarStyleMenu()
+                end,
+            }})
+
+            _bar_style_dialog = ButtonDialog:new{
+                title = _("Bar colours"),
+                buttons = sub_rows,
+            }
+            UIManager:show(_bar_style_dialog)
         end
 
-        bar_style_button.callback = function()
+        openBarStyleMenu = function()
+            -- Normalise legacy book_ticks* into the new (type, ticks) split so
+            -- the submenu always reads the new shape regardless of preset age.
+            -- The legacy mapping wins: see Utils.resolveLineBarTypeAndTicks.
+            local norm_type, norm_depth = Utils.resolveLineBarTypeAndTicks(line_bar_type, line_bar_chapter_ticks)
+            line_bar_type = norm_type ~= "chapter" and norm_type or nil
+            if norm_type == "book" then
+                if norm_depth == 1 then line_bar_chapter_ticks = "level1"
+                elseif norm_depth == 2 then line_bar_chapter_ticks = "level2"
+                elseif norm_depth == math.huge then line_bar_chapter_ticks = "all"
+                else line_bar_chapter_ticks = nil end
+            else
+                line_bar_chapter_ticks = nil
+            end
+
+            local current_type  = line_bar_type or "chapter"
+            local current_style = line_bar_style or "bordered"
+            local current_dir   = line_bar_direction or "ltr"
+            local current_ticks = line_bar_chapter_ticks or "off"
+
+            local rows = {}
+
+            -- Row 1: Type
+            table.insert(rows, {{
+                text = _("Type") .. ": " .. (current_type == "book" and _("Book") or _("Chapter")),
+                callback = function()
+                    local next_type = current_type == "book" and "chapter" or "book"
+                    line_bar_type = next_type ~= "chapter" and next_type or nil
+                    applyLivePreview()
+                    UIManager:close(_bar_style_dialog); openBarStyleMenu()
+                end,
+            }})
+
+            -- Row 2: Chapter ticks (only meaningful for Book + non-Pacman)
+            local ticks_enabled = current_type == "book" and current_style ~= "pacman"
+            table.insert(rows, {{
+                text = TICKS_LABELS[current_ticks] or TICKS_LABELS.off,
+                enabled = ticks_enabled,
+                callback = function()
+                    local next_ticks = Utils.cycleNext(TICKS_CYCLE, current_ticks)
+                    line_bar_chapter_ticks = next_ticks ~= "off" and next_ticks or nil
+                    applyLivePreview()
+                    UIManager:close(_bar_style_dialog); openBarStyleMenu()
+                end,
+            }})
+
+            -- Row 3: Style
+            table.insert(rows, {{
+                text = _("Style") .. ": " .. (STYLE_LABELS[current_style] or _("Bordered")),
+                callback = function()
+                    local next_style = Utils.cycleNext(STYLE_CYCLE, current_style)
+                    line_bar_style = next_style ~= "bordered" and next_style or nil
+                    applyLivePreview()
+                    UIManager:close(_bar_style_dialog); openBarStyleMenu()
+                end,
+            }})
+
+            -- Row 4: Fill direction (hidden for radial — direction is fixed clockwise)
+            if current_style ~= "radial" and current_style ~= "radial_hollow" then
+                table.insert(rows, {{
+                    text = current_dir == "rtl" and _("Fill: right to left") or _("Fill: left to right"),
+                    callback = function()
+                        local next_dir = current_dir == "rtl" and "ltr" or "rtl"
+                        line_bar_direction = next_dir ~= "ltr" and next_dir or nil
+                        applyLivePreview()
+                        UIManager:close(_bar_style_dialog); openBarStyleMenu()
+                    end,
+                }})
+            end
+
+            -- Row 5: Thickness (Read / Unread)
+            do
+                local read_h = line_bar_height
+                local unread_h = line_bar_unread_height
+                local label
+                if not read_h then
+                    label = _("Thickness") .. ": " .. _("auto")
+                elseif unread_h and unread_h ~= read_h then
+                    label = _("Thickness") .. ": " .. read_h .. "/" .. unread_h .. "px"
+                else
+                    label = _("Thickness") .. ": " .. read_h .. "px"
+                end
+                table.insert(rows, {{
+                    text = label,
+                    callback = function()
+                        UIManager:close(_bar_style_dialog)
+                        local default = 12
+                        DialogHelpers.showNudgeGrid{
+                            title = _("Bar thickness"),
+                            rows = {
+                                { label = _("Read"),   field = "height" },
+                                { label = _("Unread"), field = "unread_height" },
+                            },
+                            get_value = function(field)
+                                if field == "height" then return line_bar_height or default end
+                                return line_bar_unread_height or line_bar_height or default
+                            end,
+                            set_value = function(field, value)
+                                if field == "height" then
+                                    line_bar_height = value
+                                else
+                                    local r = line_bar_height or default
+                                    line_bar_unread_height = (value ~= r) and value or nil
+                                end
+                                applyLivePreview()
+                            end,
+                            on_row_change = function() applyLivePreview() end,
+                            on_cancel = function() applyLivePreview() end,
+                            on_default = function()
+                                line_bar_height = nil
+                                line_bar_unread_height = nil
+                                applyLivePreview()
+                            end,
+                            default_text = _("Default") .. " (" .. _("auto") .. ")",
+                            on_close = function() openBarStyleMenu() end,
+                        }
+                    end,
+                }})
+            end
+
+            -- Row 6: Custom colours (Read + Track)
+            local colour_label = line_bar_colors and (_("Custom colours") .. " \u{2713}") or _("Custom colours")
+            table.insert(rows, {{
+                text = colour_label,
+                callback = function()
+                    UIManager:close(_bar_style_dialog)
+                    openColoursMenu()
+                end,
+            }})
+
+            -- Close row
+            table.insert(rows, {{
+                text = _("Close"),
+                callback = function() UIManager:close(_bar_style_dialog) end,
+            }})
+
+            _bar_style_dialog = ButtonDialog:new{
+                title = _("Bar style"),
+                buttons = rows,
+            }
+            UIManager:show(_bar_style_dialog)
+        end
+
+        bar_style_menu_button.callback = function()
             format_dialog:onCloseKeyboard()
-            local next_style = Utils.cycleNext(
-                { "bordered", "solid", "rounded", "metro", "wavy", "radial", "radial_hollow", "pacman" },
-                line_bar_style or "bordered")
-            line_bar_style = next_style ~= "bordered" and next_style or nil
-            applyLivePreview()
-            format_dialog:reinit()
+            openBarStyleMenu()
         end
 
         style_button.callback = function()
@@ -336,7 +561,7 @@ function LineEditor.attach(Bookends)
             local rows = {
                 { style_button, size_button, font_button, case_button, page_filter_button },
                 { nudge_left, nudge_right, nudge_label, nudge_up, nudge_down },
-                { bar_style_button, bar_insert_button, bar_type_button },
+                { bar_style_menu_button, bar_insert_button },
             }
             table.insert(rows, {
                 {
@@ -557,6 +782,10 @@ function LineEditor.attach(Bookends)
             target.line_bar_type = target.line_bar_type or {}
             target.line_bar_height = target.line_bar_height or {}
             target.line_bar_style = target.line_bar_style or {}
+            target.line_bar_chapter_ticks = target.line_bar_chapter_ticks or {}
+            target.line_bar_direction = target.line_bar_direction or {}
+            target.line_bar_unread_height = target.line_bar_unread_height or {}
+            target.line_bar_colors = target.line_bar_colors or {}
 
             -- Append to target
             local ti = #target.lines + 1
@@ -570,6 +799,10 @@ function LineEditor.attach(Bookends)
             target.line_bar_type[ti] = ps.line_bar_type and ps.line_bar_type[line_idx] or nil
             target.line_bar_height[ti] = ps.line_bar_height and ps.line_bar_height[line_idx] or nil
             target.line_bar_style[ti] = ps.line_bar_style and ps.line_bar_style[line_idx] or nil
+            target.line_bar_chapter_ticks[ti] = ps.line_bar_chapter_ticks and ps.line_bar_chapter_ticks[line_idx] or nil
+            target.line_bar_direction[ti] = ps.line_bar_direction and ps.line_bar_direction[line_idx] or nil
+            target.line_bar_unread_height[ti] = ps.line_bar_unread_height and ps.line_bar_unread_height[line_idx] or nil
+            target.line_bar_colors[ti] = ps.line_bar_colors and ps.line_bar_colors[line_idx] or nil
 
             -- Remove from source
             removeLine()

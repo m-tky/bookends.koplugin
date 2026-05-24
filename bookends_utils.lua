@@ -47,6 +47,25 @@ function Utils.truncateUtf8(str, max_bytes)
 end
 
 --- Cycle to the next value in a list, wrapping around to the first.
+--- Resolve the (legacy or new) per-line bar type setting into a normalised
+-- (type, ticks_depth) pair. Old presets stored book + tick-depth in a single
+-- string ("book_ticks", "book_ticks2", "book_ticks_all"). New presets store
+-- type as just "chapter"/"book" and tick depth in `line_bar_chapter_ticks`
+-- ("off" / "level1" / "level2" / "all"). Legacy values win when both shapes
+-- are present, so a stray new field on an unmigrated preset can't confuse it.
+function Utils.resolveLineBarTypeAndTicks(raw_type, raw_ticks)
+    if raw_type == "book_ticks" then return "book", 1 end
+    if raw_type == "book_ticks2" then return "book", 2 end
+    if raw_type == "book_ticks_all" then return "book", math.huge end
+    if raw_type == "book" then
+        if raw_ticks == "level1" then return "book", 1 end
+        if raw_ticks == "level2" then return "book", 2 end
+        if raw_ticks == "all"    then return "book", math.huge end
+        return "book", nil
+    end
+    return "chapter", nil
+end
+
 function Utils.cycleNext(tbl, current)
     for i, v in ipairs(tbl) do
         if v == current then return tbl[(i % #tbl) + 1] end

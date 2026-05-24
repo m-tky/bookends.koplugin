@@ -228,6 +228,8 @@ function BarWidget:new(o)
     o.fraction = math.max(0, math.min(1, o.fraction or 0))
     o.ticks = o.ticks or {}
     o.style = o.style or "bordered"
+    o.reverse = o.reverse or false
+    -- o.unread_height stays nil for symmetric thickness
     return o
 end
 
@@ -236,9 +238,21 @@ function BarWidget:getSize()
 end
 
 function BarWidget:paintTo(bb, x, y)
-    -- Delegate to paintProgressBar for consistent color handling
+    -- Delegate to paintProgressBar for consistent color handling.
+    -- unread_height piggybacks on `colors` so paintProgressBar's existing
+    -- asymmetric-thickness path (which reads colors.unread_height) picks it
+    -- up without changing its signature. Inheriting via metatable keeps the
+    -- caller's colors table immutable.
+    local colors = self.colors
+    if self.unread_height and (not colors or colors.unread_height ~= self.unread_height) then
+        if colors then
+            colors = setmetatable({ unread_height = self.unread_height }, { __index = colors })
+        else
+            colors = { unread_height = self.unread_height }
+        end
+    end
     OverlayWidget.paintProgressBar(bb, x, y, self.width, self.height,
-        self.fraction, self.ticks, self.style, nil, false, self.colors)
+        self.fraction, self.ticks, self.style, nil, self.reverse, colors)
 end
 
 function BarWidget:free()
@@ -384,6 +398,8 @@ local function buildBarLine(text, cfg, available_w, max_width)
         ticks = bar_info.ticks or {},
         style = bar_style,
         colors = cfg.bar_colors,
+        reverse = cfg.bar_reverse or false,
+        unread_height = cfg.bar_unread_height,
     }
 
     table.insert(segments, bar_slot, { widget = bar_widget, w = bar_w, h = bar_h })
@@ -933,6 +949,8 @@ function OverlayWidget.buildStyledLine(segments, cfg, available_w, max_width)
                 ticks = bar_info.ticks or {},
                 style = bar_style,
                 colors = cfg.bar_colors,
+                reverse = cfg.bar_reverse or false,
+                unread_height = cfg.bar_unread_height,
             }
             table.insert(widgets, bar_slot, { widget = bar_widget, w = bar_w, h = bar_h })
             total_w = total_w + bar_w

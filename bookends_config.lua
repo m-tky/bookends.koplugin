@@ -41,6 +41,8 @@ Config.LINE_FIELDS = {
     "line_style", "line_font_size", "line_font_face",
     "line_v_nudge", "line_h_nudge", "line_uppercase",
     "line_page_filter", "line_bar_type", "line_bar_height", "line_bar_style",
+    "line_bar_chapter_ticks", "line_bar_direction",
+    "line_bar_unread_height", "line_bar_colors",
 }
 
 --- Settings keys that belong to the "defaults" group (font/margin/layout

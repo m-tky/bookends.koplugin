@@ -1682,36 +1682,49 @@ function Bookends:_paintToInner(bb, x, y)
             local expanded_idx = #line_configs + 1
             if bar_data[key] and bar_data[key][expanded_idx] then
                 local all_bars = bar_data[key][expanded_idx]
-                local bar_type = (pos_settings.line_bar_type and pos_settings.line_bar_type[i]) or "chapter"
-                if bar_type == "book_ticks_all" then
+                local raw_type  = pos_settings.line_bar_type and pos_settings.line_bar_type[i]
+                local raw_ticks = pos_settings.line_bar_chapter_ticks and pos_settings.line_bar_chapter_ticks[i]
+                local bar_type, ticks_depth = Utils.resolveLineBarTypeAndTicks(raw_type, raw_ticks)
+                if bar_type == "book" then
                     local book = all_bars.book
-                    cfg.bar = { kind = book.kind, pct = book.pct, ticks = book.ticks }
-                elseif bar_type == "book_ticks" or bar_type == "book_ticks2" then
-                    local max_tick_depth = bar_type == "book_ticks" and 1 or 2
-                    local book = all_bars.book
-                    local filtered_ticks = {}
-                    for _, tick in ipairs(book.ticks) do
-                        if type(tick) == "table" and tick[3] and tick[3] <= max_tick_depth then
-                            table.insert(filtered_ticks, tick)
+                    local filtered_ticks
+                    if ticks_depth == nil then
+                        filtered_ticks = {}
+                    elseif ticks_depth == math.huge then
+                        filtered_ticks = book.ticks
+                    else
+                        filtered_ticks = {}
+                        for _, tick in ipairs(book.ticks) do
+                            if type(tick) == "table" and tick[3] and tick[3] <= ticks_depth then
+                                table.insert(filtered_ticks, tick)
+                            end
                         end
                     end
                     cfg.bar = { kind = book.kind, pct = book.pct, ticks = filtered_ticks }
-                elseif bar_type == "book" then
-                    local book = all_bars.book
-                    cfg.bar = { kind = book.kind, pct = book.pct, ticks = {} }
                 else
                     local ch = all_bars.chapter
                     cfg.bar = { kind = ch.kind, pct = ch.pct, ticks = ch.ticks }
                 end
-                if all_bars.width then
-                    cfg.bar.width = all_bars.width
+                if all_bars.width  then cfg.bar.width  = all_bars.width  end
+                if all_bars.height then cfg.bar.height = all_bars.height end
+                cfg.bar_height        = (pos_settings.line_bar_height and pos_settings.line_bar_height[i]) or nil
+                cfg.bar_unread_height = (pos_settings.line_bar_unread_height and pos_settings.line_bar_unread_height[i]) or nil
+                cfg.bar_style         = (pos_settings.line_bar_style and pos_settings.line_bar_style[i]) or nil
+                cfg.bar_reverse       = (pos_settings.line_bar_direction and pos_settings.line_bar_direction[i]) == "rtl"
+                local line_colors = pos_settings.line_bar_colors and pos_settings.line_bar_colors[i]
+                if line_colors and next(line_colors) ~= nil then
+                    -- Per-line colour override: merge over the global bar_colors
+                    -- shape so partial overrides (e.g. just `fill`) still inherit
+                    -- tick/border/etc from the global config. Re-read the global
+                    -- bar_colors here because `bc` is local to _renderProgressBars.
+                    local global_bc = self.settings:readSetting("bar_colors") or {}
+                    local merged = {}
+                    for k, v in pairs(global_bc) do merged[k] = v end
+                    for k, v in pairs(line_colors) do merged[k] = v end
+                    cfg.bar_colors = resolveBarColors(merged)
+                else
+                    cfg.bar_colors = bar_colors
                 end
-                if all_bars.height then
-                    cfg.bar.height = all_bars.height
-                end
-                cfg.bar_height = (pos_settings.line_bar_height and pos_settings.line_bar_height[i]) or nil
-                cfg.bar_style = (pos_settings.line_bar_style and pos_settings.line_bar_style[i]) or nil
-                cfg.bar_colors = bar_colors
             end
             table.insert(line_configs, cfg)
         end
