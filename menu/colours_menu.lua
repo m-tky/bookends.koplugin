@@ -103,11 +103,11 @@ function Bookends:_buildColorItems(bc, saveColors, is_per_bar)
     return {
         {
             text_func = function()
-                return _("Read color") .. ": " .. pctLabel("fill")
+                return _("Progress bar colour") .. ": " .. pctLabel("fill")
             end,
             keep_menu_open = true,
             callback = function(touchmenu_instance)
-                colorNudge(_("Read color (% black)"), "fill", 75, touchmenu_instance)
+                colorNudge(_("Progress bar colour (% black)"), "fill", 75, touchmenu_instance)
             end,
             hold_callback = function(touchmenu_instance)
                 bc.fill = nil; saveColors()
@@ -116,40 +116,14 @@ function Bookends:_buildColorItems(bc, saveColors, is_per_bar)
         },
         {
             text_func = function()
-                return _("Unread color") .. ": " .. pctLabel("bg")
+                return _("Progress bar track colour") .. ": " .. pctLabel("bg")
             end,
             keep_menu_open = true,
             callback = function(touchmenu_instance)
-                colorNudge(_("Unread color (% black)"), "bg", 25, touchmenu_instance)
+                colorNudge(_("Progress bar track colour (% black)"), "bg", 25, touchmenu_instance)
             end,
             hold_callback = function(touchmenu_instance)
                 bc.bg = nil; saveColors()
-                if touchmenu_instance then touchmenu_instance:updateItems() end
-            end,
-        },
-        {
-            text_func = function()
-                return _("Metro read color") .. ": " .. pctLabel("metro_fill")
-            end,
-            keep_menu_open = true,
-            callback = function(touchmenu_instance)
-                colorNudge(_("Metro read color (% black)"), "metro_fill", 100, touchmenu_instance)
-            end,
-            hold_callback = function(touchmenu_instance)
-                bc.metro_fill = nil; saveColors()
-                if touchmenu_instance then touchmenu_instance:updateItems() end
-            end,
-        },
-        {
-            text_func = function()
-                return _("Metro track color") .. ": " .. pctLabel("track")
-            end,
-            keep_menu_open = true,
-            callback = function(touchmenu_instance)
-                colorNudge(_("Metro track color (% black)"), "track", 75, touchmenu_instance)
-            end,
-            hold_callback = function(touchmenu_instance)
-                bc.track = nil; saveColors()
                 if touchmenu_instance then touchmenu_instance:updateItems() end
             end,
         },
