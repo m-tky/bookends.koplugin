@@ -1344,22 +1344,32 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
                 local direction = bar_cfg.direction or (vertical and "ttb" or "ltr")
                 local paint_vertical = direction == "ttb" or direction == "btt"
                 local paint_reverse = direction == "rtl" or direction == "btt"
-                local colors = bar_cfg.colors and Colour.resolveBarColors(bar_cfg.colors, Screen:isColorEnabled()) or bar_colors
-                -- Ensure global tick_height_pct is always available
+                -- Per-bar colours inherit from the preset's global bar_colors
+                -- for any field they don't explicitly set. Merge at the RAW
+                -- level (before resolveBarColors) so the inheritance applies
+                -- uniformly to every field — tick, fill, bg, border,
+                -- border_thickness, invert, invert_read_ticks, etc. Per-bar
+                -- values win where set; nil per-bar fields inherit the global.
+                -- Same pattern as the inline-bar (per-line) cfg builder.
+                -- Lua `pairs` skips nil values, so a per-bar field left as
+                -- nil (the menu's "default" state) correctly inherits, while
+                -- a per-bar field explicitly set to `false` (transparent
+                -- sentinel, #43) correctly overrides the global.
+                local colors
+                if bar_cfg.colors then
+                    local merged = {}
+                    for k, v in pairs(bc) do merged[k] = v end
+                    for k, v in pairs(bar_cfg.colors) do merged[k] = v end
+                    colors = Colour.resolveBarColors(merged, Screen:isColorEnabled())
+                else
+                    colors = bar_colors
+                end
+                -- Ensure global tick_height_pct is always available (it lives
+                -- in its own setting, not in bar_colors).
                 if colors and not colors.tick_height_pct and global_tick_height_pct then
                     colors.tick_height_pct = global_tick_height_pct
                 elseif not colors and global_tick_height_pct then
                     colors = { tick_height_pct = global_tick_height_pct }
-                end
-                -- Per-bar override: inherit global border_thickness when not
-                -- set per-bar. The per-bar menu's "Default Xpx" label promises
-                -- inheritance from global, and storing the menu value collapses
-                -- to nil when val == default_val. Without this, a per-bar
-                -- struct with border_thickness=nil would fall back to the
-                -- painter's hardcoded 1px instead of the global value.
-                if colors and colors ~= bar_colors and not colors.border_thickness
-                        and bar_colors and bar_colors.border_thickness then
-                    colors.border_thickness = bar_colors.border_thickness
                 end
                 -- Plumb asymmetric thickness when set. Geometry lives on
                 -- bar_cfg directly; piggybacks on the colors table to avoid
