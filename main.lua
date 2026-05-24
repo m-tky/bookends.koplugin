@@ -2106,8 +2106,15 @@ function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, u
                 table.insert(footer, {
                     text = extra_button.text,
                     callback = function()
-                        value = extra_button.value
-                        on_change(value)
+                        -- callback wins over value so non-numeric sentinels
+                        -- (e.g. `false` for explicit-transparent colour) can
+                        -- bypass the on_change(value) numeric pipeline.
+                        if extra_button.callback then
+                            extra_button.callback()
+                        else
+                            value = extra_button.value
+                            on_change(value)
+                        end
                         UIManager:close(dialog)
                         if on_close then on_close() end
                     end,

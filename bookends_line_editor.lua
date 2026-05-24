@@ -243,14 +243,17 @@ function LineEditor.attach(Bookends)
 
             local function pctLabel(field)
                 local v = lc[field]
-                if v == nil then return _("default") end
-                if type(v) == "table" and v.hex then return v.hex end
+                local t = type(v)
+                if t == "nil" then return _("default") end
+                if t == "boolean" then return _("transparent") end
+                if t == "table" and v.hex then return v.hex end
                 local byte
-                if type(v) == "table" and v.grey then byte = v.grey
-                elseif type(v) == "number" then byte = v end
+                if t == "table" and v.grey then byte = v.grey
+                elseif t == "number" then byte = v end
                 if byte then
+                    -- 0% = white (real colour) since v5.10.2; no longer
+                    -- aliased to "transparent". See issue #43.
                     local pct = math.floor((0xFF - byte) * 100 / 0xFF + 0.5)
-                    if pct == 0 then return _("transparent") end
                     return pct .. "%"
                 end
                 return _("default")
@@ -288,6 +291,8 @@ function LineEditor.attach(Bookends)
                             return
                         end
                         -- Greyscale device: % black nudge dialog, mirroring colours_menu.lua.
+                        -- 0% paints pure white since v5.10.2; the Transparent
+                        -- extra-button writes `false` for explicit no-fill (#43).
                         local v = lc[field]
                         local byte
                         if type(v) == "table" and v.grey then byte = v.grey
@@ -301,7 +306,14 @@ function LineEditor.attach(Bookends)
                             function() openColoursMenu() end,  -- on_close
                             nil, nil, nil,
                             function() lc[field] = nil; persist() end,  -- on_default
-                            _("Default") .. " (" .. _("per style") .. ")")
+                            _("Default") .. " (" .. _("per style") .. ")",
+                            {
+                                text = _("Transparent"),
+                                callback = function()
+                                    lc[field] = false
+                                    persist()
+                                end,
+                            })
                     end,
                 }}
             end

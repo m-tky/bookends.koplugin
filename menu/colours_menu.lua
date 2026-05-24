@@ -48,7 +48,9 @@ function Bookends:_buildColorItems(bc, saveColors, is_per_bar)
                 touchmenu_instance)
             return
         end
-        -- Greyscale device: existing nudge path, unchanged.
+        -- Greyscale device: nudge dialog. 0% renders pure white (since
+        -- v5.10.2); Transparent is the separate explicit no-fill sentinel
+        -- (issue #43) — stored as `false` and handled at the paint layer.
         local v = bc[field]
         local byte
         if type(v) == "table" and v.grey then byte = v.grey
@@ -64,20 +66,35 @@ function Bookends:_buildColorItems(bc, saveColors, is_per_bar)
             function()
                 bc[field] = nil; saveColors()
             end,
-            _("Default") .. " (" .. _("per style") .. ")")
+            _("Default") .. " (" .. _("per style") .. ")",
+            {
+                text = _("Transparent"),
+                callback = function()
+                    bc[field] = false
+                    saveColors()
+                end,
+            })
     end
 
     local function pctLabel(field)
         local v = bc[field]
-        if not v then return _("default") end
-        if type(v) == "table" and v.hex then return v.hex end
+        -- Boolean check first: under LuaJIT, `not v` on an ffi.metatype with
+        -- __eq (Blitbuffer.Color*) routes through __eq and crashes. Cheap
+        -- type() check avoids it. `false` = explicit transparent (#43);
+        -- `nil` = inherit-from-default; everything else is a stored colour.
+        local t = type(v)
+        if t == "nil" then return _("default") end
+        if t == "boolean" then return _("transparent") end
+        if t == "table" and v.hex then return v.hex end
         local byte
-        if type(v) == "table" and v.grey then byte = v.grey
-        elseif type(v) == "number" then byte = v
+        if t == "table" and v.grey then byte = v.grey
+        elseif t == "number" then byte = v
         end
         if byte then
+            -- 0% (white) is a real colour since v5.10.2 — no longer aliased
+            -- to "transparent". Users wanting no fill choose the explicit
+            -- Transparent button which stores `false`.
             local pct = math.floor((0xFF - byte) * 100 / 0xFF + 0.5)
-            if pct == 0 then return _("transparent") end
             return pct .. "%"
         end
         return _("default")
