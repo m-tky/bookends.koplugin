@@ -222,7 +222,7 @@ function LineEditor.attach(Bookends)
             all = _("Chapter ticks: all levels"),
         }
 
-        local plugin = self  -- captured so nested colour callbacks can reach showColourPicker
+        local plugin = self  -- captured so openColoursMenu can call self:_buildColorItems
         local _bar_style_dialog
 
         -- Forward declare so the two menus can call each other.
@@ -230,7 +230,13 @@ function LineEditor.attach(Bookends)
 
         openColoursMenu = function()
             local lc = line_bar_colors or {}
-            local function persist()
+
+            -- saveColors wrapper passed to _buildColorItems. Mirrors the
+            -- global menu's saveColors but writes to line_bar_colors (per-
+            -- line override) rather than settings:bar_colors. Re-opens the
+            -- submenu after each row's nudge dialog closes so the user
+            -- lands back on the colour list, not the main Bar style menu.
+            local function saveColors()
                 if next(lc) == nil then
                     line_bar_colors = nil
                 else
@@ -239,86 +245,9 @@ function LineEditor.attach(Bookends)
                 applyLivePreview()
             end
 
-            local DEFAULT_PCT = { fill = 75, bg = 25 }
-
-            local function pctLabel(field)
-                local v = lc[field]
-                local t = type(v)
-                if t == "nil" then return _("default") end
-                if t == "boolean" then return _("transparent") end
-                if t == "table" and v.hex then return v.hex end
-                local byte
-                if t == "table" and v.grey then byte = v.grey
-                elseif t == "number" then byte = v end
-                if byte then
-                    -- 0% = white (real colour) since v5.10.2; no longer
-                    -- aliased to "transparent". See issue #43.
-                    local pct = math.floor((0xFF - byte) * 100 / 0xFF + 0.5)
-                    return pct .. "%"
-                end
-                return _("default")
-            end
-
-            local function colourRow(title, field)
-                local default_pct = DEFAULT_PCT[field] or 50
-                return {{
-                    text = title .. ": " .. pctLabel(field),
-                    callback = function()
-                        UIManager:close(_bar_style_dialog)
-                        if Screen:isColorEnabled() then
-                            -- Colour device: hex palette picker.
-                            local v = lc[field]
-                            local current_hex
-                            if type(v) == "table" and v.hex then current_hex = v.hex
-                            elseif type(v) == "table" and v.grey then
-                                local g = string.format("%02X", v.grey)
-                                current_hex = "#" .. g .. g .. g
-                            elseif type(v) == "number" then
-                                local g = string.format("%02X", v)
-                                current_hex = "#" .. g .. g .. g
-                            end
-                            local default_hex = Colour.defaultHexFor(field)
-                            plugin:showColourPicker(title, current_hex, default_hex,
-                                function(new_hex)
-                                    lc[field] = Colour.toStorageShape(new_hex)
-                                    persist(); openColoursMenu()
-                                end,
-                                function()
-                                    lc[field] = nil; persist(); openColoursMenu()
-                                end,
-                                function() openColoursMenu() end,
-                                nil)
-                            return
-                        end
-                        -- Greyscale device: % black nudge dialog, mirroring colours_menu.lua.
-                        -- 0% paints pure white since v5.10.2; the Transparent
-                        -- extra-button writes `false` for explicit no-fill (#43).
-                        local v = lc[field]
-                        local byte
-                        if type(v) == "table" and v.grey then byte = v.grey
-                        elseif type(v) == "number" then byte = v end
-                        local current = byte and math.floor((0xFF - byte) * 100 / 0xFF + 0.5) or default_pct
-                        plugin:showNudgeDialog(title, current, 0, 100, default_pct, "%",
-                            function(val)
-                                lc[field] = { grey = 0xFF - math.floor(val * 0xFF / 100 + 0.5) }
-                                persist()
-                            end,
-                            function() openColoursMenu() end,  -- on_close
-                            nil, nil, nil,
-                            function() lc[field] = nil; persist() end,  -- on_default
-                            _("Default") .. " (" .. _("per style") .. ")",
-                            {
-                                text = _("Transparent"),
-                                callback = function()
-                                    lc[field] = false
-                                    persist()
-                                end,
-                            })
-                    end,
-                }}
-            end
-
             local sub_rows = {}
+
+            -- Row 0: master Enable/Disable toggle for the per-line override.
             table.insert(sub_rows, {{
                 text = line_bar_colors and _("Disable custom colours") or _("Enable custom colours"),
                 callback = function()
@@ -331,10 +260,57 @@ function LineEditor.attach(Bookends)
                     UIManager:close(_bar_style_dialog); openColoursMenu()
                 end,
             }})
+
             if line_bar_colors then
-                table.insert(sub_rows, colourRow(_("Read colour"), "fill"))
-                table.insert(sub_rows, colourRow(_("Track colour"), "bg"))
+                -- Reuse the canonical colour-row builder. is_per_bar = true
+                -- gives the right inheritance behaviour for per-line scope
+                -- too (Border thickness label shows "default (Npx)" with
+                -- the global value).
+                --
+                -- _buildColorItems returns TouchMenu-style items. ButtonDialog
+                -- rows have a compatible shape but each item must be wrapped
+                -- in its own single-button row, and we need to bridge two
+                -- behaviours:
+                --   - Most rows' callbacks open a nudge dialog and call
+                --     saveColors on completion, which already re-opens the
+                --     submenu via the closure on line ~ above. We just need
+                --     to close the bar-style dialog first.
+                --   - The toggle row (Invert tick colour on read portion)
+                --     doesn't open a sub-dialog — it mutates bc directly and
+                --     calls saveColors, so we must re-open the submenu
+                --     immediately to refresh the checked state.
+                local color_items = plugin:_buildColorItems(lc, function()
+                    saveColors()
+                    UIManager:close(_bar_style_dialog); openColoursMenu()
+                end, true)
+                for _, item in ipairs(color_items) do
+                    local row_button = {
+                        text_func = item.text_func,
+                        text = item.text,
+                        checked_func = item.checked_func,
+                        callback = function()
+                            -- The toggle row mutates bc and calls saveColors
+                            -- synchronously (no sub-dialog), so the wrapped
+                            -- saveColors above will re-open. For rows that
+                            -- DO open a sub-dialog, we must close the bar-
+                            -- style dialog before that sub-dialog opens, or
+                            -- it'll be obscured.
+                            UIManager:close(_bar_style_dialog)
+                            if item.callback then item.callback(nil) end
+                        end,
+                        hold_callback = item.hold_callback and function()
+                            UIManager:close(_bar_style_dialog)
+                            item.hold_callback(nil)
+                            -- hold_callback in _buildColorItems clears the
+                            -- field synchronously and calls saveColors,
+                            -- which re-opens this menu.
+                        end or nil,
+                    }
+                    table.insert(sub_rows, {row_button})
+                end
             end
+
+            -- Final row: Back navigates to the parent Bar style menu.
             table.insert(sub_rows, {{
                 text = _("Back"),
                 callback = function()
