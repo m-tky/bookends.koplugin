@@ -8,8 +8,8 @@ local DialogHelpers = require("bookends_dialog_helpers")
 
 return function(Bookends)
 
---- Build the shared colour items used by bar colours (read / unread /
---- metro-track / tick / invert toggle / border / border thickness / tick-invert).
+--- Build the shared colour items used by bar colours (progress bar /
+--- track / tick / invert toggle / border / border thickness / tick-invert).
 --- When is_per_bar is true, the Border thickness item inherits the global
 --- bar_colors.border_thickness as its default instead of the hard-coded 1px.
 function Bookends:_buildColorItems(bc, saveColors, is_per_bar)

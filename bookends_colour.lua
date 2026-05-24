@@ -2,8 +2,9 @@
 Central colour-value helpers.
 
 Every colour setting in Bookends (text_color, symbol_color, bar_colors.{fill,
-bg, track, tick, border, invert, metro_fill}) can be stored in one of three
-shapes:
+bg, tick, border, invert}) can be stored in one of three shapes (bc.metro_fill
+and bc.track are legacy keys pre-v5.13; Colour.resolveBarColors aliases them
+to bc.fill and bc.bg respectively on read, and no new code writes them):
 
   - table with .hex = "#RRGGBB"    -- v4.3+ colour-picker authoring
   - table with .grey = 0xNN        -- v2+ greyscale nudge (text/symbol)
