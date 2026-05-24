@@ -1118,13 +1118,11 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
     -- Custom colors: nil = not set (use default), false = transparent (skip paint)
     local custom_fill = colors and colors.fill
     local custom_bg = colors and colors.bg
-    local custom_track = colors and colors.track
     local custom_tick = colors and colors.tick
     local invert_read_ticks = colors and colors.invert_read_ticks
     local tick_height_pct = colors and colors.tick_height_pct or 100
     local custom_border = colors and colors.border
     local custom_invert = colors and colors.invert
-    local custom_metro_fill = colors and colors.metro_fill
 
     -- Resolve custom color: false → nil (transparent/skip), nil → default, else custom.
     -- Must use type() checks to avoid triggering Blitbuffer's __eq metamethod.
@@ -1195,23 +1193,22 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
         local line_fill = math.floor(line_len * fraction)
         local line_fill_start = reverse and (line_len - line_fill) or 0
 
-        local metro_track = resolveColor(custom_track, Blitbuffer.COLOR_DARK_GRAY)
-        -- metro_fill: nil when user has not set a distinct fill (or set it to false/transparent)
-        local metro_fill = resolveColor(custom_metro_fill, nil)
+        -- Metro reads fill/bg like every other style now. Defaults match the
+        -- previous all-dark-grey trunk so an unconfigured metro bar is
+        -- visually unchanged. The legacy track/metro_fill fields are aliased
+        -- to bg/fill upstream by Colour.resolveBarColors (back-compat shim).
+        local metro_read   = resolveColor(custom_fill, Blitbuffer.COLOR_DARK_GRAY)
+        local metro_unread = resolveColor(custom_bg,   Blitbuffer.COLOR_DARK_GRAY)
         -- Trunk: read portion at full line_thick, unread portion at unread_line_thick.
         -- Both centred on the bar's cross-axis. When symmetric they coincide.
         local read_trunk_start = reverse and (line_len - line_fill) or 0
         local unread_trunk_start = reverse and 0 or line_fill
         local unread_trunk_len = line_len - line_fill
         if line_fill > 0 then
-            pr(line_ox + read_trunk_start, line_y, line_fill, line_thick, metro_track)
+            pr(line_ox + read_trunk_start, line_y, line_fill, line_thick, metro_read)
         end
         if unread_trunk_len > 0 and unread_line_thick > 0 and unread_thick > 0 then
-            pr(line_ox + unread_trunk_start, unread_line_y, unread_trunk_len, unread_line_thick, metro_track)
-        end
-        -- Optional fill overlay on the read portion (always at read line_thick)
-        if metro_fill and line_fill > 0 then
-            pr(line_ox + read_trunk_start, line_y, line_fill, line_thick, metro_fill)
+            pr(line_ox + unread_trunk_start, unread_line_y, unread_trunk_len, unread_line_thick, metro_unread)
         end
 
         -- Chapter ticks: depth 1 above line (connected to trunk), depth 2 below.
@@ -1234,14 +1231,14 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                 end
                 -- Vertical (side-anchored) bars: flip tick sides
                 if vertical then tick_above = not tick_above end
-                -- Tick recolouring: ticks within the read portion paint in metro_fill
+                -- Tick recolouring: ticks within the read portion paint in metro_read
                 local is_read
                 if reverse then
                     is_read = tick_pos >= line_len - line_fill
                 else
                     is_read = tick_pos <= line_fill
                 end
-                local tick_color = (metro_fill and is_read) and metro_fill or metro_track
+                local tick_color = is_read and metro_read or metro_unread
                 -- Anchor ticks at the bar's vertical centre so they always cross
                 -- the trunk regardless of read/unread thickness asymmetry.
                 local centre_y = oy + math.floor(thickness / 2)
@@ -1265,7 +1262,7 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
 
         -- Start circle (empty ring; read colour when set, else trunk colour)
         local start_cx = reverse and (line_ox + line_len - start_r) or (line_ox - start_r)
-        paintCircle(start_cx, oy, start_r, metro_fill or metro_track)
+        paintCircle(start_cx, oy, start_r, metro_read or metro_unread)
         local ring_border = line_thick
         local inner_r = start_r - ring_border
         if inner_r > 0 then
@@ -1274,7 +1271,7 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
 
         -- End circle (filled, trunk colour, same size as start)
         local end_cx = reverse and (line_ox - start_r) or (line_ox + line_len - start_r)
-        paintCircle(end_cx, oy, start_r, metro_track)
+        paintCircle(end_cx, oy, start_r, metro_unread)
 
         -- Current position dot (uses tick colour, default black)
         local pos_on_line = reverse and (line_len - line_fill) or line_fill
