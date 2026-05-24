@@ -595,7 +595,7 @@ function LineEditor.attach(Bookends)
             local rows = {
                 { style_button, size_button, font_button, case_button, page_filter_button },
                 { nudge_left, nudge_right, nudge_label, nudge_up, nudge_down },
-                { bar_style_menu_button, bar_insert_button },
+                { bar_insert_button, bar_style_menu_button },
             }
             table.insert(rows, {
                 {
