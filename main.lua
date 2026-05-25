@@ -757,7 +757,28 @@ function Bookends:migrateSchemaIfNeeded()
         else
             self.settings:saveSetting("bar_colors_promoted_to_per_bar", true)
             self:markDirty()
+            -- Flush settings explicitly. The migration mutated self.settings.data
+            -- directly (setting top-level keys to nil); KOReader's autosave is
+            -- debounced and may not fire before a fast restart, leaving the
+            -- stripped keys on disk. An explicit flush guarantees the strip is
+            -- persisted now, in the same session as the migration.
+            self.settings:flush()
         end
+    end
+
+    -- Orphan-key cleanup: strip any stale top-level bar_colors /
+    -- tick_height_pct / tick_width_multiplier that survive on disk past
+    -- the flag-gated migration above. Runs every init (idempotent) until
+    -- the keys are gone, then becomes a no-op. Fixes users who migrated
+    -- in pre-flush versions where KOReader's autosave didn't pick up the
+    -- direct-table mutation before the next launch.
+    if self.settings:has("bar_colors")
+            or self.settings:has("tick_height_pct")
+            or self.settings:has("tick_width_multiplier") then
+        self.settings:delSetting("bar_colors")
+        self.settings:delSetting("tick_height_pct")
+        self.settings:delSetting("tick_width_multiplier")
+        self.settings:flush()
     end
 end
 
