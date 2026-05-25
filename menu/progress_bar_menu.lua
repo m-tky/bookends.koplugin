@@ -355,13 +355,13 @@ function Bookends:buildSingleBarMenu(bar_idx, bar_cfg)
                         if m then
                             return _("Tick width") .. ": " .. m .. "x"
                         end
-                        return _("Tick width") .. ": " .. _("default") .. " (" .. self.settings:readSetting("tick_width_multiplier", self.DEFAULT_TICK_WIDTH_MULTIPLIER) .. "x)"
+                        return _("Tick width") .. ": " .. _("default") .. " (" .. self.DEFAULT_TICK_WIDTH_MULTIPLIER .. "x)"
                     end,
                     enabled_func = function() return bar_cfg.colors ~= nil end,
                     keep_menu_open = true,
                     callback = function(touchmenu_instance)
-                        local current = bc.tick_width_multiplier or self.settings:readSetting("tick_width_multiplier", self.DEFAULT_TICK_WIDTH_MULTIPLIER)
-                        self:showNudgeDialog(_("Tick width"), current, 1, 5, self.settings:readSetting("tick_width_multiplier", self.DEFAULT_TICK_WIDTH_MULTIPLIER), "x",
+                        local current = bc.tick_width_multiplier or self.DEFAULT_TICK_WIDTH_MULTIPLIER
+                        self:showNudgeDialog(_("Tick width"), current, 1, 5, self.DEFAULT_TICK_WIDTH_MULTIPLIER, "x",
                             function(val)
                                 bc.tick_width_multiplier = val
                                 bar_cfg.colors = bc
