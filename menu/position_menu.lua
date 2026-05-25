@@ -36,7 +36,7 @@ function Bookends:buildPositionMenu(pos)
                 if filter == "odd" then tag = " [odd]"
                 elseif filter == "even" then tag = " [even]" end
                 local preview = (Tokens.expandPreview(ps.lines[i] or "", self.ui, self:getSessionElapsed(), self:getSessionPages(),
-                    self.settings:readSetting("tick_width_multiplier", self.DEFAULT_TICK_WIDTH_MULTIPLIER)))
+                    self.DEFAULT_TICK_WIDTH_MULTIPLIER))
                 preview = preview:gsub("%s+", " "):match("^%s*(.-)%s*$")
                 if #preview > 42 then
                     preview = Utils.truncateUtf8(preview, 39)

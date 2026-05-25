@@ -144,7 +144,7 @@ function Bookends:buildMainMenu()
                 local previews = {}
                 for _, line in ipairs(lines) do
                     table.insert(previews, (Tokens.expandPreview(line, self.ui, session_elapsed, session_pages,
-                        self.settings:readSetting("tick_width_multiplier", self.DEFAULT_TICK_WIDTH_MULTIPLIER))))
+                        self.DEFAULT_TICK_WIDTH_MULTIPLIER)))
                 end
                 local preview = table.concat(previews, " \xC2\xB7 ")
                 preview = preview:gsub("%s+", " "):match("^%s*(.-)%s*$")

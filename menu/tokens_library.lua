@@ -80,8 +80,7 @@ local function buildDocContext(bookends)
             ui              = bookends.ui,
             session_elapsed = bookends:getSessionElapsed(),
             session_pages   = bookends:getSessionPages(),
-            tick_mult       = bookends.settings:readSetting(
-                "tick_width_multiplier", bookends.DEFAULT_TICK_WIDTH_MULTIPLIER),
+            tick_mult       = bookends.DEFAULT_TICK_WIDTH_MULTIPLIER,
             stats_cache     = {},
         }
     end)

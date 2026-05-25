@@ -986,7 +986,11 @@ end
 
 --- Compute chapter tick fractions for book progress bars (cached per dirty cycle).
 function Bookends:_computeTickCache(current_pageno)
-    local tick_m = self.settings:readSetting("tick_width_multiplier", self.DEFAULT_TICK_WIDTH_MULTIPLIER)
+    -- Inline bars use the hardcoded default tick width since the
+    -- bar_colors → per-bar migration removed the global setting.
+    -- Per-bar full-width bars apply their own bar_cfg.colors
+    -- .tick_width_multiplier downstream in the remap pass.
+    local tick_m = self.DEFAULT_TICK_WIDTH_MULTIPLIER
     return Tokens.computeTickFractions(self.ui.document, self.ui.toc, tick_m, current_pageno)
 end
 
@@ -1556,8 +1560,9 @@ function Bookends:_paintToInner(bb, x, y)
     -- Hoisted out of the per-line expand loop below: this setting is paint-
     -- invariant and reading it once per visible line was wasted work on
     -- low-power devices.
-    local tick_width_multiplier = self.settings:readSetting(
-        "tick_width_multiplier", self.DEFAULT_TICK_WIDTH_MULTIPLIER)
+    -- Same hardcoded default as Site 1 (the inline bars rendered here
+    -- have no per-bar override).
+    local tick_width_multiplier = self.DEFAULT_TICK_WIDTH_MULTIPLIER
     for _, pos in ipairs(self.POSITIONS) do
         if self:isPositionActive(pos.key) then
             local pos_settings = self.positions[pos.key]
