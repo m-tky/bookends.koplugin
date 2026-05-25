@@ -1377,9 +1377,6 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
     -- keystroke but tick fractions don't change. The flow-id check inside
     -- _computeBarProgress already handles cross-flow paint cycles.
 
-    local text_color = self.settings:readSetting("text_color")
-    local symbol_color = self.settings:readSetting("symbol_color")
-
     for _bar_idx, bar_cfg in ipairs(self.progress_bars or {}) do
         if bar_cfg.enabled then
             local bar_x, bar_y, bar_w, bar_h, vertical = computeBarRect(bar_cfg, x, y, screen_w, screen_h)
@@ -1390,8 +1387,9 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
                 local direction = bar_cfg.direction or (vertical and "ttb" or "ltr")
                 local paint_vertical = direction == "ttb" or direction == "btt"
                 local paint_reverse = direction == "rtl" or direction == "btt"
-                -- Per-bar colours stand alone after the v5.14 migration
-                -- removed the preset-level bar_colors / tick_*_pct globals.
+                -- Per-bar colours stand alone after the
+                -- bar_colors_promoted_to_per_bar migration removed the
+                -- preset-level bar_colors / tick_*_pct globals.
                 -- Missing fields fall back to hardcoded defaults at paint
                 -- time (in paintProgressBar's resolveColor helper).
                 local colors = bar_cfg.colors
@@ -1420,7 +1418,7 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
         end
     end
 
-    return text_color, symbol_color
+    -- No return value; callers read text_color / symbol_color directly.
 end
 
 --- Assemble a per-position snapshot for OverlayWidget.computeEndFillExtents.
@@ -1618,15 +1616,8 @@ function Bookends:_paintToInner(bb, x, y)
     end
 
     -- Phase 0: Render full-width progress bars (drawn behind text, on top
-    -- of BG fill). Return values discarded — text_color/symbol_color are
-    -- the hoisted reads above; _renderProgressBars no longer returns
-    -- bar_colors (dropped in T4).
+    -- of BG fill). text_color / symbol_color are read directly above.
     self:_renderProgressBars(bb, x, y, screen_w, screen_h)
-    -- Note: T4 dropped _renderProgressBars's bar_colors return. The
-    -- inline cfg builder below still references bar_colors as a fallback;
-    -- T5 will remove that reference. For now, bar_colors is nil (the
-    -- correct cascade result — no global). Cleaned up in the next commit.
-    local bar_colors = nil
 
     -- Check if anything changed
     -- Bar positions depend on page number; only rebuild when page changes
@@ -1724,18 +1715,13 @@ function Bookends:_paintToInner(bb, x, y)
                 cfg.bar_reverse       = (pos_settings.line_bar_direction and pos_settings.line_bar_direction[i]) == "rtl"
                 local line_colors = pos_settings.line_bar_colors and pos_settings.line_bar_colors[i]
                 if line_colors and next(line_colors) ~= nil then
-                    -- Per-line colour override: merge over the global bar_colors
-                    -- shape so partial overrides (e.g. just `fill`) still inherit
-                    -- tick/border/etc from the global config. Re-read the global
-                    -- bar_colors here because `bc` is local to _renderProgressBars.
-                    local global_bc = self.settings:readSetting("bar_colors") or {}
-                    local merged = {}
-                    for k, v in pairs(global_bc) do merged[k] = v end
-                    for k, v in pairs(line_colors) do merged[k] = v end
-                    cfg.bar_colors = Colour.resolveBarColors(merged, Screen:isColorEnabled())
-                else
-                    cfg.bar_colors = bar_colors
+                    -- Per-line colour override is now canonical. No global
+                    -- to merge from — missing fields hit hardcoded defaults
+                    -- in paintProgressBar's resolveColor helper.
+                    cfg.bar_colors = Colour.resolveBarColors(line_colors, Screen:isColorEnabled())
                 end
+                -- cfg.bar_colors stays nil when no per-line override exists;
+                -- the painter handles nil colors by using hardcoded defaults.
             end
             table.insert(line_configs, cfg)
         end
