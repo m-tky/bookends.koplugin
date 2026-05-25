@@ -1366,7 +1366,7 @@ end
 
 --- Render all enabled full-width progress bars (bars drawn behind text).
 --- Populates self._hold_rects so long-press gestures can find the bars.
---- Returns (bar_colors, text_color, symbol_color) — colour values the
+--- Returns (text_color, symbol_color) — colour values the
 --- text-rendering phase also needs.
 function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
     -- Tick cache is invalidated explicitly by the events that actually
@@ -1376,19 +1376,6 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
     -- harmful on the live-line-editor path, where dirty=true fires per
     -- keystroke but tick fractions don't change. The flow-id check inside
     -- _computeBarProgress already handles cross-flow paint cycles.
-
-    -- Progress bar colors from settings
-    local global_tick_height_pct = self.settings:readSetting("tick_height_pct")
-    local bc = self.settings:readSetting("bar_colors") or {}
-    bc.tick_height_pct = global_tick_height_pct or bc.tick_height_pct
-    local bar_colors
-    -- Gate on "any stored field" (next() is non-nil) rather than truthy-or
-    -- of individual fields: `false` is the explicit-transparent sentinel
-    -- (#43) and is falsy in Lua, so an `or`-chain would skip resolving even
-    -- though the user has stored a real preference. next() catches it.
-    if next(bc) ~= nil then
-        bar_colors = Colour.resolveBarColors(bc, Screen:isColorEnabled())
-    end
 
     local text_color = self.settings:readSetting("text_color")
     local symbol_color = self.settings:readSetting("symbol_color")
@@ -1403,58 +1390,26 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
                 local direction = bar_cfg.direction or (vertical and "ttb" or "ltr")
                 local paint_vertical = direction == "ttb" or direction == "btt"
                 local paint_reverse = direction == "rtl" or direction == "btt"
-                -- Per-bar colours inherit from the preset's global bar_colors
-                -- for any field they don't explicitly set. Merge at the RAW
-                -- level (before resolveBarColors) so the inheritance applies
-                -- uniformly to every field — tick, fill, bg, border,
-                -- border_thickness, invert, invert_read_ticks, etc. Per-bar
-                -- values win where set; nil per-bar fields inherit the global.
-                -- Same pattern as the inline-bar (per-line) cfg builder.
-                -- Lua `pairs` skips nil values, so a per-bar field left as
-                -- nil (the menu's "default" state) correctly inherits, while
-                -- a per-bar field explicitly set to `false` (transparent
-                -- sentinel, #43) correctly overrides the global.
-                local colors
-                if bar_cfg.colors then
-                    local merged = {}
-                    for k, v in pairs(bc) do merged[k] = v end
-                    for k, v in pairs(bar_cfg.colors) do merged[k] = v end
-                    colors = Colour.resolveBarColors(merged, Screen:isColorEnabled())
-                else
-                    colors = bar_colors
-                end
-                -- Ensure global tick_height_pct is always available (it lives
-                -- in its own setting, not in bar_colors).
-                if colors and not colors.tick_height_pct and global_tick_height_pct then
-                    colors.tick_height_pct = global_tick_height_pct
-                elseif not colors and global_tick_height_pct then
-                    colors = { tick_height_pct = global_tick_height_pct }
-                end
+                -- Per-bar colours stand alone after the v5.14 migration
+                -- removed the preset-level bar_colors / tick_*_pct globals.
+                -- Missing fields fall back to hardcoded defaults at paint
+                -- time (in paintProgressBar's resolveColor helper).
+                local colors = bar_cfg.colors
+                    and Colour.resolveBarColors(bar_cfg.colors, Screen:isColorEnabled())
+                    or nil
                 -- Plumb asymmetric thickness when set. Geometry lives on
                 -- bar_cfg directly; piggybacks on the colors table to avoid
-                -- changing paintProgressBar's signature. Copy bar_colors
-                -- before mutating so per-bar overrides don't pollute the
-                -- shared global table (which feeds inline bars too).
+                -- changing paintProgressBar's signature.
                 if bar_cfg.unread_height then
-                    if colors == bar_colors and colors ~= nil then
-                        local copy = {}
-                        for k, v in pairs(colors) do copy[k] = v end
-                        colors = copy
-                    end
                     if colors then
                         colors.unread_height = bar_cfg.unread_height
                     else
                         colors = { unread_height = bar_cfg.unread_height }
                     end
                 end
-                -- Strip global Read/Unread thickness %s — those are inline-only.
+                -- Strip Read/Unread thickness %s — those are inline-only.
                 -- Full-width bars have their own per-bar absolute-px controls.
                 if colors and (colors.read_height_pct or colors.unread_height_pct) then
-                    if colors == bar_colors then
-                        local copy = {}
-                        for k, v in pairs(colors) do copy[k] = v end
-                        colors = copy
-                    end
                     colors.read_height_pct = nil
                     colors.unread_height_pct = nil
                 end
@@ -1465,7 +1420,7 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
         end
     end
 
-    return bar_colors, text_color, symbol_color
+    return text_color, symbol_color
 end
 
 --- Assemble a per-position snapshot for OverlayWidget.computeEndFillExtents.
@@ -1663,9 +1618,15 @@ function Bookends:_paintToInner(bb, x, y)
     end
 
     -- Phase 0: Render full-width progress bars (drawn behind text, on top
-    -- of BG fill). Discard the returned text_color/symbol_color — they're
-    -- duplicates of the hoisted reads at the top of this function.
-    local bar_colors = self:_renderProgressBars(bb, x, y, screen_w, screen_h)
+    -- of BG fill). Return values discarded — text_color/symbol_color are
+    -- the hoisted reads above; _renderProgressBars no longer returns
+    -- bar_colors (dropped in T4).
+    self:_renderProgressBars(bb, x, y, screen_w, screen_h)
+    -- Note: T4 dropped _renderProgressBars's bar_colors return. The
+    -- inline cfg builder below still references bar_colors as a fallback;
+    -- T5 will remove that reference. For now, bar_colors is nil (the
+    -- correct cascade result — no global). Cleaned up in the next commit.
+    local bar_colors = nil
 
     -- Check if anything changed
     -- Bar positions depend on page number; only rebuild when page changes
