@@ -282,7 +282,7 @@ function LineEditor.attach(Bookends)
                 local color_items = plugin:_buildColorItems(lc, function()
                     saveColors()
                     UIManager:close(_bar_style_dialog); openColoursMenu()
-                end, true)
+                end)
                 for _, item in ipairs(color_items) do
                     local row_button = {
                         text_func = item.text_func,
