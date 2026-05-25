@@ -566,15 +566,6 @@ function Bookends:buildPresetAdjustmentsMenu()
         table.insert(items, item)
     end
 
-    -- Progress bar colours remain nested — too many sub-items to flatten
-    -- without overflowing the 10-row limit.
-    table.insert(items, {
-        text = _("Progress bar colors and tick marks"),
-        sub_item_table_func = function()
-            return self:buildBarColorsMenu()
-        end,
-    })
-
     return items
 end
 
