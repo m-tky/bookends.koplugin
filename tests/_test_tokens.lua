@@ -1689,5 +1689,31 @@ test("stripPageCountSuffix: no P(N) suffix -> unchanged", function()
     eq(Tokens.stripPageCountSuffix("Pride and Prejudice"), "Pride and Prejudice")
 end)
 
+-- ============================================================================
+-- lastDigit (#55): units digit of a number/numeric label for languages
+-- whose grammar branches on it (Hungarian vowel harmony etc.).
+-- ============================================================================
+test("lastDigit: integer", function() eq(Tokens.lastDigit(547), "7") end)
+test("lastDigit: numeric string", function() eq(Tokens.lastDigit("123"), "3") end)
+test("lastDigit: zero", function() eq(Tokens.lastDigit(0), "0") end)
+test("lastDigit: single digit", function() eq(Tokens.lastDigit(8), "8") end)
+test("lastDigit: ends in digit after letters", function()
+    -- pagemap labels like "page 547" -> "7" is acceptable for the use case.
+    eq(Tokens.lastDigit("page 547"), "7")
+end)
+test("lastDigit: roman-numeral label -> empty", function()
+    eq(Tokens.lastDigit("xii"), "")
+end)
+test("lastDigit: nil -> empty", function() eq(Tokens.lastDigit(nil), "") end)
+test("lastDigit: empty string -> empty", function() eq(Tokens.lastDigit(""), "") end)
+test("lastDigit: trailing non-digit -> empty", function()
+    eq(Tokens.lastDigit("page %"), "")
+end)
+test("lastDigit: float -> last digit of integer part shown by tostring", function()
+    -- Lua's tostring(3.0) is "3.0" on 5.1, so last digit char is "0".
+    -- Documents the surprising-but-stable behaviour.
+    eq(Tokens.lastDigit(3.0), "0")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))
 os.exit(fail == 0 and 0 or 1)

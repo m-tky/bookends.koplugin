@@ -25,6 +25,18 @@ local function getCurrentPageNumber(ui)
 end
 Tokens.getCurrentPageNumber = getCurrentPageNumber
 
+--- Return the last digit of a numeric value as a string.
+-- Used by the %<token>_lastdigit family (#55) to expose the units digit
+-- of page/chapter counters for languages whose grammar branches on it
+-- (Hungarian vowel harmony for -ból / -ből, etc.).
+--
+-- Accepts numbers, numeric strings, or labels that end in a digit
+-- (e.g. "page 547" -> "7"). Returns "" if the value has no trailing
+-- digit (nil, empty string, or non-numeric label like roman numerals).
+function Tokens.lastDigit(value)
+    return tostring(value or ""):match("(%d)$") or ""
+end
+
 --- Strip the community-convention page-count suffix Calibre users append
 -- via custom save templates ("Book Title - P(123)") so the Kindle/Kobo
 -- home-screen badge populates without opening every book first.
@@ -1697,7 +1709,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     -- Numeric page indices for arithmetic (separate from display labels)
     local page_idx = nil   -- numeric current page position
     local page_count = nil -- numeric total pages
-    if needs("page_num", "page_count", "book_pct", "book_pct_left", "pages_left") then
+    if needs("page_num", "page_count", "book_pct", "book_pct_left", "pages_left",
+             "page_num_lastdigit", "page_count_lastdigit", "pages_left_lastdigit") then
         if ui.pagemap and ui.pagemap:wantsPageLabels() then
             local label, idx, count = ui.pagemap:getCurrentPageLabel(true)
             currentpage = label or ""
@@ -1788,7 +1801,10 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local chapter_title_num = ""   -- leading number parsed from title when strip-safe
     local chapter_title_name = ""  -- title with leading number removed when strip-safe; raw title otherwise
     local chapter_titles_by_depth = {}  -- { [1] = "Part II", [2] = "Chapter 1", ... }
-    if needs("chap_pct", "chap_pct_left", "chap_read", "chap_pages", "chap_pages_left", "chap_title", "chap_title_1", "chap_title_2", "chap_title_3", "chap_num", "chap_count", "chap_title_num", "chap_title_name") and pageno and ui.toc then
+    if needs("chap_pct", "chap_pct_left", "chap_read", "chap_pages", "chap_pages_left",
+             "chap_read_lastdigit", "chap_pages_lastdigit", "chap_pages_left_lastdigit",
+             "chap_title", "chap_title_1", "chap_title_2", "chap_title_3", "chap_num", "chap_count",
+             "chap_title_num", "chap_title_name") and pageno and ui.toc then
         -- Raw page calculation for %P (percentage)
         local chapter_start = ui.toc:getPreviousChapter(pageno)
         if ui.toc:isChapterStart(pageno) then
@@ -2491,6 +2507,18 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         pages_left = tostring(pages_left_book),
         chap_num   = tostring(chapter_num),
         chap_count = tostring(chapter_count),
+        -- Last-digit variants of the numeric page/chapter tokens (#55).
+        -- Expose the units digit so format strings can branch on it for
+        -- languages with vowel harmony or number-shape agreement
+        -- (Hungarian -ból/-ből, Finnish partitive, etc.). Empty string
+        -- when the underlying value isn't a number (e.g. roman-numeral
+        -- pagemap labels).
+        page_num_lastdigit         = Tokens.lastDigit(currentpage),
+        page_count_lastdigit       = Tokens.lastDigit(totalpages),
+        pages_left_lastdigit       = Tokens.lastDigit(pages_left_book),
+        chap_read_lastdigit        = Tokens.lastDigit(chapter_pages_done),
+        chap_pages_lastdigit       = Tokens.lastDigit(chapter_total_pages),
+        chap_pages_left_lastdigit  = Tokens.lastDigit(chapter_pages_left),
         -- Time/Reading
         chap_time_left = tostring(time_left_chapter),
         book_time_left = tostring(time_left_doc),
@@ -2585,6 +2613,12 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         time_12h = true, time_24h = true,
         time = true,
         session_time = true, session_pages = true, speed = true,
+        -- _lastdigit tokens (#55): "0" is a real value (last digit of 10,
+        -- 20, …); without this gate it would auto-hide and the conditional
+        -- grammar branching on the digit would break.
+        page_num_lastdigit = true, page_count_lastdigit = true,
+        pages_left_lastdigit = true, chap_read_lastdigit = true,
+        chap_pages_lastdigit = true, chap_pages_left_lastdigit = true,
     }
     -- Per-token occurrence counters for matching limits
     local token_occurrence = {}
