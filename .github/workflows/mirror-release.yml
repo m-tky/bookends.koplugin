@@ -1,0 +1,80 @@
+name: Mirror upstream release
+
+on:
+  schedule:
+    - cron: '0 10 * * *'  # Daily at 10:00 UTC (19:00 JST), one hour after Friday sync
+  workflow_dispatch:
+
+concurrency:
+  group: mirror-release
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get latest upstream release tag
+        id: upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=$(gh release view --repo AndyHazz/bookends.koplugin --json tagName -q .tagName)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Latest upstream release: $tag"
+
+      - name: Check if we already mirrored this release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ steps.upstream.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release ${{ steps.upstream.outputs.tag }} already exists — skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch upstream tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git remote add upstream https://github.com/AndyHazz/bookends.koplugin.git
+          git fetch upstream tag "${{ steps.upstream.outputs.tag }}"
+
+      - name: Verify upstream release commit is reachable from master
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          upstream_sha=$(git rev-parse "${{ steps.upstream.outputs.tag }}^{commit}")
+          if ! git merge-base --is-ancestor "$upstream_sha" HEAD; then
+            echo "ERROR: upstream tag ${{ steps.upstream.outputs.tag }} ($upstream_sha) is not yet merged into our master."
+            echo "Run sync-upstream workflow first, then re-run this workflow."
+            exit 1
+          fi
+          echo "Upstream tag is reachable from HEAD ✓"
+
+      - name: Build release zip
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          chmod +x tools/build-release.sh
+          tools/build-release.sh /tmp/bookends-release
+          ls -la /tmp/bookends-release/
+
+      - name: Create release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.upstream.outputs.tag }}"
+          zip_path=$(ls /tmp/bookends-release/bookends.koplugin-${tag}.zip 2>/dev/null || ls /tmp/bookends-release/bookends.koplugin-*.zip | head -1)
+          test -f "$zip_path" || { echo "ERROR: zip not found"; exit 1; }
+          # gh release create auto-creates the tag pointing to the default branch HEAD
+          gh release create "$tag" "$zip_path" \
+            --repo "${{ github.repository }}" \
+            --title "$tag" \
+            --notes "Mirrors [AndyHazz/bookends.koplugin ${tag}](https://github.com/AndyHazz/bookends.koplugin/releases/tag/${tag}) with vertical-rl auto-detection patch for [koreader-tategumi](https://github.com/m-tky/koreader-tategumi) users."
