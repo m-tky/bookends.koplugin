@@ -135,27 +135,9 @@ msgstr ""
 msgid "Chapter ticks: all levels"
 msgstr ""
 
-#: bookends_line_editor.lua:252
-#, fuzzy
-#| msgid "Use custom colors"
-msgid "Disable custom colours"
-msgstr "Use custom colours"
-
-#: bookends_line_editor.lua:252
-#, fuzzy
-#| msgid "Use custom colors"
-msgid "Enable custom colours"
-msgstr "Use custom colours"
-
 #: bookends_line_editor.lua:315
 msgid "Back"
 msgstr ""
-
-#: bookends_line_editor.lua:322
-#, fuzzy
-#| msgid "Border color"
-msgid "Bar colours"
-msgstr "Border colour"
 
 #: bookends_line_editor.lua:352 menu/progress_bar_menu.lua:109
 msgid "Type"
@@ -202,12 +184,6 @@ msgstr ""
 #: bookends_line_editor.lua:419 menu/progress_bar_menu.lua:242
 msgid "Unread"
 msgstr ""
-
-#: bookends_line_editor.lua:449
-#, fuzzy
-#| msgid "Use custom colors"
-msgid "Custom colours"
-msgstr "Use custom colours"
 
 #: bookends_line_editor.lua:460 bookends_updater.lua:266 main.lua:2636
 #: menu/icons_library.lua:355 menu/preset_manager_modal.lua:561
@@ -549,30 +525,6 @@ msgstr ""
 #: menu/colours_menu.lua:84
 msgid "transparent"
 msgstr ""
-
-#: menu/colours_menu.lua:103
-#, fuzzy
-#| msgid "Progress bar colors and tick marks"
-msgid "Progress bar colour"
-msgstr "Progress bar colours and tick marks"
-
-#: menu/colours_menu.lua:107
-#, fuzzy
-#| msgid "Border color (% black)"
-msgid "Progress bar colour (% black)"
-msgstr "Border colour (% black)"
-
-#: menu/colours_menu.lua:116
-#, fuzzy
-#| msgid "Metro track color"
-msgid "Progress bar track colour"
-msgstr "Metro track colour"
-
-#: menu/colours_menu.lua:120
-#, fuzzy
-#| msgid "Metro track color (% black)"
-msgid "Progress bar track colour (% black)"
-msgstr "Metro track colour (% black)"
 
 #: menu/colours_menu.lua:129
 msgid "Tick color"

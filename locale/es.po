@@ -81,10 +81,8 @@ msgid "+ Progress bar"
 msgstr "+ Barra de progreso"
 
 #: bookends_line_editor.lua:182
-#, fuzzy
-#| msgid "per style"
 msgid "Bar style…"
-msgstr "por estilo"
+msgstr "Estilo de barra…"
 
 #: bookends_line_editor.lua:213 bookends_line_editor.lua:376
 #: menu/progress_bar_menu.lua:141
@@ -137,26 +135,20 @@ msgid "Chapter ticks: all levels"
 msgstr "Marcas de capítulo: Todos los niveles"
 
 #: bookends_line_editor.lua:252
-#, fuzzy
-#| msgid "Use custom colors"
 msgid "Disable custom colours"
-msgstr "Usar colores personalizados"
+msgstr "Desactivar colores personalizados"
 
 #: bookends_line_editor.lua:252
-#, fuzzy
-#| msgid "Use custom colors"
 msgid "Enable custom colours"
-msgstr "Usar colores personalizados"
+msgstr "Activar colores personalizados"
 
 #: bookends_line_editor.lua:315
 msgid "Back"
 msgstr ""
 
 #: bookends_line_editor.lua:322
-#, fuzzy
-#| msgid "Background colour"
 msgid "Bar colours"
-msgstr "Color de fondo"
+msgstr "Colores de la barra"
 
 #: bookends_line_editor.lua:352 menu/progress_bar_menu.lua:109
 msgid "Type"
@@ -205,10 +197,8 @@ msgid "Unread"
 msgstr "No leído"
 
 #: bookends_line_editor.lua:449
-#, fuzzy
-#| msgid "Use custom colors"
 msgid "Custom colours"
-msgstr "Usar colores personalizados"
+msgstr "Colores personalizados"
 
 #: bookends_line_editor.lua:460 bookends_updater.lua:266 main.lua:2636
 #: menu/icons_library.lua:355 menu/preset_manager_modal.lua:561
@@ -217,10 +207,8 @@ msgid "Close"
 msgstr "Cerrar"
 
 #: bookends_line_editor.lua:465
-#, fuzzy
-#| msgid "per style"
 msgid "Bar style"
-msgstr "por estilo"
+msgstr "Estilo de barra"
 
 #: bookends_line_editor.lua:486
 msgid "Font size"
@@ -540,10 +528,8 @@ msgid "per style"
 msgstr "por estilo"
 
 #: menu/colours_menu.lua:68
-#, fuzzy
-#| msgid "transparent"
 msgid "Transparent"
-msgstr "transparente"
+msgstr "Transparente"
 
 #: menu/colours_menu.lua:83 menu/colours_menu.lua:97 menu/colours_menu.lua:269
 #: menu/colours_menu.lua:276 menu/colours_menu.lua:282
@@ -556,28 +542,20 @@ msgid "transparent"
 msgstr "transparente"
 
 #: menu/colours_menu.lua:103
-#, fuzzy
-#| msgid "Progress bar colors"
 msgid "Progress bar colour"
-msgstr "Colores de barra de progreso"
+msgstr "Color de la barra de progreso"
 
 #: menu/colours_menu.lua:107
-#, fuzzy
-#| msgid "Border color (% black)"
 msgid "Progress bar colour (% black)"
-msgstr "Color del borde (% negro)"
+msgstr "Color de la barra de progreso (% negro)"
 
 #: menu/colours_menu.lua:116
-#, fuzzy
-#| msgid "Progress bar colors"
 msgid "Progress bar track colour"
-msgstr "Colores de barra de progreso"
+msgstr "Color de la pista de progreso"
 
 #: menu/colours_menu.lua:120
-#, fuzzy
-#| msgid "Metro track color (% black)"
 msgid "Progress bar track colour (% black)"
-msgstr "Color de vía Metro (% negro)"
+msgstr "Color de la pista de progreso (% negro)"
 
 #: menu/colours_menu.lua:129
 msgid "Tick color"
