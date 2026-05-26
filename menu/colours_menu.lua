@@ -9,7 +9,14 @@ return function(Bookends)
 
 --- Build the shared colour items used by bar colours (progress bar /
 --- track / tick / invert toggle / border / border thickness / tick-invert).
-function Bookends:_buildColorItems(bc, saveColors)
+--
+-- on_reopen (optional): called once when a colour row's sub-dialog (nudge
+-- or palette picker) closes. The TouchMenu callers leave it nil and rely on
+-- the touchmenu_instance restore closure instead; the inline ButtonDialog
+-- caller passes it to reopen its rebuilt colour list. It must NOT be wired
+-- to saveColors — saveColors fires on every nudge increment, and reopening
+-- the list mid-nudge stacks dialogs (issue #57).
+function Bookends:_buildColorItems(bc, saveColors, on_reopen)
     local function colorNudge(title, field, default_pct, touchmenu_instance)
         if Screen:isColorEnabled() then
             -- Colour device: show palette picker. Hex-shape takes priority; if
@@ -42,7 +49,7 @@ function Bookends:_buildColorItems(bc, saveColors)
                     bc[field] = original  -- restore exact pre-picker shape
                     saveColors()
                 end,
-                touchmenu_instance)
+                touchmenu_instance, nil, nil, on_reopen)
             return
         end
         -- Greyscale device: nudge dialog. 0% renders pure white (since
@@ -59,7 +66,7 @@ function Bookends:_buildColorItems(bc, saveColors)
                 bc[field] = { grey = 0xFF - math.floor(val * 0xFF / 100 + 0.5) }
                 saveColors()
             end,
-            nil, nil, nil, touchmenu_instance,
+            on_reopen, nil, nil, touchmenu_instance,
             function()
                 bc[field] = nil; saveColors()
             end,
@@ -178,7 +185,7 @@ function Bookends:_buildColorItems(bc, saveColors)
                         bc.border_thickness = (val ~= default_val) and val or nil
                         saveColors()
                     end,
-                    nil, nil, nil, touchmenu_instance)
+                    on_reopen, nil, nil, touchmenu_instance)
             end,
             hold_callback = function(touchmenu_instance)
                 bc.border_thickness = nil; saveColors()

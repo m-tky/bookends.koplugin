@@ -262,48 +262,39 @@ function LineEditor.attach(Bookends)
             }})
 
             if line_bar_colors then
-                -- Reuse the canonical colour-row builder. is_per_bar = true
-                -- gives the right inheritance behaviour for per-line scope
-                -- too (Border thickness label shows "default (Npx)" with
-                -- the global value).
+                -- Reuse the canonical colour-row builder. saveColors here only
+                -- persists + live-previews; reopening the colour list is driven
+                -- by on_reopen (the 3rd arg), which fires when a row's sub-dialog
+                -- CLOSES. Wiring reopen to saveColors instead stacks dialogs,
+                -- because showNudgeDialog calls saveColors on every increment
+                -- while the nudge is still open (issue #57).
                 --
-                -- _buildColorItems returns TouchMenu-style items. ButtonDialog
-                -- rows have a compatible shape but each item must be wrapped
-                -- in its own single-button row, and we need to bridge two
-                -- behaviours:
-                --   - Most rows' callbacks open a nudge dialog and call
-                --     saveColors on completion, which already re-opens the
-                --     submenu via the closure on line ~ above. We just need
-                --     to close the bar-style dialog first.
-                --   - The toggle row (Invert tick colour on read portion)
-                --     doesn't open a sub-dialog — it mutates bc directly and
-                --     calls saveColors, so we must re-open the submenu
-                --     immediately to refresh the checked state.
-                local color_items = plugin:_buildColorItems(lc, function()
-                    saveColors()
-                    UIManager:close(_bar_style_dialog); openColoursMenu()
+                -- _buildColorItems returns TouchMenu-style items; each is wrapped
+                -- in its own single-button ButtonDialog row. We close the colour
+                -- list before a row's sub-dialog opens (so it isn't obscured) and
+                -- let on_reopen rebuild it on close.
+                local color_items = plugin:_buildColorItems(lc, saveColors, function()
+                    openColoursMenu()
                 end)
                 for _, item in ipairs(color_items) do
+                    -- Rows that open a sub-dialog (nudge/picker) carry a
+                    -- hold_callback (clear-to-default); they reopen via on_reopen
+                    -- on close. The "Invert tick colour" toggle has no sub-dialog
+                    -- and mutates synchronously, so reopen it here.
+                    local opens_subdialog = item.hold_callback ~= nil
                     local row_button = {
                         text_func = item.text_func,
                         text = item.text,
                         checked_func = item.checked_func,
                         callback = function()
-                            -- The toggle row mutates bc and calls saveColors
-                            -- synchronously (no sub-dialog), so the wrapped
-                            -- saveColors above will re-open. For rows that
-                            -- DO open a sub-dialog, we must close the bar-
-                            -- style dialog before that sub-dialog opens, or
-                            -- it'll be obscured.
                             UIManager:close(_bar_style_dialog)
                             if item.callback then item.callback(nil) end
+                            if not opens_subdialog then openColoursMenu() end
                         end,
                         hold_callback = item.hold_callback and function()
                             UIManager:close(_bar_style_dialog)
                             item.hold_callback(nil)
-                            -- hold_callback in _buildColorItems clears the
-                            -- field synchronously and calls saveColors,
-                            -- which re-opens this menu.
+                            openColoursMenu()
                         end or nil,
                     }
                     table.insert(sub_rows, {row_button})
