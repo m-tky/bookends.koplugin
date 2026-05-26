@@ -25,6 +25,23 @@ local function getCurrentPageNumber(ui)
 end
 Tokens.getCurrentPageNumber = getCurrentPageNumber
 
+--- Strip the community-convention page-count suffix Calibre users append
+-- via custom save templates ("Book Title - P(123)") so the Kindle/Kobo
+-- home-screen badge populates without opening every book first.
+--
+-- Anchored to end-of-title and requires the literal " - P(" + digits + ")"
+-- form with whitespace around the dash. This avoids clobbering:
+--   * legitimate year-in-parens titles ("Doctor Strange P(2025)") — no dash
+--   * mid-string occurrences ("Title - P(123) - Author")
+--   * titles starting with P( ("P(123) Title at start")
+--   * unrelated bracketed annotations ("Title (Anniversary Edition)")
+--
+-- The raw filename stays reachable via %filename for anyone who needs the
+-- unstripped form. Closes #53.
+function Tokens.stripPageCountSuffix(title)
+    return (title or ""):gsub("%s+%-%s+P%(%d+%)%s*$", "")
+end
+
 -- Legacy token → new-name alias map. See
 -- docs/superpowers/specs/2026-04-23-v5-token-system-design.md for full rationale.
 -- Single-letter keys only; %C1/%C2/%C3 handled via pattern in rewriteLegacyTokens.
@@ -2191,7 +2208,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         local doc_props = ui.doc_props or {}
         local ok, props = pcall(doc.getProps, doc)
         if not ok then props = {} end
-        title = doc_props.display_title or props.title or ""
+        title = Tokens.stripPageCountSuffix(doc_props.display_title or props.title or "")
         local authors_raw = doc_props.authors or props.authors or ""
         authors_list = splitAuthors(authors_raw)
         first_author = authors_list[1] or ""
