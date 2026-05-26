@@ -23,12 +23,20 @@ local function parsePO(path)
 
     local map = {}
     local msgid, msgstr, in_id, in_str = nil, nil, false, false
+    -- Fuzzy entries are msgmerge's unconfirmed guesses (flagged `#, fuzzy`,
+    -- usually after a string rename). Real gettext treats them as
+    -- untranslated and falls back to the source msgid; we must too. Applying
+    -- them surfaced stale pre-rename strings — e.g. en_GB titled the
+    -- "Bar colours" menu "Border colour". `pending_fuzzy` accumulates from the
+    -- comment block; it becomes `entry_fuzzy` once the entry's msgid is seen.
+    local entry_fuzzy, pending_fuzzy = false, false
 
     local function flush()
-        if msgid and msgstr and msgid ~= "" and msgstr ~= "" then
+        if msgid and msgstr and msgid ~= "" and msgstr ~= "" and not entry_fuzzy then
             map[msgid] = msgstr
         end
         msgid, msgstr, in_id, in_str = nil, nil, false, false
+        entry_fuzzy = false
     end
 
     local function unescape(s)
@@ -38,9 +46,14 @@ local function parsePO(path)
     for raw_line in f:lines() do
         local line = raw_line:match("^%s*(.-)%s*$")
         if line:match("^#") or line == "" then
-            if line == "" then flush() end
+            if line:match("^#,") and line:find("fuzzy", 1, true) then
+                pending_fuzzy = true
+            end
+            if line == "" then flush(); pending_fuzzy = false end
         elseif line:match('^msgid%s+"') then
             flush()
+            entry_fuzzy = pending_fuzzy
+            pending_fuzzy = false
             msgid  = unescape(line:match('^msgid%s+"(.*)"') or "")
             in_id  = true; in_str = false
         elseif line:match('^msgstr%s+"') then
@@ -102,4 +115,5 @@ end
 return {
     gettext = gettext,
     getLang = detectLang,
+    _parsePO = parsePO,  -- exposed for tests
 }
