@@ -1409,7 +1409,14 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
                 local pageno_local = Tokens.getCurrentPageNumber(self.ui) or 0
                 local pct, ticks = self:_computeBarProgress(bar_cfg, pageno_local)
 
-                local direction = bar_cfg.direction or (vertical and "ttb" or "ltr")
+                -- tategumi fork: when the document uses vertical-rl writing-mode,
+                -- horizontal progress bars naturally fill right→left to match the
+                -- reading direction. Falls back to the upstream default when the
+                -- isVerticalText() method is not present (vanilla KOReader).
+                local doc_is_vert_rl = self.ui.document.isVerticalText
+                    and self.ui.document:isVerticalText()
+                local h_default = doc_is_vert_rl and "rtl" or "ltr"
+                local direction = bar_cfg.direction or (vertical and "ttb" or h_default)
                 local paint_vertical = direction == "ttb" or direction == "btt"
                 local paint_reverse = direction == "rtl" or direction == "btt"
                 -- Per-bar colours stand alone after the
