@@ -8,13 +8,18 @@ local Utf8Proc = require("ffi/utf8proc")
 local PacmanSprite = require("bookends_pacman_sprite")
 local Screen = Device.screen
 
--- Pacman bar frame counter. Parity drives mouth-open vs mouth-closed.
--- ADVANCED ONCE PER PAINT CYCLE by tickPacmanFrame (called from
--- main.lua's _paintToInner before any bar is painted), not per pacman
--- bar — so multiple pacmans on screen stay in sync. Read inside
--- paintProgressBar's pacman branch; never mutated there.
--- Resets on plugin reload; no persistence needed.
-local _pacman_frame = 0
+-- Per-pacman animation frame counters keyed by screen position. Each
+-- distinct pacman on screen has its own counter, incremented once per
+-- paintProgressBar call (so the bar animates on every repaint regardless
+-- of who's driving the paint — bookends overlay, bookshelf's hero bar,
+-- or any future consumer). Different pacmans first appearing in the same
+-- paint get sequential starting phases via _pacman_seq, so two pacmans
+-- side-by-side animate in opposite phase rather than locked together.
+-- Resets on plugin reload; no persistence needed. Table growth is
+-- bounded by the number of distinct screen positions ever painted —
+-- negligible in practice.
+local _pacman_frames = {}
+local _pacman_seq = 0
 
 local ColorRGB32_t = ffi.typeof("ColorRGB32")
 
@@ -63,14 +68,6 @@ local OverlayWidget = {}
 --- colour buffer. KOReader's *RGB32 variants preserve true colour; this
 --- wrapper dispatches by colour type so callers stay shape-agnostic.
 --- Exported as OverlayWidget.bbPaintRect so main.lua can call it directly.
-
---- Advance the pacman animation frame by one. Callers should invoke
---- this exactly once per overlay paint cycle, BEFORE any bars are
---- painted, so all pacman bars in the same paint share a mouth state.
---- Called from main.lua's _paintToInner.
-function OverlayWidget.tickPacmanFrame()
-    _pacman_frame = _pacman_frame + 1
-end
 
 function OverlayWidget.bbPaintRect(bb, x, y, w, h, c)
     if not c then return end
@@ -1418,11 +1415,23 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
     elseif style == "pacman" then
         -- Pacman bar: read portion is empty, pacman sprite at the read
         -- fraction, dot strip and power pellet in the unread region.
-        -- Mouth state is read from the module-level frame counter that
-        -- advances ONCE per paint cycle (tickPacmanFrame, called from
-        -- _paintToInner before any bar is painted). Multiple pacman
-        -- bars in the same paint share the same mouth state.
-        local mouth_open = (_pacman_frame % 2) == 1
+        --
+        -- Mouth animation: each pacman is keyed by its top-left screen
+        -- position. First sighting at a position seeds its counter from
+        -- a monotonic sequence (so two pacmans appearing side-by-side in
+        -- the same paint start in opposite mouth phase). Every subsequent
+        -- paintProgressBar call increments that pacman's own counter, so
+        -- the animation advances on each repaint regardless of how many
+        -- pacmans are on screen or who is driving the paint (bookends
+        -- overlay, bookshelf, etc.).
+        local pacman_key = math.floor(x) .. "_" .. math.floor(y)
+        local frame = _pacman_frames[pacman_key]
+        if frame == nil then
+            _pacman_seq = _pacman_seq + 1
+            frame = _pacman_seq
+        end
+        _pacman_frames[pacman_key] = frame + 1
+        local mouth_open = (frame % 2) == 1
 
         -- Resolve colours. Authentic arcade hex on colour-enabled devices;
         -- strong greyscale defaults on B&W. Custom overrides via the existing

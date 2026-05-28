@@ -482,7 +482,7 @@ function ColourPaletteWidget:onShow()
 end
 
 -- Public entry point.
-local function showColourPicker(bookends, title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label, white_hex)
+local function showColourPicker(bookends, title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label, white_hex, on_close)
     local restoreMenu = bookends:hideMenu(touchmenu_instance)
 
     local closed = false
@@ -490,6 +490,7 @@ local function showColourPicker(bookends, title, current_hex, default_hex, on_ap
         if closed then return end
         closed = true
         restoreMenu()
+        if on_close then on_close() end
     end
 
     local widget
@@ -530,8 +531,8 @@ end
 
 local M = {}
 function M.attach(Bookends)
-    function Bookends:showColourPicker(title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label, white_hex)
-        showColourPicker(self, title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label, white_hex)
+    function Bookends:showColourPicker(title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label, white_hex, on_close)
+        showColourPicker(self, title, current_hex, default_hex, on_apply, on_default, on_revert, touchmenu_instance, null_tile_label, white_hex, on_close)
     end
 end
 return M

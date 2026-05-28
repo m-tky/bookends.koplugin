@@ -1515,12 +1515,6 @@ end
 function Bookends:_paintToInner(bb, x, y)
     self._hold_rects = {}
 
-    -- Advance the pacman animation frame once per overlay paint. All
-    -- pacman bars (full-width AND inline) painted in this cycle read
-    -- the same mouth-open/closed state — so multiple pacmans on screen
-    -- stay synchronised instead of going opposite phases.
-    OverlayWidget.tickPacmanFrame()
-
     local screen_size = Screen:getSize()
     local screen_w = screen_size.w
     local screen_h = screen_size.h

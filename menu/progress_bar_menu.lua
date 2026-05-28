@@ -314,7 +314,7 @@ function Bookends:buildSingleBarMenu(bar_idx, bar_cfg)
                 local color_items = self:_buildColorItems(bc, function()
                     bar_cfg.colors = bc
                     saveBar()
-                end, true)
+                end)
                 for _, item in ipairs(color_items) do
                     local orig_enabled = item.enabled_func
                     item.enabled_func = function()

@@ -85,10 +85,8 @@ msgid "+ Progress bar"
 msgstr "+ Лента за напредъка"
 
 #: bookends_line_editor.lua:182
-#, fuzzy
-#| msgid "per style"
 msgid "Bar style…"
-msgstr "по стил"
+msgstr "Стил на лентата…"
 
 #: bookends_line_editor.lua:213 bookends_line_editor.lua:376
 #: menu/progress_bar_menu.lua:141
@@ -141,26 +139,20 @@ msgid "Chapter ticks: all levels"
 msgstr "Отметки за глави: всички нива"
 
 #: bookends_line_editor.lua:252
-#, fuzzy
-#| msgid "Use custom colors"
 msgid "Disable custom colours"
-msgstr "Използване на персонализирани цветове"
+msgstr "Изключване на персонализирани цветове"
 
 #: bookends_line_editor.lua:252
-#, fuzzy
-#| msgid "Use custom colors"
 msgid "Enable custom colours"
-msgstr "Използване на персонализирани цветове"
+msgstr "Включване на персонализирани цветове"
 
 #: bookends_line_editor.lua:315
 msgid "Back"
 msgstr ""
 
 #: bookends_line_editor.lua:322
-#, fuzzy
-#| msgid "Background colour"
 msgid "Bar colours"
-msgstr "Цвят на фона"
+msgstr "Цветове на лентата"
 
 #: bookends_line_editor.lua:352 menu/progress_bar_menu.lua:109
 msgid "Type"
@@ -209,10 +201,8 @@ msgid "Unread"
 msgstr "Непрочетена"
 
 #: bookends_line_editor.lua:449
-#, fuzzy
-#| msgid "Use custom colors"
 msgid "Custom colours"
-msgstr "Използване на персонализирани цветове"
+msgstr "Персонализирани цветове"
 
 #: bookends_line_editor.lua:460 bookends_updater.lua:266 main.lua:2636
 #: menu/icons_library.lua:355 menu/preset_manager_modal.lua:561
@@ -221,10 +211,8 @@ msgid "Close"
 msgstr "Затваряне"
 
 #: bookends_line_editor.lua:465
-#, fuzzy
-#| msgid "per style"
 msgid "Bar style"
-msgstr "по стил"
+msgstr "Стил на лентата"
 
 #: bookends_line_editor.lua:486
 msgid "Font size"
@@ -544,10 +532,8 @@ msgid "per style"
 msgstr "по стил"
 
 #: menu/colours_menu.lua:68
-#, fuzzy
-#| msgid "transparent"
 msgid "Transparent"
-msgstr "прозрачен"
+msgstr "Прозрачен"
 
 #: menu/colours_menu.lua:83 menu/colours_menu.lua:97 menu/colours_menu.lua:269
 #: menu/colours_menu.lua:276 menu/colours_menu.lua:282
@@ -560,28 +546,20 @@ msgid "transparent"
 msgstr "прозрачен"
 
 #: menu/colours_menu.lua:103
-#, fuzzy
-#| msgid "Progress bars"
 msgid "Progress bar colour"
-msgstr "Ленти за напредъка"
+msgstr "Цвят на лентата за напредъка"
 
 #: menu/colours_menu.lua:107
-#, fuzzy
-#| msgid "Border color (% black)"
 msgid "Progress bar colour (% black)"
-msgstr "Цвят на рамката (% черно)"
+msgstr "Цвят на лентата за напредъка (% черно)"
 
 #: menu/colours_menu.lua:116
-#, fuzzy
-#| msgid "Progress bar, 10px tall"
 msgid "Progress bar track colour"
-msgstr "Лента за напредъка, 10px висока"
+msgstr "Цвят на пистата на лентата за напредъка"
 
 #: menu/colours_menu.lua:120
-#, fuzzy
-#| msgid "Metro track color (% black)"
 msgid "Progress bar track colour (% black)"
-msgstr "Цвят на релсата в % черно (метро)"
+msgstr "Цвят на пистата на лентата за напредъка (% черно)"
 
 #: menu/colours_menu.lua:129
 msgid "Tick color"

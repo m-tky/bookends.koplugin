@@ -24,8 +24,10 @@ mkdir -p "$stage_dir"
 rsync -a \
     --exclude='.git/' \
     --exclude='.claude/' \
+    --exclude='.superpowers/' \
     --exclude='.gitignore' \
     --exclude='.github/' \
+    --exclude='*.mo' \
     --exclude='docs/' \
     --exclude='screenshots/' \
     --exclude='tests/' \
