@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '0 10 * * *'  # Daily at 10:00 UTC (19:00 JST), one hour after Friday sync
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Sync from upstream bookends.koplugin"]
+    types:
+      - completed
 
 concurrency:
   group: mirror-release
@@ -12,6 +16,8 @@ concurrency:
 jobs:
   mirror:
     runs-on: ubuntu-latest
+    # When chained off a sync run, only proceed if that sync succeeded.
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write
     steps:
@@ -48,25 +54,28 @@ jobs:
           git fetch upstream tag "${{ steps.upstream.outputs.tag }}"
 
       - name: Verify upstream release commit is reachable from master
+        id: verify
         if: steps.check.outputs.exists == 'false'
         run: |
           upstream_sha=$(git rev-parse "${{ steps.upstream.outputs.tag }}^{commit}")
-          if ! git merge-base --is-ancestor "$upstream_sha" HEAD; then
-            echo "ERROR: upstream tag ${{ steps.upstream.outputs.tag }} ($upstream_sha) is not yet merged into our master."
-            echo "Run sync-upstream workflow first, then re-run this workflow."
-            exit 1
+          if git merge-base --is-ancestor "$upstream_sha" HEAD; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Upstream tag is reachable from HEAD ✓"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Upstream tag ${{ steps.upstream.outputs.tag }} ($upstream_sha) is not yet merged into our master — skipping."
+            echo "It will be mirrored automatically once the next sync-upstream run brings it into master."
           fi
-          echo "Upstream tag is reachable from HEAD ✓"
 
       - name: Build release zip
-        if: steps.check.outputs.exists == 'false'
+        if: steps.check.outputs.exists == 'false' && steps.verify.outputs.ready == 'true'
         run: |
           chmod +x tools/build-release.sh
           tools/build-release.sh /tmp/bookends-release
           ls -la /tmp/bookends-release/
 
       - name: Create release
-        if: steps.check.outputs.exists == 'false'
+        if: steps.check.outputs.exists == 'false' && steps.verify.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
