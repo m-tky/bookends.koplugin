@@ -8,6 +8,7 @@
 local Blitbuffer = require("ffi/blitbuffer")
 local CenterContainer = require("ui/widget/container/centercontainer")
 local Device = require("device")
+local FocusManager = require("ui/widget/focusmanager")
 local FrameContainer = require("ui/widget/container/framecontainer")
 local Geom = require("ui/geometry")
 local GestureRange = require("ui/gesturerange")
@@ -26,7 +27,7 @@ local MARGIN = Device.screen:scaleBySize(10)
 -- modal-level tap handler that dismisses the on-screen keyboard. Child
 -- gestures (button/chip/tile taps) still get first crack via WidgetContainer's
 -- propagateEvent; our handler only fires on uncaught taps.
-local LibraryModal = InputContainer:extend{
+local LibraryModal = FocusManager:extend{
     name = "library_modal",
     config = nil,           -- domain config table (see spec)
     -- KOReader's UIManager:sendEvent only dispatches gestures to the topmost
@@ -120,6 +121,14 @@ function LibraryModal:init()
             },
         },
     }
+    -- D-pad: physical Back closes the modal (issue #61 — non-touch users were
+    -- trapped with no dismiss path). FocusManager has already populated
+    -- self.key_events with the arrow/Press mappings during _init; we only add
+    -- Close. Guard on hasDPad so we don't register phantom keys on touch-only
+    -- devices.
+    if Device:hasDPad() then
+        self.key_events.Close = { { Device.input.group.Back } }
+    end
     -- Build the modal frame on init; populated lazily via :refresh()
     self:_buildFrame()
 end
@@ -152,15 +161,11 @@ function LibraryModal:onCloseWidget()
     UIManager:setDirty("all", "ui")
 end
 
--- Stub for InputText's parent contract. Upstream inputtext.lua:157 calls
--- self.parent:getFocusableWidgetXY(self) inside `if Device:hasDPad() then`,
--- which is true on desktop SDL (arrow keys), Kindle Keyboard, some Kobos with
--- hardware buttons, and certain Android configs. Without this, the search
--- field crashes on first tap on those devices. We don't use FocusManager grid
--- navigation here, so returning nothing matches FocusManager's own behaviour
--- when self.layout is unset (focusmanager.lua:551) and the upstream
--- `if x and y then moveFocusTo(...)` branch correctly no-ops.
-function LibraryModal:getFocusableWidgetXY() end
+function LibraryModal:onClose()
+    UIManager:close(self)
+    return true
+end
+
 
 function LibraryModal:_dismissKeyboard()
     local input = self._search_input
