@@ -571,6 +571,10 @@ function LibraryModal:_renderSearchInput(content_width)
         self:_onSearchSubmit("")
     end)
 
+    -- self._search_input (an InputText) supplies its own onFocus/onUnfocus via
+    -- KOReader's initDPadEvents, so it is NOT run through _attachFocus — doing
+    -- so would double up the focus border. FocusManager lands on it regardless
+    -- (it dispatches to any non-nil layout cell), and Press opens the keyboard.
     self:_pushFocusRow({ self._search_input, search_btn, clear_btn })
     return HorizontalGroup:new{
         align = "center",
