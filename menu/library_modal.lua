@@ -108,6 +108,15 @@ function LibraryModal._attachFocus(ic, frame)
     end
 end
 
+--- Append one focus-row (a flat array of focusable widgets, left→right) to the
+--- accumulator built during refresh(). No-op for empty/nil rows.
+function LibraryModal:_pushFocusRow(widgets)
+    if not self._focus_rows then return end
+    if widgets and #widgets > 0 then
+        self._focus_rows[#self._focus_rows + 1] = widgets
+    end
+end
+
 function LibraryModal:init()
     assert(self.config, "LibraryModal requires a config table")
     -- Pre-populate runtime state from config defaults
@@ -378,10 +387,14 @@ function LibraryModal:_renderTabSegments(title_bar_h)
     -- Tabs butt together so they read as one segmented control rather than two
     -- floating pills (no HorizontalSpan between segments).
     local hg = HorizontalGroup:new{ align = "center" }
+    local focus_row = {}
     for _i, tab in ipairs(self.config.tabs) do
         local is_active = tab.key == self.active_tab
-        table.insert(hg, seg(tab.label, is_active, function() self:_onTabSelect(tab.key) end))
+        local ic = seg(tab.label, is_active, function() self:_onTabSelect(tab.key) end)
+        table.insert(hg, ic)
+        focus_row[#focus_row + 1] = ic
     end
+    self:_pushFocusRow(focus_row)
     return hg
 end
 
@@ -558,6 +571,7 @@ function LibraryModal:_renderSearchInput(content_width)
         self:_onSearchSubmit("")
     end)
 
+    self:_pushFocusRow({ self._search_input, search_btn, clear_btn })
     return HorizontalGroup:new{
         align = "center",
         self._search_input,
@@ -638,7 +652,9 @@ function LibraryModal:_renderChipStrip(content_width)
     end
 
     local rows = {}
+    local focus_rows_local = {}
     local current_row = HorizontalGroup:new{ align = "center" }
+    local current_focus = {}
     local current_w = 0
     for i, chip in ipairs(chips) do
         local cw = buildChip(chip)
@@ -646,7 +662,9 @@ function LibraryModal:_renderChipStrip(content_width)
         local needed = (i == 1) and cw_w or (current_w + chip_gap + cw_w)
         if needed > content_width and #current_row > 0 then
             table.insert(rows, current_row)
+            table.insert(focus_rows_local, current_focus)
             current_row = HorizontalGroup:new{ align = "center", cw }
+            current_focus = { cw }
             current_w = cw_w
         else
             if i > 1 and current_w > 0 then
@@ -654,11 +672,14 @@ function LibraryModal:_renderChipStrip(content_width)
                 current_w = current_w + chip_gap
             end
             table.insert(current_row, cw)
+            current_focus[#current_focus + 1] = cw
             current_w = current_w + cw_w
         end
         if #rows >= 2 then break end
     end
     table.insert(rows, current_row)
+    table.insert(focus_rows_local, current_focus)
+    for _r = 1, #focus_rows_local do self:_pushFocusRow(focus_rows_local[_r]) end
 
     -- Optional inline status text rendered alongside the chips on the first
     -- row, in the empty space to their right. The domain returns a string
@@ -738,7 +759,10 @@ function LibraryModal:_renderListArea(content_width, area_height)
         if item then
             if idx > start_idx then table.insert(vg, VerticalSpan:new{ width = MARGIN }) end
             local slot_dimen = Geom:new{ w = content_width, h = row_height }
-            table.insert(vg, self.config.row_renderer(item, slot_dimen))
+            local row = self.config.row_renderer(item, slot_dimen)
+            table.insert(vg, row)
+            local focus_target = row._focus_target or (row.focusable and row) or nil
+            if focus_target then self:_pushFocusRow({ focus_target }) end
         end
     end
     local rendered = end_idx - start_idx + 1
@@ -785,6 +809,7 @@ function LibraryModal:_renderGridArea(content_width, area_height)
     local HorizontalGroup = require("ui/widget/horizontalgroup")
     local vg = VerticalGroup:new{ align = "left" }
     local hg = HorizontalGroup:new{ align = "top" }
+    local focus_row = {}
     local in_row = 0
     for idx = start_idx, end_idx do
         local item = self.config.item_at(idx)
@@ -822,13 +847,16 @@ function LibraryModal:_renderGridArea(content_width, area_height)
                 end
                 LibraryModal._attachFocus(ic, ic[1])
                 cell_widget = ic
+                focus_row[#focus_row + 1] = ic
             end
             table.insert(hg, cell_widget)
             in_row = in_row + 1
             if in_row >= cols then
                 if #vg > 0 then table.insert(vg, VerticalSpan:new{ width = MARGIN }) end
                 table.insert(vg, hg)
+                self:_pushFocusRow(focus_row)
                 hg = HorizontalGroup:new{ align = "top" }
+                focus_row = {}
                 in_row = 0
             end
         end
@@ -836,6 +864,7 @@ function LibraryModal:_renderGridArea(content_width, area_height)
     if in_row > 0 then
         if #vg > 0 then table.insert(vg, VerticalSpan:new{ width = MARGIN }) end
         table.insert(vg, hg)
+        self:_pushFocusRow(focus_row)
     end
     -- Top-align the grid: a partially-filled page (e.g. Dynamic with 4
     -- entries in a 9-cell grid) shouldn't float in the vertical centre
@@ -879,24 +908,20 @@ function LibraryModal:_renderPagination(content_width)
     local pn_span = Screen:scaleBySize(32)
     local function gap() return HorizontalSpan:new{ width = pn_span } end
 
-    local page_nav = HorizontalGroup:new{
-        align = "center",
-        chev("chevron.first", self.page > 1,          function() self.page = 1;              self:refresh() end),
-        gap(),
-        chev("chevron.left",  self.page > 1,          function() self.page = self.page - 1;  self:refresh() end),
-        gap(),
-        Button:new{
-            text = T(_("Page %1 of %2"), self.page, total_pages),
-            text_font_size = 15,
-            bordersize = 0,
-            callback = function() end,
-            show_parent = self,
-        },
-        gap(),
-        chev("chevron.right", self.page < total_pages, function() self.page = self.page + 1; self:refresh() end),
-        gap(),
-        chev("chevron.last",  self.page < total_pages, function() self.page = total_pages;   self:refresh() end),
+    local first_btn = chev("chevron.first", self.page > 1,          function() self.page = 1;              self:refresh() end)
+    local prev_btn  = chev("chevron.left",  self.page > 1,          function() self.page = self.page - 1;  self:refresh() end)
+    local page_btn  = Button:new{
+        text = T(_("Page %1 of %2"), self.page, total_pages),
+        text_font_size = 15, bordersize = 0, callback = function() end, show_parent = self,
     }
+    local next_btn  = chev("chevron.right", self.page < total_pages, function() self.page = self.page + 1; self:refresh() end)
+    local last_btn  = chev("chevron.last",  self.page < total_pages, function() self.page = total_pages;   self:refresh() end)
+    local page_nav = HorizontalGroup:new{
+        align = "center", first_btn, gap(), prev_btn, gap(), page_btn, gap(), next_btn, gap(), last_btn,
+    }
+    if self.page > 1 or self.page < total_pages then
+        self:_pushFocusRow({ first_btn, prev_btn, page_btn, next_btn, last_btn })
+    end
 
     local function divider()
         -- Fresh widget per slot; sharing one across paint positions corrupts
@@ -969,6 +994,7 @@ function LibraryModal:_renderFooter(content_width)
         })
     end
 
+    self:_pushFocusRow(btns)
     if #btns == 1 then return btns[1] end
 
     local hg = HorizontalGroup:new{ align = "center" }
@@ -986,6 +1012,7 @@ end
 
 function LibraryModal:refresh()
     local Screen = Device.screen
+    self._focus_rows = {}
     local HorizontalGroup = require("ui/widget/horizontalgroup")
     local cw = self.content_w
     -- modal_w is passed so _renderTitleBar can draw an edge-to-edge separator.
@@ -1059,6 +1086,11 @@ function LibraryModal:refresh()
     end
 
     self.frame[1] = body
+    -- D-pad: assemble the focus grid from the rows collected during this
+    -- rebuild, and re-anchor the cursor so it never points at a now-missing
+    -- cell (page/tab/chip/search all rebuild the tree and shift the rows).
+    self.layout = LibraryModal._buildLayout(self._focus_rows)
+    self.selected = LibraryModal._clampSelected(self.layout, self.selected)
     -- Self-bounded dirty rect is sufficient now that the modal is a fixed,
     -- content-derived size. setDirty(nil, ...) was triggering full-screen
     -- repaints that stacked ~1s each on e-ink.
