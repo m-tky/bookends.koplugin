@@ -145,6 +145,8 @@ local function swatchTile(hex, selected, side, on_tap)
         on_tap(hex)
         return true
     end
+    -- Swatch self-paints its border (Swatch:paintTo), so toggle swatch.focused
+    -- directly rather than the FrameContainer-border attachFocus() helper.
     container.focusable = true
     function container:onFocus()  swatch.focused = true;  return true end
     function container:onUnfocus() swatch.focused = false; return true end
