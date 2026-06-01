@@ -37,6 +37,17 @@ local WidgetContainer   = require("ui/widget/container/widgetcontainer")
 local Font              = require("ui/font")
 local Screen            = Device.screen
 
+local FOCUS_BORDER = Screen:scaleBySize(2)
+-- Toggle a focus border on a focusable wrapper `ic`, restoring `frame`'s
+-- original border on unfocus. For tiles whose visible border lives on a
+-- FrameContainer (nullTile, footer buttons). Mirrors LibraryModal._attachFocus.
+local function attachFocus(ic, frame)
+    ic.focusable = true
+    local orig_border, orig_color = frame.bordersize or 0, frame.color
+    function ic:onFocus()  frame.bordersize = FOCUS_BORDER; frame.color = Blitbuffer.COLOR_BLACK; return true end
+    function ic:onUnfocus() frame.bordersize = orig_border; frame.color = orig_color; return true end
+end
+
 -- 5 rows × 5 cols: neutrals / warm dark / warm light / cool dark / cool light.
 -- Luminance-separated rows so dark/light pairings survive the greyscale fallback.
 local PALETTE = {
@@ -57,6 +68,7 @@ local Swatch = WidgetContainer:extend{
     dimen    = nil,
     hex      = nil,
     selected = false,
+    focused  = false,
     side     = nil,
 }
 
@@ -75,8 +87,9 @@ function Swatch:paintTo(bb, x, y)
     self.dimen = Geom:new{ x = x, y = y, w = self.side, h = self.side }
     local r = SWATCH_RADIUS
     bb:paintRoundedRectRGB32(x, y, self.side, self.side, self._fill, r)
-    local bw = self.selected and Size.border.thick or Size.border.thin
-    local bc = self.selected and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_DARK_GRAY
+    local hot = self.selected or self.focused
+    local bw = hot and Size.border.thick or Size.border.thin
+    local bc = hot and Blitbuffer.COLOR_BLACK or Blitbuffer.COLOR_DARK_GRAY
     bb:paintBorder(x, y, self.side, self.side, bw, bc, r)
 end
 
@@ -112,6 +125,7 @@ local function nullTile(label, selected, side, on_tap)
         on_tap()
         return true
     end
+    attachFocus(container, frame)
     return container
 end
 
@@ -131,6 +145,9 @@ local function swatchTile(hex, selected, side, on_tap)
         on_tap(hex)
         return true
     end
+    container.focusable = true
+    function container:onFocus()  swatch.focused = true;  return true end
+    function container:onUnfocus() swatch.focused = false; return true end
     return container
 end
 
@@ -144,12 +161,23 @@ local function makeFooterBtn(text, width, height, on_tap)
         bold     = true,
         fgcolor  = Blitbuffer.COLOR_BLACK,
     }
+    -- Reserve a focus-border slot (white = invisible) so the d-pad highlight
+    -- toggles colour only, with no size change / reflow.
+    local frame = FrameContainer:new{
+        bordersize = FOCUS_BORDER,
+        color      = Blitbuffer.COLOR_WHITE,
+        background = Blitbuffer.COLOR_WHITE,
+        padding    = 0,
+        margin     = 0,
+        CenterContainer:new{ dimen = Geom:new{ w = width - 2 * FOCUS_BORDER, h = height - 2 * FOCUS_BORDER }, label },
+    }
     local ic = InputContainer:new{
         dimen = Geom:new{ w = width, h = height },
-        CenterContainer:new{ dimen = Geom:new{ w = width, h = height }, label },
+        frame,
     }
     ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
     ic.onTapSelect = function() on_tap(); return true end
+    attachFocus(ic, frame)
     return ic
 end
 
@@ -202,6 +230,15 @@ function ColourPaletteWidget:init()
         }
     end
 
+    -- The palette is intentionally non-dismissable on touch (Cancel/Default/
+    -- Apply only). Map physical Back to Cancel (revert + close) so a keyed
+    -- device user is never trapped. Guard on hasKeys (matches LibraryModal and
+    -- every stock KOReader widget's Close binding); FocusManager already
+    -- populated the arrow/Press mappings during _init.
+    if Device:hasKeys() then
+        self.key_events.Close = { { Device.input.group.Back } }
+    end
+
     self:update()
 end
 
@@ -245,10 +282,18 @@ function ColourPaletteWidget:onCloseWidget()
     end
 end
 
+function ColourPaletteWidget:onClose()
+    -- Back == Cancel: revert to the original colour and close. revert_callback
+    -- owns the UIManager:close (same path as the Cancel footer button).
+    if self.revert_callback then self.revert_callback() end
+    return true
+end
+
 function ColourPaletteWidget:update()
     local side = SWATCH_SIDE
     local gap  = SWATCH_GAP
     local iw   = self.inner_width
+    local focus_rows = {}
 
     -- Palette grid: explicit VerticalSpan + HorizontalGroup rows. NB. KOReader's
     -- VerticalSpan uses `width` as its extent along the group's axis — using
@@ -256,12 +301,15 @@ function ColourPaletteWidget:update()
     local palette_vgroup = VerticalGroup:new{ align = "center" }
     for row_idx, row_hexes in ipairs(PALETTE) do
         local hgroup = HorizontalGroup:new{ align = "center" }
+        local row_focus = {}
         -- Prepend the null tile at grid position [0,0] of the first row only.
         if row_idx == 1 and self.null_tile then
             local sel = (self.selected_hex == nil)
-            hgroup[#hgroup + 1] = nullTile(self.null_tile.label, sel, side, function()
+            local nt = nullTile(self.null_tile.label, sel, side, function()
                 self.null_tile.on_tap()
             end)
+            hgroup[#hgroup + 1] = nt
+            row_focus[#row_focus + 1] = nt
             hgroup[#hgroup + 1] = HorizontalSpan:new{ width = gap }
         end
         for col_idx, hex in ipairs(row_hexes) do
@@ -269,12 +317,15 @@ function ColourPaletteWidget:update()
                 hgroup[#hgroup + 1] = HorizontalSpan:new{ width = gap }
             end
             local is_selected = (hex == self.selected_hex)
-            hgroup[#hgroup + 1] = swatchTile(hex, is_selected, side, function(tapped_hex)
+            local tile = swatchTile(hex, is_selected, side, function(tapped_hex)
                 self.selected_hex = tapped_hex
                 if self.apply_callback then self.apply_callback(tapped_hex) end
                 self:update()
             end)
+            hgroup[#hgroup + 1] = tile
+            row_focus[#row_focus + 1] = tile
         end
+        focus_rows[#focus_rows + 1] = row_focus
         if row_idx > 1 then
             palette_vgroup[#palette_vgroup + 1] = VerticalSpan:new{ width = gap }
         end
@@ -353,6 +404,12 @@ function ColourPaletteWidget:update()
     local white_btn   = self.white_callback and makeFooterBtn(_("White"), btn_w, footer_h,
         function() self.white_callback() end) or nil
 
+    focus_rows[#focus_rows + 1] = { self.hex_input }
+    local footer_focus = { cancel_btn, default_btn }
+    if white_btn then footer_focus[#footer_focus + 1] = white_btn end
+    footer_focus[#footer_focus + 1] = apply_btn
+    focus_rows[#focus_rows + 1] = footer_focus
+
     local vdiv_inset = Screen:scaleBySize(10)
     local vdiv = function() return CenterContainer:new{
         dimen = Geom:new{ w = Size.line.thin, h = footer_h },
@@ -430,6 +487,10 @@ function ColourPaletteWidget:update()
         },
         movable,
     }
+
+    local LibraryModal = require("menu.library_modal")
+    self.layout = LibraryModal._buildLayout(focus_rows)
+    self.selected = LibraryModal._clampSelected(self.layout, self.selected)
 
     UIManager:setDirty(self, "ui")
 end
