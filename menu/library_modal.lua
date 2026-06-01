@@ -121,12 +121,14 @@ function LibraryModal:init()
             },
         },
     }
-    -- D-pad: physical Back closes the modal (issue #61 — non-touch users were
-    -- trapped with no dismiss path). FocusManager has already populated
-    -- self.key_events with the arrow/Press mappings during _init; we only add
-    -- Close. Guard on hasDPad so we don't register phantom keys on touch-only
-    -- devices.
-    if Device:hasDPad() then
+    -- Physical Back closes the modal (issue #61 — non-touch users were trapped
+    -- with no dismiss path). Guard on hasKeys (not hasDPad) so ANY device with
+    -- hardware keys can escape — including keyed-but-no-dpad devices like the
+    -- Kindle Keyboard, which would otherwise stay trapped. Arrow/Press grid
+    -- navigation is separately gated: FocusManager only populates those
+    -- mappings when hasDPad is true. FocusManager has already populated
+    -- self.key_events during _init; we only add Close here.
+    if Device:hasKeys() then
         self.key_events.Close = { { Device.input.group.Back } }
     end
     -- Build the modal frame on init; populated lazily via :refresh()

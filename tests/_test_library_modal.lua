@@ -12,9 +12,12 @@ local stub_meta = setmetatable({}, {
 })
 package.loaded["ffi/blitbuffer"] = setmetatable({}, { __index = function() return 0 end })
 package.loaded["ui/widget/container/centercontainer"] = stub_meta
-package.loaded["device"] = { screen = setmetatable({}, {
-    __index = function() return function() return 1024 end end,
-}) }
+package.loaded["device"] = {
+    screen = setmetatable({}, { __index = function() return function() return 1024 end end }),
+    hasDPad = function() return false end,
+    hasKeys = function() return false end,
+    input = { group = { Back = { "Back" } } },
+}
 package.loaded["ui/widget/container/framecontainer"] = stub_meta
 package.loaded["ui/geometry"] = { new = function(_, t) return t end }
 package.loaded["ui/widget/container/inputcontainer"] = setmetatable({ extend = function(_, t) return t end }, { __index = stub_meta })
