@@ -2154,6 +2154,15 @@ function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, u
             return { nudge_buttons, footer }
         end)(),
     }
+    -- dismissable=false makes ButtonDialog skip its own Back binding
+    -- (buttondialog.lua:98), trapping keyed/d-pad users. Re-add only the Back
+    -- key (taps outside stay ignored). Back → ButtonDialog:onClose → our
+    -- tap_close_callback (revert) then close, i.e. Back == Cancel.
+    if Device:hasKeys() then
+        local back_group = util.tableDeepCopy(Device.input.group.Back)
+        table.insert(back_group, Device:hasFewKeys() and "Left" or "Menu")
+        dialog.key_events.Close = { { back_group } }
+    end
     UIManager:show(dialog)
 end
 

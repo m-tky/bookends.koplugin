@@ -1,6 +1,8 @@
 --- Reusable ButtonDialog shapes for nudge-style adjusters.
 -- Keeps callers free to decide when to persist (live vs on-apply).
+local Device = require("device")
 local UIManager = require("ui/uimanager")
+local util = require("util")
 local _ = require("bookends_i18n").gettext
 
 local DialogHelpers = {}
@@ -120,6 +122,18 @@ function DialogHelpers.showNudgeGrid(opts)
         end,
         buttons = button_rows,
     }
+    -- dismissable=false makes ButtonDialog skip its own Back/tap-close wiring
+    -- (buttondialog.lua:98), so a keyed/d-pad user would be trapped with no
+    -- exit. Re-add ONLY the Back key binding (not tap-close — taps outside must
+    -- still be ignored, which is the whole point of dismissable=false). Back
+    -- routes to ButtonDialog:onClose, which runs our tap_close_callback
+    -- (revert + restore) then closes — i.e. Back == Cancel. Mirrors the
+    -- back_group construction ButtonDialog uses for its own Close binding.
+    if Device:hasKeys() then
+        local back_group = util.tableDeepCopy(Device.input.group.Back)
+        table.insert(back_group, Device:hasFewKeys() and "Left" or "Menu")
+        dialog.key_events.Close = { { back_group } }
+    end
     UIManager:show(dialog)
     return dialog
 end
