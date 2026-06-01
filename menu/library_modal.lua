@@ -54,6 +54,33 @@ function LibraryModal._matchesQuery(text, query)
     return true
 end
 
+--- Assemble a FocusManager `self.layout` from an ordered list of focus-rows.
+--- Each row is a flat array of focusable widgets (top→bottom, left→right in
+--- screen order). Empty rows are dropped so FocusManager never lands on a
+--- blank line. Public for unit testing.
+function LibraryModal._buildLayout(rows)
+    local layout = {}
+    for _i = 1, #rows do
+        local row = rows[_i]
+        if row and #row > 0 then
+            layout[#layout + 1] = row
+        end
+    end
+    return layout
+end
+
+--- Clamp a {x,y} cursor onto a layout grid, returning a position that always
+--- points at a real cell (or {1,1} when the grid is empty). Public for testing.
+function LibraryModal._clampSelected(layout, sel)
+    if not layout or #layout == 0 then return { x = 1, y = 1 } end
+    local y = (sel and sel.y) or 1
+    if y < 1 then y = 1 elseif y > #layout then y = #layout end
+    local row = layout[y]
+    local x = (sel and sel.x) or 1
+    if x < 1 then x = 1 elseif x > #row then x = #row end
+    return { x = x, y = y }
+end
+
 function LibraryModal:init()
     assert(self.config, "LibraryModal requires a config table")
     -- Pre-populate runtime state from config defaults
