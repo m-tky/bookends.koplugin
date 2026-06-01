@@ -85,6 +85,9 @@ end
 -- Focus indicator: 2px on e-ink reads clearly without dominating. Tunable in
 -- the desktop-verification task.
 local FOCUS_BORDER = Device.screen:scaleBySize(2)
+-- Exposed so external renderers (e.g. preset_manager_modal's star column) can
+-- build a matching reserved focus-border slot that _attachFocus toggles.
+LibraryModal.FOCUS_BORDER = FOCUS_BORDER
 
 --- Attach a d-pad focus highlight to a focusable wrapper `ic`. FocusManager
 --- dispatches Focus/Unfocus to whichever layout cell is current; we toggle a
@@ -765,12 +768,19 @@ function LibraryModal:_renderListArea(content_width, area_height)
             local slot_dimen = Geom:new{ w = content_width, h = row_height }
             local row = self.config.row_renderer(item, slot_dimen)
             table.insert(vg, row)
-            -- A renderer either returns a focusable widget directly, or returns
-            -- a wrapper carrying _focus_target = <inner focusable widget> (e.g.
-            -- preset cards wrap the focusable card body in a HorizontalGroup
-            -- alongside a touch-only accent column).
-            local focus_target = row._focus_target or (row.focusable and row) or nil
-            if focus_target then self:_pushFocusRow({ focus_target }) end
+            -- A renderer signals its focusable cell(s) one of three ways:
+            --   _focus_row   = { w1, w2, ... }  multiple left→right cells in
+            --                  this row (e.g. a preset card + its star toggle),
+            --   _focus_target = <widget>        a single focusable inner widget
+            --                  when the returned widget is a non-focusable
+            --                  wrapper, or
+            --   the returned widget is itself .focusable (e.g. token cards).
+            if row._focus_row then
+                self:_pushFocusRow(row._focus_row)
+            else
+                local focus_target = row._focus_target or (row.focusable and row) or nil
+                if focus_target then self:_pushFocusRow({ focus_target }) end
+            end
         end
     end
     local rendered = end_idx - start_idx + 1
@@ -928,7 +938,9 @@ function LibraryModal:_renderPagination(content_width)
         align = "center", first_btn, gap(), prev_btn, gap(), page_btn, gap(), next_btn, gap(), last_btn,
     }
     if self.page > 1 or self.page < total_pages then
-        self:_pushFocusRow({ first_btn, prev_btn, page_btn, next_btn, last_btn })
+        -- page_btn ("Page X of Y") is a non-interactive label, so it's omitted
+        -- from the focus row — d-pad skips straight between the chevrons.
+        self:_pushFocusRow({ first_btn, prev_btn, next_btn, last_btn })
     end
 
     local function divider()
