@@ -1,6 +1,8 @@
 --- Reusable ButtonDialog shapes for nudge-style adjusters.
 -- Keeps callers free to decide when to persist (live vs on-apply).
+local Device = require("device")
 local UIManager = require("ui/uimanager")
+local util = require("util")
 local _ = require("bookends_i18n").gettext
 
 local DialogHelpers = {}
@@ -59,6 +61,17 @@ function DialogHelpers.showNudgeGrid(opts)
     end
 
     local dialog
+    -- ButtonDialog:reinit() rebuilds the buttons but keeps a stale self.layout
+    -- (buttondialog.lua:267 `self.layout = self.layout or ...`), which strands
+    -- the d-pad cursor on the now-freed widgets — arrows stop working after a
+    -- nudge. Discard the layout so init() adopts the fresh one, then re-anchor
+    -- focus on the next tick (the pressed Button repaints after its callback).
+    -- No-op on touch devices (refocusWidget uses FOCUS_ONLY_ON_NT).
+    local function rebuild()
+        dialog.layout = nil
+        dialog:reinit()
+        dialog:refocusWidget(true)
+    end
     local function revert()
         for field, value in pairs(originals) do
             opts.set_value(field, value)
@@ -69,7 +82,7 @@ function DialogHelpers.showNudgeGrid(opts)
         local new_val = math.max(min_val, (opts.get_value(field) or 0) + delta)
         opts.set_value(field, new_val)
         if opts.on_row_change then opts.on_row_change() end
-        dialog:reinit()
+        rebuild()
     end
 
     local button_rows = {}
@@ -96,7 +109,7 @@ function DialogHelpers.showNudgeGrid(opts)
             text = opts.default_text or _("Default"),
             callback = function()
                 if opts.on_default then opts.on_default() end
-                dialog:reinit()
+                rebuild()
             end,
         },
         {
@@ -120,6 +133,18 @@ function DialogHelpers.showNudgeGrid(opts)
         end,
         buttons = button_rows,
     }
+    -- dismissable=false makes ButtonDialog skip its own Back/tap-close wiring
+    -- (buttondialog.lua:98), so a keyed/d-pad user would be trapped with no
+    -- exit. Re-add ONLY the Back key binding (not tap-close — taps outside must
+    -- still be ignored, which is the whole point of dismissable=false). Back
+    -- routes to ButtonDialog:onClose, which runs our tap_close_callback
+    -- (revert + restore) then closes — i.e. Back == Cancel. Mirrors the
+    -- back_group construction ButtonDialog uses for its own Close binding.
+    if Device:hasKeys() then
+        local back_group = util.tableDeepCopy(Device.input.group.Back)
+        table.insert(back_group, Device:hasFewKeys() and "Left" or "Menu")
+        dialog.key_events.Close = { { back_group } }
+    end
     UIManager:show(dialog)
     return dialog
 end

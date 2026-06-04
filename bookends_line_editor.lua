@@ -578,6 +578,7 @@ function LineEditor.attach(Bookends)
             }
             table.insert(rows, {
                 {
+                    id = "close",
                     text = _("Cancel"),
                     callback = function()
                         self._live_edit_position = nil

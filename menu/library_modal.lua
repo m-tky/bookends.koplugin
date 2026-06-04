@@ -8,6 +8,7 @@
 local Blitbuffer = require("ffi/blitbuffer")
 local CenterContainer = require("ui/widget/container/centercontainer")
 local Device = require("device")
+local FocusManager = require("ui/widget/focusmanager")
 local FrameContainer = require("ui/widget/container/framecontainer")
 local Geom = require("ui/geometry")
 local GestureRange = require("ui/gesturerange")
@@ -26,7 +27,7 @@ local MARGIN = Device.screen:scaleBySize(10)
 -- modal-level tap handler that dismisses the on-screen keyboard. Child
 -- gestures (button/chip/tile taps) still get first crack via WidgetContainer's
 -- propagateEvent; our handler only fires on uncaught taps.
-local LibraryModal = InputContainer:extend{
+local LibraryModal = FocusManager:extend{
     name = "library_modal",
     config = nil,           -- domain config table (see spec)
     -- KOReader's UIManager:sendEvent only dispatches gestures to the topmost
@@ -52,6 +53,71 @@ function LibraryModal._matchesQuery(text, query)
         if not lc:find(term, 1, true) then return false end
     end
     return true
+end
+
+--- Assemble a FocusManager `self.layout` from an ordered list of focus-rows.
+--- Each row is a flat array of focusable widgets (top→bottom, left→right in
+--- screen order). Empty rows are dropped so FocusManager never lands on a
+--- blank line. Public for unit testing.
+function LibraryModal._buildLayout(rows)
+    local layout = {}
+    for _i = 1, #rows do
+        local row = rows[_i]
+        if row and #row > 0 then
+            layout[#layout + 1] = row
+        end
+    end
+    return layout
+end
+
+--- Clamp a {x,y} cursor onto a layout grid, returning a position that always
+--- points at a real cell (or {1,1} when the grid is empty). Public for testing.
+function LibraryModal._clampSelected(layout, sel)
+    if not layout or #layout == 0 then return { x = 1, y = 1 } end
+    local y = (sel and sel.y) or 1
+    if y < 1 then y = 1 elseif y > #layout then y = #layout end
+    local row = layout[y]
+    local x = (sel and sel.x) or 1
+    if x < 1 then x = 1 elseif x > #row then x = #row end
+    return { x = x, y = y }
+end
+
+-- Focus indicator: 2px on e-ink reads clearly without dominating. Tunable in
+-- the desktop-verification task.
+local FOCUS_BORDER = Device.screen:scaleBySize(2)
+-- Exposed so external renderers (e.g. preset_manager_modal's star column) can
+-- build a matching reserved focus-border slot that _attachFocus toggles.
+LibraryModal.FOCUS_BORDER = FOCUS_BORDER
+
+--- Attach a d-pad focus highlight to a focusable wrapper `ic`. FocusManager
+--- dispatches Focus/Unfocus to whichever layout cell is current; we toggle a
+--- border on `frame` (the FrameContainer the wrapper renders through) to BLACK
+--- when focused and restore the original border on unfocus. FocusManager
+--- issues the repaint after dispatching (focusmanager.lua), so we only mutate
+--- fields here. `ic.focusable = true` marks it for FocusManager.
+function LibraryModal._attachFocus(ic, frame)
+    ic.focusable = true
+    local orig_border = frame.bordersize or 0
+    local orig_color = frame.color
+    function ic:onFocus()
+        frame.bordersize = FOCUS_BORDER
+        frame.color = Blitbuffer.COLOR_BLACK
+        return true
+    end
+    function ic:onUnfocus()
+        frame.bordersize = orig_border
+        frame.color = orig_color
+        return true
+    end
+end
+
+--- Append one focus-row (a flat array of focusable widgets, left→right) to the
+--- accumulator built during refresh(). No-op for empty/nil rows.
+function LibraryModal:_pushFocusRow(widgets)
+    if not self._focus_rows then return end
+    if widgets and #widgets > 0 then
+        self._focus_rows[#self._focus_rows + 1] = widgets
+    end
 end
 
 function LibraryModal:init()
@@ -93,6 +159,16 @@ function LibraryModal:init()
             },
         },
     }
+    -- Physical Back closes the modal (issue #61 — non-touch users were trapped
+    -- with no dismiss path). Guard on hasKeys (not hasDPad) so ANY device with
+    -- hardware keys can escape — including keyed-but-no-dpad devices like the
+    -- Kindle Keyboard, which would otherwise stay trapped. Arrow/Press grid
+    -- navigation is separately gated: FocusManager only populates those
+    -- mappings when hasDPad is true. FocusManager has already populated
+    -- self.key_events during _init; we only add Close here.
+    if Device:hasKeys() then
+        self.key_events.Close = { { Device.input.group.Back } }
+    end
     -- Build the modal frame on init; populated lazily via :refresh()
     self:_buildFrame()
 end
@@ -125,15 +201,11 @@ function LibraryModal:onCloseWidget()
     UIManager:setDirty("all", "ui")
 end
 
--- Stub for InputText's parent contract. Upstream inputtext.lua:157 calls
--- self.parent:getFocusableWidgetXY(self) inside `if Device:hasDPad() then`,
--- which is true on desktop SDL (arrow keys), Kindle Keyboard, some Kobos with
--- hardware buttons, and certain Android configs. Without this, the search
--- field crashes on first tap on those devices. We don't use FocusManager grid
--- navigation here, so returning nothing matches FocusManager's own behaviour
--- when self.layout is unset (focusmanager.lua:551) and the upstream
--- `if x and y then moveFocusTo(...)` branch correctly no-ops.
-function LibraryModal:getFocusableWidgetXY() end
+function LibraryModal:onClose()
+    UIManager:close(self)
+    return true
+end
+
 
 function LibraryModal:_dismissKeyboard()
     local input = self._search_input
@@ -311,16 +383,21 @@ function LibraryModal:_renderTabSegments(title_bar_h)
         local ic = InputContainer:new{ dimen = Geom:new{ w = pill_w, h = title_bar_h }, fc }
         ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
         ic.onTapSelect = function() on_tap(); return true end
+        LibraryModal._attachFocus(ic, fc)
         return ic
     end
 
     -- Tabs butt together so they read as one segmented control rather than two
     -- floating pills (no HorizontalSpan between segments).
     local hg = HorizontalGroup:new{ align = "center" }
+    local focus_row = {}
     for _i, tab in ipairs(self.config.tabs) do
         local is_active = tab.key == self.active_tab
-        table.insert(hg, seg(tab.label, is_active, function() self:_onTabSelect(tab.key) end))
+        local ic = seg(tab.label, is_active, function() self:_onTabSelect(tab.key) end)
+        table.insert(hg, ic)
+        focus_row[#focus_row + 1] = ic
     end
+    self:_pushFocusRow(focus_row)
     return hg
 end
 
@@ -482,6 +559,7 @@ function LibraryModal:_renderSearchInput(content_width)
         local ic = InputContainer:new{ dimen = Geom:new{ w = btn_w, h = row_h }, fc }
         ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
         ic.onTapSelect = function() on_tap(); return true end
+        LibraryModal._attachFocus(ic, fc)
         return ic
     end
 
@@ -496,6 +574,11 @@ function LibraryModal:_renderSearchInput(content_width)
         self:_onSearchSubmit("")
     end)
 
+    -- self._search_input (an InputText) supplies its own onFocus/onUnfocus via
+    -- KOReader's initDPadEvents, so it is NOT run through _attachFocus — doing
+    -- so would double up the focus border. FocusManager lands on it regardless
+    -- (it dispatches to any non-nil layout cell), and Press opens the keyboard.
+    self:_pushFocusRow({ self._search_input, search_btn, clear_btn })
     return HorizontalGroup:new{
         align = "center",
         self._search_input,
@@ -571,11 +654,14 @@ function LibraryModal:_renderChipStrip(content_width)
         local ic = InputContainer:new{ dimen = Geom:new{ w = fc:getSize().w, h = fc:getSize().h }, fc }
         ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = ic.dimen } } }
         ic.onTapSelect = function() self:_onChipTap(chip.key); return true end
+        LibraryModal._attachFocus(ic, fc)
         return ic
     end
 
     local rows = {}
+    local focus_rows_local = {}
     local current_row = HorizontalGroup:new{ align = "center" }
+    local current_focus = {}
     local current_w = 0
     for i, chip in ipairs(chips) do
         local cw = buildChip(chip)
@@ -583,7 +669,9 @@ function LibraryModal:_renderChipStrip(content_width)
         local needed = (i == 1) and cw_w or (current_w + chip_gap + cw_w)
         if needed > content_width and #current_row > 0 then
             table.insert(rows, current_row)
+            table.insert(focus_rows_local, current_focus)
             current_row = HorizontalGroup:new{ align = "center", cw }
+            current_focus = { cw }
             current_w = cw_w
         else
             if i > 1 and current_w > 0 then
@@ -591,11 +679,14 @@ function LibraryModal:_renderChipStrip(content_width)
                 current_w = current_w + chip_gap
             end
             table.insert(current_row, cw)
+            current_focus[#current_focus + 1] = cw
             current_w = current_w + cw_w
         end
         if #rows >= 2 then break end
     end
     table.insert(rows, current_row)
+    table.insert(focus_rows_local, current_focus)
+    for _r = 1, #focus_rows_local do self:_pushFocusRow(focus_rows_local[_r]) end
 
     -- Optional inline status text rendered alongside the chips on the first
     -- row, in the empty space to their right. The domain returns a string
@@ -675,7 +766,21 @@ function LibraryModal:_renderListArea(content_width, area_height)
         if item then
             if idx > start_idx then table.insert(vg, VerticalSpan:new{ width = MARGIN }) end
             local slot_dimen = Geom:new{ w = content_width, h = row_height }
-            table.insert(vg, self.config.row_renderer(item, slot_dimen))
+            local row = self.config.row_renderer(item, slot_dimen)
+            table.insert(vg, row)
+            -- A renderer signals its focusable cell(s) one of three ways:
+            --   _focus_row   = { w1, w2, ... }  multiple left→right cells in
+            --                  this row (e.g. a preset card + its star toggle),
+            --   _focus_target = <widget>        a single focusable inner widget
+            --                  when the returned widget is a non-focusable
+            --                  wrapper, or
+            --   the returned widget is itself .focusable (e.g. token cards).
+            if row._focus_row then
+                self:_pushFocusRow(row._focus_row)
+            else
+                local focus_target = row._focus_target or (row.focusable and row) or nil
+                if focus_target then self:_pushFocusRow({ focus_target }) end
+            end
         end
     end
     local rendered = end_idx - start_idx + 1
@@ -722,6 +827,7 @@ function LibraryModal:_renderGridArea(content_width, area_height)
     local HorizontalGroup = require("ui/widget/horizontalgroup")
     local vg = VerticalGroup:new{ align = "left" }
     local hg = HorizontalGroup:new{ align = "top" }
+    local focus_row = {}
     local in_row = 0
     for idx = start_idx, end_idx do
         local item = self.config.item_at(idx)
@@ -757,14 +863,18 @@ function LibraryModal:_renderGridArea(content_width, area_height)
                         return true
                     end
                 end
+                LibraryModal._attachFocus(ic, ic[1])
                 cell_widget = ic
+                focus_row[#focus_row + 1] = ic
             end
             table.insert(hg, cell_widget)
             in_row = in_row + 1
             if in_row >= cols then
                 if #vg > 0 then table.insert(vg, VerticalSpan:new{ width = MARGIN }) end
                 table.insert(vg, hg)
+                self:_pushFocusRow(focus_row)
                 hg = HorizontalGroup:new{ align = "top" }
+                focus_row = {}
                 in_row = 0
             end
         end
@@ -772,6 +882,7 @@ function LibraryModal:_renderGridArea(content_width, area_height)
     if in_row > 0 then
         if #vg > 0 then table.insert(vg, VerticalSpan:new{ width = MARGIN }) end
         table.insert(vg, hg)
+        self:_pushFocusRow(focus_row)
     end
     -- Top-align the grid: a partially-filled page (e.g. Dynamic with 4
     -- entries in a 9-cell grid) shouldn't float in the vertical centre
@@ -815,24 +926,22 @@ function LibraryModal:_renderPagination(content_width)
     local pn_span = Screen:scaleBySize(32)
     local function gap() return HorizontalSpan:new{ width = pn_span } end
 
-    local page_nav = HorizontalGroup:new{
-        align = "center",
-        chev("chevron.first", self.page > 1,          function() self.page = 1;              self:refresh() end),
-        gap(),
-        chev("chevron.left",  self.page > 1,          function() self.page = self.page - 1;  self:refresh() end),
-        gap(),
-        Button:new{
-            text = T(_("Page %1 of %2"), self.page, total_pages),
-            text_font_size = 15,
-            bordersize = 0,
-            callback = function() end,
-            show_parent = self,
-        },
-        gap(),
-        chev("chevron.right", self.page < total_pages, function() self.page = self.page + 1; self:refresh() end),
-        gap(),
-        chev("chevron.last",  self.page < total_pages, function() self.page = total_pages;   self:refresh() end),
+    local first_btn = chev("chevron.first", self.page > 1,          function() self.page = 1;              self:refresh() end)
+    local prev_btn  = chev("chevron.left",  self.page > 1,          function() self.page = self.page - 1;  self:refresh() end)
+    local page_btn  = Button:new{
+        text = T(_("Page %1 of %2"), self.page, total_pages),
+        text_font_size = 15, bordersize = 0, callback = function() end, show_parent = self,
     }
+    local next_btn  = chev("chevron.right", self.page < total_pages, function() self.page = self.page + 1; self:refresh() end)
+    local last_btn  = chev("chevron.last",  self.page < total_pages, function() self.page = total_pages;   self:refresh() end)
+    local page_nav = HorizontalGroup:new{
+        align = "center", first_btn, gap(), prev_btn, gap(), page_btn, gap(), next_btn, gap(), last_btn,
+    }
+    if self.page > 1 or self.page < total_pages then
+        -- page_btn ("Page X of Y") is a non-interactive label, so it's omitted
+        -- from the focus row — d-pad skips straight between the chevrons.
+        self:_pushFocusRow({ first_btn, prev_btn, next_btn, last_btn })
+    end
 
     local function divider()
         -- Fresh widget per slot; sharing one across paint positions corrupts
@@ -905,6 +1014,7 @@ function LibraryModal:_renderFooter(content_width)
         })
     end
 
+    self:_pushFocusRow(btns)
     if #btns == 1 then return btns[1] end
 
     local hg = HorizontalGroup:new{ align = "center" }
@@ -922,14 +1032,19 @@ end
 
 function LibraryModal:refresh()
     local Screen = Device.screen
+    -- ORDERING CONTRACT: the section render calls below each push their
+    -- focusable widgets into self._focus_rows as a side-effect, so they MUST
+    -- run in top→bottom visual order for d-pad navigation to feel right.
+    -- Note pagination/footer are deliberately rendered AFTER result_area
+    -- (content) for this reason, even though every section's *visible* slot is
+    -- fixed by the body assembly lower down. Do not reorder these calls.
+    self._focus_rows = {}
     local HorizontalGroup = require("ui/widget/horizontalgroup")
     local cw = self.content_w
     -- modal_w is passed so _renderTitleBar can draw an edge-to-edge separator.
     local title = self:_renderTitleBar(cw, self.modal_w)
     local search = self:_renderSearchInput(cw)
     local chips = self:_renderChipStrip(cw)
-    local pagination = self:_renderPagination(cw)
-    local footer = self:_renderFooter(cw)
 
     -- Sized to fit content rather than a screen fraction, so the dialog isn't
     -- bigger than necessary. Uses the row renderer's intrinsic card height
@@ -974,6 +1089,11 @@ function LibraryModal:refresh()
     else
         result_area = self:_renderListArea(cw, area_height)
     end
+    -- Rendered after the content area so their focus-rows are collected in
+    -- top→bottom screen order (content sits above pagination/footer). The
+    -- visible body assembly below still places them in the same spots.
+    local pagination = self:_renderPagination(cw)
+    local footer = self:_renderFooter(cw)
 
     local body = VerticalGroup:new{
         align = "left",
@@ -995,6 +1115,15 @@ function LibraryModal:refresh()
     end
 
     self.frame[1] = body
+    -- D-pad: assemble the focus grid from the rows collected during this
+    -- rebuild, and re-anchor the cursor so it never points at a now-missing
+    -- cell (page/tab/chip/search all rebuild the tree and shift the rows).
+    self.layout = LibraryModal._buildLayout(self._focus_rows)
+    -- self.selected carries over across rebuilds and is clamped onto the new
+    -- grid — so it always points at a real cell, but on a tab/chip/search
+    -- change (which rebuilds with a different layout) the cursor lands at the
+    -- clamped previous position rather than resetting to {1,1}. Intended.
+    self.selected = LibraryModal._clampSelected(self.layout, self.selected)
     -- Self-bounded dirty rect is sufficient now that the modal is a fixed,
     -- content-derived size. setDirty(nil, ...) was triggering full-screen
     -- repaints that stacked ~1s each on e-ink.

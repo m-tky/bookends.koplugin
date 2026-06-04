@@ -1039,6 +1039,8 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
         card.ges_events.HoldSelect = { GestureRange:new{ ges = "hold", range = card.dimen } }
         card.onHoldSelect = function() opts.on_hold(); return true end
     end
+    local LibraryModal = require("menu.library_modal")
+    LibraryModal._attachFocus(card, card_frame)
 
     -- Right-hand accent column. Local rows show a tappable ★/☆ that toggles
     -- cycle membership. Gallery rows show a ✓ if the preset is already
@@ -1052,13 +1054,30 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
             bold = true,
             fgcolor = Blitbuffer.COLOR_BLACK,
         }
+        -- Reserved focus-border slot (white = invisible) so the star is a
+        -- d-pad-focusable cell beside the card, with no reflow on focus. The
+        -- inner CenterContainer shrinks by the border so the outer size holds.
+        local fb = LibraryModal.FOCUS_BORDER
+        local star_frame = FrameContainer:new{
+            bordersize = fb,
+            color = Blitbuffer.COLOR_WHITE,
+            background = Blitbuffer.COLOR_WHITE,
+            padding = 0,
+            margin = 0,
+            radius = Size.radius.default,
+            CenterContainer:new{
+                dimen = Geom:new{ w = star_width - 2 * fb, h = card_height - 2 * fb },
+                star_widget,
+            },
+        }
         accent_ic = InputContainer:new{
             dimen = Geom:new{ w = star_width, h = card_height },
-            CenterContainer:new{ dimen = Geom:new{ w = star_width, h = card_height }, star_widget },
+            star_frame,
         }
         accent_ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = accent_ic.dimen } } }
         local key = opts.star_key
         accent_ic.onTapSelect = function() self.toggleStar(key); return true end
+        LibraryModal._attachFocus(accent_ic, star_frame)
     elseif opts.installed then
         local check_widget = TextWidget:new{
             text = "\xE2\x9C\x93",  -- ✓
@@ -1074,12 +1093,23 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
         accent_ic = HorizontalSpan:new{ width = star_width }
     end
 
-    table.insert(vg, HorizontalGroup:new{
+    local row_hgroup = HorizontalGroup:new{
         align = "center",
         card,
         HorizontalSpan:new{ width = star_gap },
         accent_ic,
-    })
+    }
+    -- Tell LibraryModal._renderListArea which inner widget(s) are focusable
+    -- (the wrapper HorizontalGroup itself is not). Local rows expose two cells
+    -- — the card body (preview) and the star toggle (favourite) — so d-pad
+    -- Left/Right reaches the star. Gallery/installed/virtual rows have only the
+    -- card body. Drop this and the row vanishes from d-pad navigation.
+    if opts.star_key then
+        row_hgroup._focus_row = { card, accent_ic }
+    else
+        row_hgroup._focus_target = card
+    end
+    table.insert(vg, row_hgroup)
     -- Gap between cards
     table.insert(vg, VerticalSpan:new{ width = Screen:scaleBySize(8) })
 end

@@ -2081,10 +2081,19 @@ function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, u
     small_step = small_step or 1
     if large_step == nil then large_step = 10 end
 
+    -- ButtonDialog:reinit() keeps a stale self.layout (buttondialog.lua:267),
+    -- stranding the d-pad cursor on freed widgets after a nudge. Discard it so
+    -- init() rebuilds, then re-anchor focus next tick. No-op on touch.
+    local function rebuild()
+        dialog.layout = nil
+        dialog:reinit()
+        dialog:refocusWidget(true)
+    end
+
     local function update(delta)
         value = math.max(min_val, math.min(max_val, value + delta))
         on_change(value)
-        dialog:reinit()
+        rebuild()
     end
 
     local nudge_buttons = {}
@@ -2128,7 +2137,7 @@ function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, u
                         UIManager:close(dialog)
                         if on_close then on_close() end
                     else
-                        value = default_val; on_change(value); dialog:reinit()
+                        value = default_val; on_change(value); rebuild()
                     end
                 end },
             }
@@ -2161,6 +2170,15 @@ function Bookends:showNudgeDialog(title, value, min_val, max_val, default_val, u
             return { nudge_buttons, footer }
         end)(),
     }
+    -- dismissable=false makes ButtonDialog skip its own Back binding
+    -- (buttondialog.lua:98), trapping keyed/d-pad users. Re-add only the Back
+    -- key (taps outside stay ignored). Back → ButtonDialog:onClose → our
+    -- tap_close_callback (revert) then close, i.e. Back == Cancel.
+    if Device:hasKeys() then
+        local back_group = util.tableDeepCopy(Device.input.group.Back)
+        table.insert(back_group, Device:hasFewKeys() and "Left" or "Menu")
+        dialog.key_events.Close = { { back_group } }
+    end
     UIManager:show(dialog)
 end
 
