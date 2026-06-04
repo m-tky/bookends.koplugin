@@ -1,0 +1,47 @@
+name: Watch upstream releases
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Hourly
+  workflow_dispatch:
+
+concurrency:
+  group: watch-upstream-releases
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Get latest upstream release tag
+        id: upstream
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=$(gh release view --repo AndyHazz/bookends.koplugin --json tagName -q .tagName)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Latest upstream release: $tag"
+
+      - name: Check if we already mirrored this release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ steps.upstream.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "mirrored=true" >> "$GITHUB_OUTPUT"
+            echo "Release ${{ steps.upstream.outputs.tag }} already mirrored — nothing to do."
+          else
+            echo "mirrored=false" >> "$GITHUB_OUTPUT"
+            echo "Release ${{ steps.upstream.outputs.tag }} not yet mirrored — dispatching sync-upstream."
+          fi
+
+      - name: Dispatch sync-upstream
+        if: steps.check.outputs.mirrored == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run sync-upstream.yml --repo "${{ github.repository }}"
+          echo "sync-upstream dispatched — mirror-release will chain off its completion."
