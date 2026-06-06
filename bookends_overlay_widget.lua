@@ -983,8 +983,14 @@ end
 --- Calculate max_width for each position in a row, applying overlap prevention.
 -- @param priority string: "center" (default) = center gets priority;
 --                         "sides" = left/right get priority, center is truncated first.
+-- @param left_offset number or nil: the left side's horizontal offset+margin.
+-- @param right_offset number or nil: the right side's horizontal offset+margin.
+--   When supplied, a lone side is capped to the true content width
+--   (screen minus BOTH offsets) so it can't run to the screen edge and
+--   collapse the opposite margin (issue #43). Omitted → fall back to the
+--   symmetric 2*h_offset reservation.
 -- Returns { left=max_w|nil, center=max_w|nil, right=max_w|nil }.
-function OverlayWidget.calculateRowLimits(left_w, center_w, right_w, screen_w, gap, h_offset, priority)
+function OverlayWidget.calculateRowLimits(left_w, center_w, right_w, screen_w, gap, h_offset, priority, left_offset, right_offset)
     local limits = { left = nil, center = nil, right = nil }
 
     -- No centre, both sides: flex layout regardless of priority. The priority
@@ -1056,12 +1062,18 @@ function OverlayWidget.calculateRowLimits(left_w, center_w, right_w, screen_w, g
     else
         -- No centre, both sides handled by the early-return flex block above.
         -- This branch only handles the left-only and right-only cases.
+        -- A lone side is anchored at its own offset and must still leave the
+        -- opposite margin intact, so cap to screen minus BOTH offsets. When the
+        -- per-side offsets aren't supplied, reserve the (max) margin on both
+        -- sides via 2*h_offset rather than the near side alone (issue #43).
+        local lo = left_offset or h_offset
+        local ro = right_offset or h_offset
         if left_w and not right_w then
-            local max = math.max(0, screen_w - h_offset)
+            local max = math.max(0, screen_w - lo - ro)
             if left_w > max then limits.left = max end
         end
         if right_w and not left_w then
-            local max = math.max(0, screen_w - h_offset)
+            local max = math.max(0, screen_w - lo - ro)
             if right_w > max then limits.right = max end
         end
     end
