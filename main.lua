@@ -1816,7 +1816,7 @@ function Bookends:_paintToInner(bb, x, y)
 
         local limits = OverlayWidget.calculateRowLimits(
             left_w, center_w, right_w, screen_w, gap, max_h_offset,
-            self.defaults.truncation_priority)
+            self.defaults.truncation_priority, left_h_offset, right_h_offset)
 
         -- Phase 4: Reuse pre-built widgets or rebuild with truncation
         local row_keys = {
