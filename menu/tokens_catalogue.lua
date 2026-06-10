@@ -118,6 +118,7 @@ M.TOKENS = {
     { description = _("Free disk space"), token = "%disk", chip = "device" },
     { description = _("Page X of Y, em-dash framed"), token = "\xE2\x80\x94 Page %page_num of %page_count \xE2\x80\x94", chip = "templates", is_snippet = true },
     { description = _("Title \xE2\x8B\xAE author (italic)"), token = "%title \xE2\x8B\xAE [i]%author[/i]", chip = "templates", is_snippet = true },
+    { description = _("Title in a chosen font"), token = "[font=Noto Sans]%title[/font]", chip = "templates", is_snippet = true },
     { description = _("Bookmark(s) count + label"), token = "%bookmarks Bookmark(s)", chip = "templates", is_snippet = true },
     { description = _("Highlight(s) count + label"), token = "%highlights Highlight(s)", chip = "templates", is_snippet = true },
     { description = _("Hourglass session timer + pages"), token = "\xEE\xB0\x9E %session_time \xC2\xBB %session_pages page session", chip = "templates", is_snippet = true },

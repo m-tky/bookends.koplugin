@@ -124,6 +124,10 @@ local function resolveFontNameToFile(name_or_file)
     return best_file
 end
 
+-- Exposed for the overlay renderer's [font=NAME] span resolution (issue #62),
+-- which needs to turn a font display name into a file the renderer can load.
+Utils.resolveFontNameToFile = resolveFontNameToFile
+
 --- Resolve a font-face string to a concrete file path.
 -- Returns `face` unchanged if it isn't a family sentinel.
 -- Family sentinels resolve via KOReader's font-family map; unmapped slots fall
