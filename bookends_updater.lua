@@ -175,12 +175,13 @@ function Updater.check(on_success)
 
     local installed_version = Updater.getInstalledVersion()
 
+    -- runWhenOnline (parity with bookshelf #77): if Wi-Fi is off, bring it up
+    -- (prompting per the user's KOReader prefs) and re-run once online; if the
+    -- user cancels, nothing happens. Stronger than isWifiOn — also handles
+    -- "radio on but connection dead".
     local NetworkMgr = require("ui/network/manager")
-    if not NetworkMgr:isWifiOn() then
-        UIManager:show(InfoMessage:new{
-            text = _("Wi-Fi is not enabled."),
-            timeout = 3,
-        })
+    if not NetworkMgr:isOnline() then
+        NetworkMgr:runWhenOnline(function() Updater.check(on_success) end)
         return
     end
 
@@ -298,6 +299,16 @@ end
 
 function Updater.install(zip_url, old_version, new_version, on_success, error_label)
 
+    -- Single Wi-Fi gate for every install path (release, branch, latest-stable):
+    -- bring Wi-Fi up if off and re-run once online; cancel = no-op (bookshelf #77).
+    local NetworkMgr = require("ui/network/manager")
+    if not NetworkMgr:isOnline() then
+        NetworkMgr:runWhenOnline(function()
+            Updater.install(zip_url, old_version, new_version, on_success, error_label)
+        end)
+        return
+    end
+
     local DataStorage = require("datastorage")
     local lfs = require("libs/libkoreader-lfs")
 
@@ -408,15 +419,7 @@ end
 -- @param branch string: branch name (e.g. "feature/v5.2-test")
 -- @param on_success function or nil: fired after successful unpack
 function Updater.installBranch(branch, on_success)
-    local NetworkMgr = require("ui/network/manager")
-    if not NetworkMgr:isWifiOn() then
-        UIManager:show(InfoMessage:new{
-            text = _("Wi-Fi is not enabled."),
-            timeout = 3,
-        })
-        return
-    end
-
+    -- Wi-Fi is handled by Updater.install's runWhenOnline gate.
     local installed_version = Updater.getInstalledVersion()
     local zip_url = Updater.composeBranchUrl(branch)
     local error_label = _("Could not install branch:") .. " " .. branch
@@ -429,12 +432,11 @@ end
 -- pull the release zip and re-stamp last_install_source = "release".
 -- @param on_success function or nil: fired after successful unpack
 function Updater.installLatestStable(on_success)
+    -- runWhenOnline gate (bookshelf #77); this path does its own release fetch
+    -- before delegating to Updater.install.
     local NetworkMgr = require("ui/network/manager")
-    if not NetworkMgr:isWifiOn() then
-        UIManager:show(InfoMessage:new{
-            text = _("Wi-Fi is not enabled."),
-            timeout = 3,
-        })
+    if not NetworkMgr:isOnline() then
+        NetworkMgr:runWhenOnline(function() Updater.installLatestStable(on_success) end)
         return
     end
 

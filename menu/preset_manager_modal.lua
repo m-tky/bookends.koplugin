@@ -663,6 +663,12 @@ function PresetManagerModal.show(bookends)
     -- this modal only — nothing is persisted to disk.
     self.refreshGallery = function()
         if self.gallery_loading then return end
+        -- Bring Wi-Fi up if it's off (prompt per the user's KOReader prefs) and
+        -- load once online; cancel = no-op. Loading state is set inside the
+        -- callback so a cancelled prompt leaves the gallery untouched
+        -- (parity with bookshelf's runWhenOnline, issue #77).
+        local NetworkMgr = require("ui/network/manager")
+        NetworkMgr:runWhenOnline(function()
         local Gallery = require("preset_gallery")
         self.gallery_loading = true
         self.gallery_error = nil
@@ -698,6 +704,7 @@ function PresetManagerModal.show(bookends)
                     self.rebuild()
                 end)
             end)
+        end)
         end)
     end
     self.setGallerySort = function(mode)
@@ -1546,6 +1553,10 @@ local function submitToGalleryImpl(self, entry)
                         end
                     end
                 end
+                -- Bring Wi-Fi up if it's off (prompt per the user's prefs) and
+                -- submit once online; cancel = no-op (parity with bookshelf #77).
+                local NetworkMgr = require("ui/network/manager")
+                NetworkMgr:runWhenOnline(function()
                 Notification:notify(_("Submitting to gallery…"))
                 local Gallery = require("preset_gallery")
                 local submission = {
@@ -1577,6 +1588,7 @@ local function submitToGalleryImpl(self, entry)
                         end
                         UIManager:show(require("ui/widget/infomessage"):new{ text = msg })
                     end
+                end)
                 end)
             end,
         }

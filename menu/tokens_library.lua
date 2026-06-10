@@ -224,6 +224,15 @@ Tokens are placeholders that get replaced with live data each time the preset re
   %title — %page_num/%page_count
   → 1984 — 12/268
 
+INLINE STYLING
+
+Wrap a span of text to restyle just that part:
+  [b]…[/b] bold   [i]…[/i] italic   [u]…[/u] UPPERCASE
+  [c=50]…[/c] grey 0–100   [c=#RRGGBB]…[/c] colour
+  [font=Name]…[/font] switch font for the span
+
+The font Name is the display name shown in KOReader's font menu, e.g. [font=Noto Sans]%title[/font]. Spaces are fine. If that font isn't installed on the device, the span falls back to the line's font, so presets stay readable when shared.
+
 CONDITIONALS
 
 Wrap content in [if:condition]…[/if] to show it only when the condition is true. Add an [else]…[/if] branch for an alternative.

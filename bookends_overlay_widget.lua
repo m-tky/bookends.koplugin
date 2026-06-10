@@ -95,6 +95,27 @@ end
 -- Cache for font variant lookups (face_name:style -> path or false)
 local _variant_cache = {}
 
+-- Cache for [font=NAME] resolution (display name -> file path, or false if the
+-- font isn't installed). Resolving goes through bookends_utils, which asks CRE
+-- (matching KOReader's font menu); cache to keep the per-segment render cheap.
+local _font_file_cache = {}
+local function resolveSegFontFile(name)
+    local cached = _font_file_cache[name]
+    if cached ~= nil then
+        return cached or nil
+    end
+    local file
+    local ok, Utils = pcall(require, "bookends_utils")
+    if ok and Utils and Utils.resolveFontNameToFile then
+        local ok2, res = pcall(Utils.resolveFontNameToFile, name)
+        if ok2 and type(res) == "string" and res ~= "" then
+            file = res
+        end
+    end
+    _font_file_cache[name] = file or false
+    return file
+end
+
 --- Find a style variant (bold, italic, bolditalic) of a font by filename patterns.
 -- Searches installed fonts for variants matching common naming conventions.
 -- Results are cached per (face_name, style) pair.
@@ -665,6 +686,7 @@ function OverlayWidget.parseStyledSegments(text, base_bold, base_italic, base_up
     local segments = {}
     local stack = {}  -- style stack: each entry is "b", "i", or "u"
     local color_stack = {}  -- color stack: each entry is a {grey=N} or {hex=H} table
+    local font_stack = {}  -- font stack: each entry is a font display name (string)
     local pos = 1
     local pending = ""  -- accumulates text between tags
     local found_tags = false
@@ -690,12 +712,19 @@ function OverlayWidget.parseStyledSegments(text, base_bold, base_italic, base_up
         return color_stack[#color_stack]
     end
 
+    local function currentFont()
+        if #font_stack == 0 then return nil end
+        return font_stack[#font_stack]
+    end
+
     local function flushPending()
         if pending == "" then return end
         local bold, italic, uppercase = currentStyle()
         local seg = { text = pending, bold = bold, italic = italic, uppercase = uppercase }
         local clr = currentColor()
         if clr then seg.color = clr end
+        local fnt = currentFont()
+        if fnt then seg.font = fnt end
         table.insert(segments, seg)
         pending = ""
     end
@@ -718,6 +747,8 @@ function OverlayWidget.parseStyledSegments(text, base_bold, base_italic, base_up
             seg.color = symbol_color
             found_tags = true  -- parser applied meaningful colouring, not just plain text
         end
+        local fnt = currentFont()
+        if fnt then seg.font = fnt end
         table.insert(segments, seg)
     end
 
@@ -747,6 +778,28 @@ function OverlayWidget.parseStyledSegments(text, base_bold, base_italic, base_up
             table.insert(stack, tag)
             found_tags = true
             pos = pos + 3  -- [b] = 3 chars
+        -- Check for closing font tag [/font]
+        elseif text:match("^%[/font%]", pos) then
+            if #font_stack > 0 then
+                flushPending()
+                table.remove(font_stack)
+                found_tags = true
+                pos = pos + 7  -- [/font] = 7 chars
+            else
+                -- Mismatched close — render entire line as plain text
+                return nil, false
+            end
+        -- Check for opening font tag [font=NAME]. NAME is read verbatim up to the
+        -- first ']' and trimmed, so font display names with spaces work
+        -- (e.g. [font=BIZ UDPMincho]). Resolution to an actual face happens in
+        -- buildStyledLine; an unknown name there falls back to the line font.
+        elseif text:match("^%[font=[^%]]*%]", pos) then
+            local raw, end_pos = text:match("^%[font=([^%]]*)()%]", pos)
+            local name = (raw or ""):gsub("^%s*(.-)%s*$", "%1")
+            flushPending()
+            table.insert(font_stack, name)
+            found_tags = true
+            pos = end_pos + 1  -- skip past the ']'
         -- Check for closing colour tag [/c]
         elseif text:match("^%[/c%]", pos) then
             if #color_stack > 0 then
@@ -835,6 +888,9 @@ function OverlayWidget.parseStyledSegments(text, base_bold, base_italic, base_up
     if #color_stack > 0 then
         return nil, false
     end
+    if #font_stack > 0 then
+        return nil, false
+    end
 
     if not found_tags then
         return nil, false
@@ -865,18 +921,32 @@ function OverlayWidget.buildStyledLine(segments, cfg, available_w, max_width)
         else
             local display = seg.uppercase and Utf8Proc.uppercase_dumb(seg.text) or seg.text
             if display ~= "" then
+                -- Resolve the segment's base font family. A [font=NAME] span
+                -- (seg.font) overrides the line's family for this segment only;
+                -- if NAME can't be resolved (font not installed) we silently keep
+                -- the line font, so shared presets degrade gracefully.
+                local base_face = cfg.face
+                local base_face_name = cfg.face_name
+                if seg.font then
+                    local file = resolveSegFontFile(seg.font)
+                    if file then
+                        base_face_name = file
+                        base_face = Font:getFace(file, cfg.font_size)
+                    end
+                end
+
                 -- Resolve font face and synthetic bold for this segment
-                local seg_face = cfg.face
+                local seg_face = base_face
                 local seg_synthetic_bold = false
-                if cfg.face_name and (seg.bold or seg.italic) then
+                if base_face_name and (seg.bold or seg.italic) then
                     local style = (seg.bold and seg.italic and "bolditalic")
                         or (seg.bold and "bold") or "italic"
-                    local variant = OverlayWidget.findFontVariant(cfg.face_name, style)
+                    local variant = OverlayWidget.findFontVariant(base_face_name, style)
                     if variant then
                         seg_face = Font:getFace(variant, cfg.font_size)
                     elseif style == "bolditalic" then
                         -- Fallback: italic file + synthetic bold
-                        local italic = OverlayWidget.findFontVariant(cfg.face_name, "italic")
+                        local italic = OverlayWidget.findFontVariant(base_face_name, "italic")
                         if italic then
                             seg_face = Font:getFace(italic, cfg.font_size)
                         end
