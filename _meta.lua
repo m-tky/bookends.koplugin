@@ -6,5 +6,5 @@ return {
     -- WARN on every plugin load in nightly builds.
     fullname = _("Bookends"),
     description = _([[Configurable text overlays at screen corners and edges with token expansion and icon support.]]),
-    version = "5.14.1",
+    version = "5.15.0",
 }
