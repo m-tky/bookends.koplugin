@@ -23,6 +23,7 @@ package.loaded["ui/widget/verticalgroup"]                 = stub()
 package.loaded["ui/widget/verticalspan"]                  = stub()
 package.loaded["ui/widget/horizontalgroup"]               = stub()
 package.loaded["ui/widget/horizontalspan"]                = stub()
+package.loaded["ui/widget/container/centercontainer"]     = stub()
 package.loaded["ui/font"]                                 = { getFace = function() return {} end }
 package.loaded["ui/widget/textwidget"]                    = stub()
 package.loaded["ui/widget/container/inputcontainer"]      = stub()

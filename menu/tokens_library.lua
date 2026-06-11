@@ -18,6 +18,9 @@ local UIManager = require("ui/uimanager")
 local Utils = require("bookends_utils")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
+local HorizontalGroup = require("ui/widget/horizontalgroup")
+local HorizontalSpan = require("ui/widget/horizontalspan")
+local CenterContainer = require("ui/widget/container/centercontainer")
 local _ = require("bookends_i18n").gettext
 
 local Screen = Device.screen
@@ -151,14 +154,19 @@ end
 ---   Line 2:        for conditionals: expression; for tokens: '%token → live'
 ---                  (or just the literal if expansion fails or no ctx);
 ---                  for snippets: full template.
-function TokensLibrary._renderRow(item, slot_dimen, doc_ctx)
+function TokensLibrary._renderRow(item, slot_dimen, doc_ctx, is_fav, on_select, on_toggle_fav)
     local Font = require("ui/font")
     local TextWidget = require("ui/widget/textwidget")
     local InputContainer = require("ui/widget/container/inputcontainer")
     local GestureRange = require("ui/gesturerange")
     local inner_pad = Screen:scaleBySize(12)
     local card_h = slot_dimen.h
-    local content_w = slot_dimen.w - 2 * inner_pad - 2 * Size.border.thin
+    -- Reserve a right-hand star column (matches preset_manager_modal layout:
+    -- 40px star + 6px gap). The card occupies the remaining width.
+    local star_width = Screen:scaleBySize(40)
+    local star_gap = Screen:scaleBySize(6)
+    local card_outer_w = slot_dimen.w - star_gap - star_width
+    local content_w = card_outer_w - 2 * inner_pad - 2 * Size.border.thin
 
     local line1 = TextWidget:new{
         text = item.description or "",
@@ -239,14 +247,56 @@ function TokensLibrary._renderRow(item, slot_dimen, doc_ctx)
         },
     }
     local card = InputContainer:new{
-        dimen = Geom:new{ w = slot_dimen.w, h = card_h },
+        dimen = Geom:new{ w = card_outer_w, h = card_h },
         card_frame,
     }
     card.ges_events = {
         TapSelect = { GestureRange:new{ ges = "tap", range = card.dimen } },
     }
+    card.onTapSelect = function() if on_select then on_select() end; return true end
     LibraryModal._attachFocus(card, card_frame)
-    return card
+
+    -- Right-hand tappable star, same glyphs/size as the preset chooser
+    -- (preset_manager_modal.lua): ★ filled = favourited, ☆ outline = not.
+    local star_widget = TextWidget:new{
+        text = is_fav and "\xE2\x98\x85" or "\xE2\x98\x86",
+        face = Font:getFace("infofont", 22),
+        bold = true,
+        fgcolor = Blitbuffer.COLOR_BLACK,
+    }
+    -- Reserved focus-border slot (white = invisible) so the star is a
+    -- d-pad-focusable cell with no glyph reflow on focus. The inner
+    -- CenterContainer shrinks by the border so the outer size holds.
+    -- Mirrors preset_manager_modal.lua's accent-column star.
+    local fb = LibraryModal.FOCUS_BORDER
+    local star_frame = FrameContainer:new{
+        bordersize = fb, color = Blitbuffer.COLOR_WHITE,
+        padding = 0, margin = 0, radius = Size.radius.default,
+        background = Blitbuffer.COLOR_WHITE,
+        CenterContainer:new{
+            dimen = Geom:new{ w = star_width - 2 * fb, h = card_h - 2 * fb },
+            star_widget,
+        },
+    }
+    local star_ic = InputContainer:new{
+        dimen = Geom:new{ w = star_width, h = card_h },
+        star_frame,
+    }
+    star_ic.ges_events = {
+        TapSelect = { GestureRange:new{ ges = "tap", range = star_ic.dimen } },
+    }
+    star_ic.onTapSelect = function() if on_toggle_fav then on_toggle_fav() end; return true end
+    LibraryModal._attachFocus(star_ic, star_frame)
+
+    local row = HorizontalGroup:new{
+        align = "center",
+        card,
+        HorizontalSpan:new{ width = star_gap },
+        star_ic,
+    }
+    -- Both cells d-pad reachable left->right (LibraryModal reads _focus_row).
+    row._focus_row = { card, star_ic }
+    return row
 end
 
 --- Show the tokens library modal. on_select(value) is called with the
@@ -356,18 +406,24 @@ EXAMPLES
         item_count = function() return #items() end,
         item_at = function(idx) return items()[idx] end,
         row_renderer = function(item, dimen)
-            local row = TokensLibrary._renderRow(item, dimen, doc_ctx)
-            -- Bind the tap inside the row_renderer closure rather than via a
-            -- generic config.on_item_tap hook — the row's InputContainer is
-            -- already gesture-ranged in _renderRow, we just need to attach
-            -- the action that fires the on_select callback + closes the modal.
-            row.onTapSelect = function()
-                local val = item.token or item.expression
+            local val = item.token or item.expression
+            local favs = bookends.settings:readSetting("token_favourites") or {}
+            local is_fav = TokensLibrary._isFavourite(favs, val)
+            -- Card tap: insert the token + close. Star tap: toggle favourite,
+            -- persist, and refresh the modal so the glyph + (in the Favourites
+            -- view) the filtered list both update.
+            local function selectRow()
                 if self_ref.modal then UIManager:close(self_ref.modal); self_ref.modal = nil end
                 if on_select and val then on_select(val) end
-                return true
             end
-            return row
+            local function toggleFav()
+                if not val then return end
+                local cur = bookends.settings:readSetting("token_favourites") or {}
+                bookends.settings:saveSetting("token_favourites",
+                    TokensLibrary._toggleFavourite(cur, val))
+                if self_ref.modal then self_ref.modal:refresh() end
+            end
+            return TokensLibrary._renderRow(item, dimen, doc_ctx, is_fav, selectRow, toggleFav)
         end,
         footer_actions = {
             { key = "close", label = _("Close"), on_tap = function()
