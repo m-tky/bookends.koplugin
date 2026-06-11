@@ -21,6 +21,8 @@ local VerticalSpan = require("ui/widget/verticalspan")
 local HorizontalGroup = require("ui/widget/horizontalgroup")
 local HorizontalSpan = require("ui/widget/horizontalspan")
 local CenterContainer = require("ui/widget/container/centercontainer")
+local Font = require("ui/font")
+local TextWidget = require("ui/widget/textwidget")
 local _ = require("bookends_i18n").gettext
 
 local Screen = Device.screen
@@ -155,8 +157,6 @@ end
 ---                  (or just the literal if expansion fails or no ctx);
 ---                  for snippets: full template.
 function TokensLibrary._renderRow(item, slot_dimen, doc_ctx, is_fav, on_select, on_toggle_fav)
-    local Font = require("ui/font")
-    local TextWidget = require("ui/widget/textwidget")
     local InputContainer = require("ui/widget/container/inputcontainer")
     local GestureRange = require("ui/gesturerange")
     local inner_pad = Screen:scaleBySize(12)
@@ -311,6 +311,13 @@ function TokensLibrary:show(bookends, on_select)
     -- query change; nothing else mutates the underlying catalogues.
     local items_key, items_cache = nil, nil
     local function items()
+        -- Favourites view: never cache -- a star toggle mutates the list
+        -- without changing the (chip, query) key, and the list is small.
+        if state.active_chip == "favourites" then
+            local favs = bookends.settings:readSetting("token_favourites") or {}
+            items_key = nil  -- force a fresh build on the next non-favourites view
+            return TokensLibrary._currentItems("favourites", state.search_query, favs)
+        end
         local key = (state.active_chip or "") .. "\0" .. (state.search_query or "")
         if items_key ~= key then
             items_cache = TokensLibrary._currentItems(state.active_chip, state.search_query)
@@ -368,7 +375,15 @@ EXAMPLES
   [if:not series]Standalone[/if]
 ]]),
         chip_strip = function()
-            local out = {}
+            -- Favourites is injected here (not in tokens_catalogue.lua's CHIPS)
+            -- because the curator web app overwrites the catalogue file wholesale.
+            local out = {
+                {
+                    key = "favourites",
+                    label = _("\xE2\x98\x85 Favourites"),
+                    is_active = (state.active_chip == "favourites") and true or false,
+                },
+            }
             for _i, c in ipairs(CHIPS) do
                 out[#out + 1] = {
                     key = c.key, label = c.label,
@@ -392,6 +407,20 @@ EXAMPLES
             end
         end,
         search_placeholder = function() return _("Search tokens by name, value, or expression…") end,
+        empty_state = function(content_width, area_height)
+            if state.active_chip ~= "favourites" then return nil end
+            local hint = TextWidget:new{
+                -- Plain hyphen, no em dash (project style).
+                text = _("No favourites yet. Tap the \xE2\x98\x86 on any token to add it."),
+                face = Font:getFace("cfont", 15),
+                fgcolor = Blitbuffer.COLOR_GRAY_5,
+                max_width = content_width - Screen:scaleBySize(24),
+            }
+            return CenterContainer:new{
+                dimen = Geom:new{ w = content_width, h = area_height },
+                hint,
+            }
+        end,
         on_search_submit = function(query)
             state.search_query = query
             -- Search hits the merged TOKENS + CONDITIONALS pool regardless
