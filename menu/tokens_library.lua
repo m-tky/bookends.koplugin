@@ -32,12 +32,71 @@ local CHIPS = Catalogue.CHIPS
 TokensLibrary.TOKENS = Catalogue.TOKENS
 TokensLibrary.CONDITIONALS = Catalogue.CONDITIONALS
 
+--- Favourites are stored in the `token_favourites` plugin setting as an
+--- ordered array of token value strings (item.token or item.expression),
+--- most-recent first. These helpers are pure (operate on plain tables, no
+--- settings/widget access) so they're unit-testable; persistence + rebuild
+--- live in TokensLibrary:show. Exposed on the module table for tests.
+
+--- True if `key` is in the favourites array.
+function TokensLibrary._isFavourite(favs, key)
+    if not favs or not key then return false end
+    for _i = 1, #favs do
+        if favs[_i] == key then return true end
+    end
+    return false
+end
+
+--- Returns a NEW favourites array (never mutates `favs`): prepend `key` when
+--- absent (most-recent first), remove it when present.
+function TokensLibrary._toggleFavourite(favs, key)
+    favs = favs or {}
+    local out, found = {}, false
+    for _i = 1, #favs do
+        if favs[_i] == key then
+            found = true
+        else
+            out[#out + 1] = favs[_i]
+        end
+    end
+    if not found then table.insert(out, 1, key) end
+    return out
+end
+
+--- Intersect catalogue `items` with `favs`, returned in favs order
+--- (most-recent first). Items are keyed by their value string (token or
+--- expression). Favourites with no matching catalogue entry (e.g. the curator
+--- later removed the token) are silently skipped — self-cleaning, no migration.
+function TokensLibrary._filterFavourites(items, favs)
+    favs = favs or {}
+    local by_value = {}
+    for _i = 1, #items do
+        local it = items[_i]
+        local val = it.token or it.expression
+        if val and by_value[val] == nil then by_value[val] = it end
+    end
+    local out = {}
+    for _i = 1, #favs do
+        local it = by_value[favs[_i]]
+        if it then out[#out + 1] = it end
+    end
+    return out
+end
+
 --- Filter the merged token + conditional list by chip and search query.
 --- All chip → both lists merged; If/else chip → conditionals only; other
 --- chips → tokens with matching chip tag.
-function TokensLibrary._currentItems(active_chip, search_query)
+function TokensLibrary._currentItems(active_chip, search_query, favourites)
     local items = {}
-    if active_chip == "all" or not active_chip then
+    if active_chip == "favourites" then
+        -- Full merged catalogue intersected with the favourites set, kept in
+        -- favourites order (most-recent first). favourites passed in by show
+        -- so this stays pure/testable (no settings access here).
+        local merged = {}
+        for _i, t in ipairs(TokensLibrary.TOKENS) do merged[#merged + 1] = t end
+        for _i, c in ipairs(TokensLibrary.CONDITIONALS) do merged[#merged + 1] = c end
+        items = TokensLibrary._filterFavourites(merged, favourites or {})
+    elseif active_chip == "all" or not active_chip then
         for _i, t in ipairs(TokensLibrary.TOKENS) do items[#items + 1] = t end
         for _i, c in ipairs(TokensLibrary.CONDITIONALS) do items[#items + 1] = c end
     else
