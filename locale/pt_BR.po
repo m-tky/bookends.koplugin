@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-10 21:05+0100\n"
+"POT-Creation-Date: 2026-06-13 00:14+0100\n"
 "Language: pt_BR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -34,7 +34,7 @@ msgid "Version: "
 msgstr "Versão: "
 
 #: bookends_updater.lua:267 bookends_line_editor.lua:451 main.lua:2654
-#: menu/tokens_library.lua:314 menu/icons_library.lua:355
+#: menu/tokens_library.lua:458 menu/icons_library.lua:355
 #: menu/preset_manager_modal.lua:561
 msgid "Close"
 msgstr "Fechar"
@@ -1331,15 +1331,15 @@ msgstr "Espaço de truncamento"
 msgid "Prioritise left/right and truncate long center text"
 msgstr "Priorizar esq./dir. e truncar centro longo"
 
-#: menu/tokens_library.lua:219
+#: menu/tokens_library.lua:335
 msgid "Tokens library"
 msgstr "Biblioteca de tokens"
 
-#: menu/tokens_library.lua:220
+#: menu/tokens_library.lua:336
 msgid "Tokens & conditionals"
 msgstr "Tokens e condicionais"
 
-#: menu/tokens_library.lua:221
+#: menu/tokens_library.lua:337
 msgid ""
 "TOKENS\n"
 "\n"
@@ -1395,7 +1395,10 @@ msgid ""
 msgstr ""
 "TOKENS\n"
 "\n"
-"Tokens são marcadores que são substituídos por dados ao vivo cada vez que o preset é renderizado. Cada item nos chips Livro / Progresso / Hora / Sessão / Dispositivo é um token, escrito como %name. Eles se expandem inline:\n"
+"Tokens são marcadores que são substituídos por dados ao vivo cada vez que o "
+"preset é renderizado. Cada item nos chips Livro / Progresso / Hora / "
+"Sessão / Dispositivo é um token, escrito como %name. Eles se expandem "
+"inline:\n"
 "  %title — %page_num/%page_count\n"
 "  → 1984 — 12/268\n"
 "\n"
@@ -1406,11 +1409,16 @@ msgstr ""
 "  [c=50]…[/c] cinza 0–100   [c=#RRGGBB]…[/c] cor\n"
 "  [font=Name]…[/font] trocar fonte para o trecho\n"
 "\n"
-"O Name da fonte é o nome exibido no menu de fontes do KOReader, ex. [font=Noto Sans]%title[/font]. Espaços são permitidos. Se a fonte não estiver instalada no dispositivo, o trecho usa a fonte da linha, então os presets continuam legíveis ao serem compartilhados.\n"
+"O Name da fonte é o nome exibido no menu de fontes do KOReader, ex. "
+"[font=Noto Sans]%title[/font]. Espaços são permitidos. Se a fonte não "
+"estiver instalada no dispositivo, o trecho usa a fonte da linha, então os "
+"presets continuam legíveis ao serem compartilhados.\n"
 "\n"
 "CONDICIONAIS\n"
 "\n"
-"Envolva conteúdo em [if:condição]…[/if] para mostrá-lo apenas quando a condição for verdadeira. Adicione um ramo [else]…[/if] para uma alternativa.\n"
+"Envolva conteúdo em [if:condição]…[/if] para mostrá-lo apenas quando a "
+"condição for verdadeira. Adicione um ramo [else]…[/if] para uma "
+"alternativa.\n"
 "\n"
 "OPERADORES\n"
 "  =    igual                 !=  diferente\n"
@@ -1420,11 +1428,18 @@ msgstr ""
 "\n"
 "  Exemplo:  [if:batt<20 and not charging]LOW[/if]\n"
 "\n"
-"Verificação de verdade: um simples [if:chave] testa se a chave está definida, é diferente de zero e não é \"off\"/\"no\". Útil para [if:title]…[/if], [if:author]…[/if], [if:series]…[/if].\n"
+"Verificação de verdade: um simples [if:chave] testa se a chave está "
+"definida, é diferente de zero e não é \"off\"/\"no\". Útil para [if:title]…[/"
+"if], [if:author]…[/if], [if:series]…[/if].\n"
 "\n"
-"Comparação por referência de token: =@token compara com o valor atual de outro token, ex. [if:chap_title_1!=@title]…[/if] oculta o título do capítulo quando ele é igual ao título do livro.\n"
+"Comparação por referência de token: =@token compara com o valor atual de "
+"outro token, ex. [if:chap_title_1!=@title]…[/if] oculta o título do capítulo "
+"quando ele é igual ao título do livro.\n"
 "\n"
-"Para a lista completa de chaves de estado condicionais (wifi, batt, light_pct, night, time, format, …) navegue pelo chip Se/senão — cada entrada de referência ali mostra a chave exata e a sintaxe do operador para uma condição.\n"
+"Para a lista completa de chaves de estado condicionais (wifi, batt, "
+"light_pct, night, time, format, …) navegue pelo chip Se/senão — cada entrada "
+"de referência ali mostra a chave exata e a sintaxe do operador para uma "
+"condição.\n"
 "\n"
 "EXEMPLOS\n"
 "\n"
@@ -1433,11 +1448,19 @@ msgstr ""
 "  [if:time>=18:00 and time<18:30]6–6:30[/if]\n"
 "  [if:not series]Standalone[/if]\n"
 
-#: menu/tokens_library.lua:285
+#: menu/tokens_library.lua:383
+msgid "★ Favourites"
+msgstr "★ Favoritos"
+
+#: menu/tokens_library.lua:409
 msgid "Search tokens by name, value, or expression…"
 msgstr "Buscar tokens por nome, valor ou expressão…"
 
-#: menu/tokens_library.lua:317
+#: menu/tokens_library.lua:414
+msgid "No favourites yet. Tap the ☆ on any token to add it."
+msgstr "Nenhum favorito ainda. Toque no ☆ em qualquer token para adicionar."
+
+#: menu/tokens_library.lua:461
 msgid "Help"
 msgstr "Ajuda"
 
@@ -2012,6 +2035,9 @@ msgid ""
 "across the screen. Choose a colour to enable, hold this row or tap Default "
 "in the picker to turn off."
 msgstr ""
+"Preenchimento sólido desenhado atrás das regiões de sobreposição superior e "
+"inferior, de borda a borda na tela. Escolha uma cor para ativar, mantenha "
+"pressionada esta linha ou toque em Padrão no seletor para desativar."
 
 #: menu/library_modal.lua:442
 msgid "Search…"
