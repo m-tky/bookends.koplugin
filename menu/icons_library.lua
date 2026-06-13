@@ -4,6 +4,7 @@
 
 local Blitbuffer = require("ffi/blitbuffer")
 local CenterContainer = require("ui/widget/container/centercontainer")
+local DataStorage = require("datastorage")
 local Device = require("device")
 local FrameContainer = require("ui/widget/container/framecontainer")
 local Geom = require("ui/geometry")
@@ -14,6 +15,7 @@ local UIManager = require("ui/uimanager")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
 local Catalogue = require("menu.icons_catalogue")
+local lfs = require("libs/libkoreader-lfs")
 local _ = require("bookends_i18n").gettext
 local T = require("ffi/util").template
 
@@ -213,6 +215,42 @@ local function currentItemList(state)
         return getAllNerdFontCells()
     end
     return projectCuratedItems(state.active_chip)
+end
+
+-- Scan KOReader's standard user icons dir (koreader/icons/) for user-supplied
+-- images. Top-level *.svg / *.png only (plugins keep their own subdirs here,
+-- e.g. casualchess/ -- we don't recurse). .svg wins over a same-named .png.
+-- Filenames containing ']' are skipped: the [icon=NAME] tag reads NAME up to
+-- the first ']', so such a name couldn't round-trip. Cached per session.
+local _user_icons = nil
+function IconsLibrary._scanUserIcons()
+    if _user_icons then return _user_icons end
+    _user_icons = {}
+    local dir = DataStorage:getDataDir() .. "/icons"
+    if lfs.attributes(dir, "mode") ~= "directory" then return _user_icons end
+    local seen = {}
+    -- Two passes so .svg takes precedence over a same-named .png.
+    local function collect(want_ext)
+        for f in lfs.dir(dir) do
+            local name, ext = f:match("^(.+)%.([^.]+)$")
+            if name and ext and ext:lower() == want_ext
+                    and not seen[name]
+                    and not name:find("]", 1, true)
+                    and lfs.attributes(dir .. "/" .. f, "mode") == "file" then
+                seen[name] = true
+                _user_icons[#_user_icons + 1] = {
+                    icon = name,
+                    label = name,
+                    insert_value = "[icon=" .. name .. "]",
+                    is_image = true,
+                }
+            end
+        end
+    end
+    collect("svg")
+    collect("png")
+    table.sort(_user_icons, function(a, b) return a.label:lower() < b.label:lower() end)
+    return _user_icons
 end
 
 -- Render a single icon cell: glyph centred large, label below.
