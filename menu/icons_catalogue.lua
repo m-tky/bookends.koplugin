@@ -30,6 +30,7 @@ M.CHIPS = {
     { key = "arrows", label = _("Arrows") },
     { key = "blocks", label = _("Blocks") },
     { key = "separators", label = _("Separators") },
+    { key = "svg", label = _("SVG") },
 }
 
 M.CURATED_BY_CHIP = {

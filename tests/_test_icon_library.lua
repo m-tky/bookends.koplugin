@@ -48,6 +48,7 @@ package.loaded["ui/widget/verticalspan"] = noop_tbl()
 package.loaded["menu.icons_catalogue"] = { CHIPS = {}, CURATED_BY_CHIP = {}, PATTERNS_BY_CHIP = {}, PATTERN_EXCLUDES = {} }
 package.loaded["bookends_i18n"] = { gettext = function(s) return s end }
 package.loaded["ffi/util"] = { template = function(s) return s end }
+package.loaded["bookends_nerdfont_names"] = { { name = "heartbeat", code = 0xF21E } }
 
 local IconsLibrary = dofile("menu/icons_library.lua")
 
@@ -84,6 +85,21 @@ test("results are sorted alphabetically by label", function()
     for i = 2, #cells do
         assert(cells[i-1].label:lower() <= cells[i].label:lower(), "sorted at index " .. i)
     end
+end)
+
+test("svg chip returns the scanned user icons", function()
+    local items = IconsLibrary._itemList("svg", nil)
+    assert(#items > 0, "svg chip non-empty")
+    assert(items[1].is_image, "svg chip yields image cells")
+end)
+
+test("search surfaces matching user icons by filename", function()
+    local items = IconsLibrary._itemList("all", "heart")
+    local found = false
+    for _, c in ipairs(items) do
+        if c.is_image and c.label == "heart" then found = true end
+    end
+    assert(found, "user icon 'heart' present in search results for 'heart'")
 end)
 
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))

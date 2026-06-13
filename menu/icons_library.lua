@@ -190,8 +190,21 @@ local function currentItemList(state)
         for term in state.search_query:lower():gmatch("%S+") do
             terms[#terms + 1] = term
         end
-        local cells = getAllNerdFontCells()
         local items = {}
+        -- User SVG/PNG icons match on filename and surface first, so custom
+        -- icons aren't buried under ~2,800 nerd-font hits.
+        for _i, cell in ipairs(IconsLibrary._scanUserIcons()) do
+            local lc = cell.label:lower()
+            local m = true
+            for _t = 1, #terms do
+                if not lc:find(terms[_t], 1, true) then m = false; break end
+            end
+            if m then
+                items[#items + 1] = cell
+                if #items >= 200 then return items end
+            end
+        end
+        local cells = getAllNerdFontCells()
         for _i, cell in ipairs(cells) do
             local lc = cell.search_lc
             local match = true
@@ -208,6 +221,9 @@ local function currentItemList(state)
         end
         return items
     end
+    if state.active_chip == "svg" then
+        return IconsLibrary._scanUserIcons()
+    end
     if state.active_chip == "all" or not state.active_chip then
         -- All: the entire Nerd Font index (~2,800 entries) for free browsing,
         -- alphabetised by cmap name. Curated category chips show smaller
@@ -215,6 +231,11 @@ local function currentItemList(state)
         return getAllNerdFontCells()
     end
     return projectCuratedItems(state.active_chip)
+end
+
+-- Test/seam wrapper around the file-local currentItemList.
+function IconsLibrary._itemList(active_chip, search_query)
+    return currentItemList({ active_chip = active_chip, search_query = search_query })
 end
 
 -- Scan KOReader's standard user icons dir (koreader/icons/) for user-supplied
