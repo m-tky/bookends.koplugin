@@ -222,12 +222,7 @@ local function currentItemList(state)
         return items
     end
     if state.active_chip == "svg" then
-        local cells = IconsLibrary._scanUserIcons()
-        if #cells == 0 then
-            return { { is_hint = true,
-                label = _("Drop .svg or .png files in koreader/icons/") } }
-        end
-        return cells
+        return IconsLibrary._scanUserIcons()
     end
     if state.active_chip == "all" or not state.active_chip then
         -- All: the entire Nerd Font index (~2,800 entries) for free browsing,
@@ -285,21 +280,6 @@ end
 function IconsLibrary._renderCell(item, dimen)
     local Font = require("ui/font")
     local TextWidget = require("ui/widget/textwidget")
-    -- Empty-state hint cell (svg chip, no user icons): centred message,
-    -- no glyph, not tappable (on_cell_tap ignores item.is_hint).
-    if item.is_hint then
-        local msg = TextWidget:new{
-            text = item.label or "",
-            face = Font:getFace("cfont", 14),
-            fgcolor = Blitbuffer.COLOR_BLACK,
-            max_width = dimen.w - Screen:scaleBySize(8),
-        }
-        return FrameContainer:new{
-            bordersize = 0, padding = 0, margin = 0,
-            background = Blitbuffer.COLOR_WHITE,
-            CenterContainer:new{ dimen = Geom:new{ w = dimen.w, h = dimen.h }, msg },
-        }
-    end
     local glyph_size = math.max(36, math.floor(dimen.w * 0.16))
     local glyph_w
     if item.is_image then
@@ -438,8 +418,26 @@ function IconsLibrary:show(on_select)
         end,
         cell_renderer = IconsLibrary._renderCell,
         cell_long_tap = IconsLibrary._showCellTooltip,
+        -- Full-width guidance shown only when the SVG chip is active and the
+        -- user's koreader/icons/ folder is empty. Returns nil for any other
+        -- empty view (e.g. a search with no hits) so those fall through to the
+        -- normal empty grid.
+        empty_state = function(content_width, area_height)
+            if state.active_chip ~= "svg" or state.search_query then return nil end
+            local Font = require("ui/font")
+            local TextWidget = require("ui/widget/textwidget")
+            local msg = TextWidget:new{
+                text = _("Drop .svg or .png files in koreader/icons/"),
+                face = Font:getFace("cfont", 16),
+                fgcolor = Blitbuffer.COLOR_BLACK,
+                max_width = content_width - Screen:scaleBySize(24),
+            }
+            return CenterContainer:new{
+                dimen = Geom:new{ w = content_width, h = area_height },
+                msg,
+            }
+        end,
         on_cell_tap = function(item)
-            if item.is_hint then return end
             local val = item.insert_value or item.glyph
             if self_ref.modal then UIManager:close(self_ref.modal); self_ref.modal = nil end
             if on_select then on_select(val) end
