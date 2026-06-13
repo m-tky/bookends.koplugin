@@ -2419,6 +2419,14 @@ msgstr "Installa con un nuovo nome…"
 msgid "Install as"
 msgstr "Installa come"
 
+#: menu/icons_catalogue.lua:33
+msgid "SVG icon folder"
+msgstr "Cartella icone SVG"
+
+#: menu/icons_library.lua:435
+msgid "Drop .svg or .png files in koreader/icons/"
+msgstr "Inserisci file .svg o .png in koreader/icons/"
+
 #~ msgid "Wi-Fi is not enabled."
 #~ msgstr "Wi-Fi non attivo."
 

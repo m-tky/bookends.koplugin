@@ -2423,6 +2423,14 @@ msgstr "Инсталиране под ново име…"
 msgid "Install as"
 msgstr "Инсталиране като"
 
+#: menu/icons_catalogue.lua:33
+msgid "SVG icon folder"
+msgstr "Папка с SVG икони"
+
+#: menu/icons_library.lua:435
+msgid "Drop .svg or .png files in koreader/icons/"
+msgstr "Поставете .svg или .png файлове в koreader/icons/"
+
 #~ msgid "Wi-Fi is not enabled."
 #~ msgstr "Wi-Fi не е включен."
 

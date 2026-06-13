@@ -592,7 +592,7 @@ function OverlayWidget.measureTextWidth(line_texts, line_configs)
             end
             -- Strip BBCode tags so they don't inflate the overlap-prevention
             -- width and falsely trigger the truncation path for bar lines.
-            measure_text = measure_text:gsub("%[[/]?[biu]%]", ""):gsub("%[/?c[^%]]*%]", "")
+            measure_text = measure_text:gsub("%[[/]?[biu]%]", ""):gsub("%[/?c[^%]]*%]", ""):gsub("%[icon=[^%]]*%]", "")
             if measure_text ~= "" then
                 local display_text = cfg.uppercase and Utf8Proc.uppercase_dumb(measure_text) or measure_text
                 local tw = TextWidget:new(textWidgetOpts{
@@ -800,6 +800,20 @@ function OverlayWidget.parseStyledSegments(text, base_bold, base_italic, base_up
             table.insert(font_stack, name)
             found_tags = true
             pos = end_pos + 1  -- skip past the ']'
+        -- Check for self-closing icon tag [icon=NAME]. NAME is an icon
+        -- filename without extension, resolved at build time via KOReader's
+        -- IconWidget (koreader/icons/ first, then built-in mdlight). Atomic:
+        -- one tag = one image segment, no closing tag. NAME is read verbatim
+        -- up to the first ']' and trimmed, mirroring the [font=NAME] branch.
+        elseif text:match("^%[icon=[^%]]*%]", pos) then
+            local raw, end_pos = text:match("^%[icon=([^%]]*)()%]", pos)
+            local name = (raw or ""):gsub("^%s*(.-)%s*$", "%1")
+            if name ~= "" then
+                flushPending()
+                table.insert(segments, { icon = name })
+                found_tags = true
+            end
+            pos = end_pos + 1  -- skip past the ']'
         -- Check for closing colour tag [/c]
         elseif text:match("^%[/c%]", pos) then
             if #color_stack > 0 then
@@ -918,6 +932,41 @@ function OverlayWidget.buildStyledLine(segments, cfg, available_w, max_width)
         if seg.bar then
             -- Remember bar position, insert later after measuring text
             bar_slot = #widgets + 1
+        elseif seg.icon then
+            local IconWidget = require("ui/widget/iconwidget")
+            -- Square, sized to the line's font size so it sits inline on the
+            -- text baseline. cfg.face.size is the scaled pixel size.
+            local icon_size = math.floor((cfg.face and cfg.face.size) or 20)
+            -- Respect the line's truncation limit. An icon is atomic -- it
+            -- can't be ellipsis-truncated like text -- so if the available
+            -- width is already used up, stop adding segments (mirrors the
+            -- text branch's `remaining <= 0 then break`).
+            if max_width then
+                local remaining = max_width - total_w
+                if remaining <= 0 then break end
+            end
+            local icon_w = IconWidget:new{
+                icon = seg.icon,
+                width = icon_size,
+                height = icon_size,
+                alpha = true,   -- keep SVG/PNG own colours (render as-is)
+            }
+            -- Missing-file guard: IconWidget resolves to the built-in
+            -- "icon-not-found" glyph when NAME exists in neither
+            -- koreader/icons/ nor the built-in set. Render nothing instead,
+            -- so a shared preset referencing an icon the recipient lacks
+            -- degrades silently (mirrors unknown [font=...] falling back).
+            if icon_w.file and icon_w.file:find("icon-not-found", 1, true) then
+                if icon_w.free then icon_w:free() end
+            else
+                local size = icon_w:getSize()
+                table.insert(widgets, { widget = icon_w, w = size.w, h = size.h })
+                total_w = total_w + size.w
+                -- Count icon width as non-bar width so a same-line %bar is
+                -- sized against the remaining space (text_total_w drives bar_w).
+                text_total_w = text_total_w + size.w
+                if size.h > max_h then max_h = size.h end
+            end
         else
             local display = seg.uppercase and Utf8Proc.uppercase_dumb(seg.text) or seg.text
             if display ~= "" then
