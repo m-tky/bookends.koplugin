@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-10 21:05+0100\n"
+"POT-Creation-Date: 2026-06-13 00:14+0100\n"
 "Language: en_GB\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -35,7 +35,7 @@ msgid "Version: "
 msgstr ""
 
 #: bookends_updater.lua:267 bookends_line_editor.lua:451 main.lua:2654
-#: menu/tokens_library.lua:314 menu/icons_library.lua:355
+#: menu/tokens_library.lua:458 menu/icons_library.lua:355
 #: menu/preset_manager_modal.lua:561
 msgid "Close"
 msgstr ""
@@ -1316,15 +1316,15 @@ msgstr ""
 msgid "Prioritise left/right and truncate long center text"
 msgstr "Prioritise left/right and truncate long centre text"
 
-#: menu/tokens_library.lua:219
+#: menu/tokens_library.lua:335
 msgid "Tokens library"
 msgstr ""
 
-#: menu/tokens_library.lua:220
+#: menu/tokens_library.lua:336
 msgid "Tokens & conditionals"
 msgstr ""
 
-#: menu/tokens_library.lua:221
+#: menu/tokens_library.lua:337
 msgid ""
 "TOKENS\n"
 "\n"
@@ -1379,11 +1379,19 @@ msgid ""
 "  [if:not series]Standalone[/if]\n"
 msgstr ""
 
-#: menu/tokens_library.lua:285
+#: menu/tokens_library.lua:383
+msgid "★ Favourites"
+msgstr ""
+
+#: menu/tokens_library.lua:409
 msgid "Search tokens by name, value, or expression…"
 msgstr ""
 
-#: menu/tokens_library.lua:317
+#: menu/tokens_library.lua:414
+msgid "No favourites yet. Tap the ☆ on any token to add it."
+msgstr ""
+
+#: menu/tokens_library.lua:461
 msgid "Help"
 msgstr ""
 

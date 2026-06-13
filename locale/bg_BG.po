@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bookends\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-10 21:05+0100\n"
+"POT-Creation-Date: 2026-06-13 00:14+0100\n"
 "PO-Revision-Date: 2026-04-21 14:00+0000\n"
 "Language-Team: Bulgarian\n"
 "Language: bg_BG\n"
@@ -38,7 +38,7 @@ msgid "Version: "
 msgstr "Версия: "
 
 #: bookends_updater.lua:267 bookends_line_editor.lua:451 main.lua:2654
-#: menu/tokens_library.lua:314 menu/icons_library.lua:355
+#: menu/tokens_library.lua:458 menu/icons_library.lua:355
 #: menu/preset_manager_modal.lua:561
 msgid "Close"
 msgstr "Затваряне"
@@ -1336,15 +1336,15 @@ msgstr "Разстояние при съкращаване"
 msgid "Prioritise left/right and truncate long center text"
 msgstr "Приоритет на ляво/дясно и съкращаване на дълъг централен текст"
 
-#: menu/tokens_library.lua:219
+#: menu/tokens_library.lua:335
 msgid "Tokens library"
 msgstr "Библиотека с токени"
 
-#: menu/tokens_library.lua:220
+#: menu/tokens_library.lua:336
 msgid "Tokens & conditionals"
 msgstr "Токени и условия"
 
-#: menu/tokens_library.lua:221
+#: menu/tokens_library.lua:337
 msgid ""
 "TOKENS\n"
 "\n"
@@ -1401,8 +1401,8 @@ msgstr ""
 "ТОКЕНИ\n"
 "\n"
 "Токените са контейнери, които се заменят с актуални данни при всяко "
-"изобразяване на настройката. Всеки запис в чиповете Книга / Напредък / Час "
-"/ Сесия / Устройство е токен, записан като %name. Те се разширяват в реда:\n"
+"изобразяване на настройката. Всеки запис в чиповете Книга / Напредък / Час / "
+"Сесия / Устройство е токен, записан като %name. Те се разширяват в реда:\n"
 "  %title — %page_num/%page_count\n"
 "  → 1984 — 12/268\n"
 "\n"
@@ -1415,8 +1415,8 @@ msgstr ""
 "\n"
 "Името на шрифта е показното наименование от менюто за шрифтове на KOReader, "
 "напр. [font=Noto Sans]%title[/font]. Интервалите са допустими. Ако шрифтът "
-"не е инсталиран на устройството, участъкът се връща към шрифта на реда, "
-"така че настройките остават четими при споделяне.\n"
+"не е инсталиран на устройството, участъкът се връща към шрифта на реда, така "
+"че настройките остават четими при споделяне.\n"
 "\n"
 "УСЛОВИЯ\n"
 "\n"
@@ -1450,11 +1450,19 @@ msgstr ""
 "  [if:time>=18:00 and time<18:30]6–6:30[/if]\n"
 "  [if:not series]Standalone[/if]\n"
 
-#: menu/tokens_library.lua:285
+#: menu/tokens_library.lua:383
+msgid "★ Favourites"
+msgstr "★ Любими"
+
+#: menu/tokens_library.lua:409
 msgid "Search tokens by name, value, or expression…"
 msgstr "Търсене на токени по име, стойност или израз…"
 
-#: menu/tokens_library.lua:317
+#: menu/tokens_library.lua:414
+msgid "No favourites yet. Tap the ☆ on any token to add it."
+msgstr "Все още няма любими. Докоснете ☆ върху произволен токен, за да го добавите."
+
+#: menu/tokens_library.lua:461
 msgid "Help"
 msgstr "Помощ"
 
@@ -2029,6 +2037,9 @@ msgid ""
 "across the screen. Choose a colour to enable, hold this row or tap Default "
 "in the picker to turn off."
 msgstr ""
+"Плътен цвят зад горната и долната слоеве на наслагване, от ръб до ръб на "
+"екрана. Изберете цвят, за да включите; задръжте този ред или докоснете По "
+"подразбиране в палитрата, за да изключите."
 
 #: menu/library_modal.lua:442
 msgid "Search…"

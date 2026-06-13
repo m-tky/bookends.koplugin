@@ -18,6 +18,11 @@ local UIManager = require("ui/uimanager")
 local Utils = require("bookends_utils")
 local VerticalGroup = require("ui/widget/verticalgroup")
 local VerticalSpan = require("ui/widget/verticalspan")
+local HorizontalGroup = require("ui/widget/horizontalgroup")
+local HorizontalSpan = require("ui/widget/horizontalspan")
+local CenterContainer = require("ui/widget/container/centercontainer")
+local Font = require("ui/font")
+local TextWidget = require("ui/widget/textwidget")
 local _ = require("bookends_i18n").gettext
 
 local Screen = Device.screen
@@ -32,12 +37,71 @@ local CHIPS = Catalogue.CHIPS
 TokensLibrary.TOKENS = Catalogue.TOKENS
 TokensLibrary.CONDITIONALS = Catalogue.CONDITIONALS
 
+--- Favourites are stored in the `token_favourites` plugin setting as an
+--- ordered array of token value strings (item.token or item.expression),
+--- most-recent first. These helpers are pure (operate on plain tables, no
+--- settings/widget access) so they're unit-testable; persistence + rebuild
+--- live in TokensLibrary:show. Exposed on the module table for tests.
+
+--- True if `key` is in the favourites array.
+function TokensLibrary._isFavourite(favs, key)
+    if not favs or not key then return false end
+    for _i = 1, #favs do
+        if favs[_i] == key then return true end
+    end
+    return false
+end
+
+--- Returns a NEW favourites array (never mutates `favs`): prepend `key` when
+--- absent (most-recent first), remove it when present.
+function TokensLibrary._toggleFavourite(favs, key)
+    favs = favs or {}
+    local out, found = {}, false
+    for _i = 1, #favs do
+        if favs[_i] == key then
+            found = true
+        else
+            out[#out + 1] = favs[_i]
+        end
+    end
+    if not found then table.insert(out, 1, key) end
+    return out
+end
+
+--- Intersect catalogue `items` with `favs`, returned in favs order
+--- (most-recent first). Items are keyed by their value string (token or
+--- expression). Favourites with no matching catalogue entry (e.g. the curator
+--- later removed the token) are silently skipped — self-cleaning, no migration.
+function TokensLibrary._filterFavourites(items, favs)
+    favs = favs or {}
+    local by_value = {}
+    for _i = 1, #items do
+        local it = items[_i]
+        local val = it.token or it.expression
+        if val and by_value[val] == nil then by_value[val] = it end
+    end
+    local out = {}
+    for _i = 1, #favs do
+        local it = by_value[favs[_i]]
+        if it then out[#out + 1] = it end
+    end
+    return out
+end
+
 --- Filter the merged token + conditional list by chip and search query.
 --- All chip → both lists merged; If/else chip → conditionals only; other
 --- chips → tokens with matching chip tag.
-function TokensLibrary._currentItems(active_chip, search_query)
+function TokensLibrary._currentItems(active_chip, search_query, favourites)
     local items = {}
-    if active_chip == "all" or not active_chip then
+    if active_chip == "favourites" then
+        -- Full merged catalogue intersected with the favourites set, kept in
+        -- favourites order (most-recent first). favourites passed in by show
+        -- so this stays pure/testable (no settings access here).
+        local merged = {}
+        for _i, t in ipairs(TokensLibrary.TOKENS) do merged[#merged + 1] = t end
+        for _i, c in ipairs(TokensLibrary.CONDITIONALS) do merged[#merged + 1] = c end
+        items = TokensLibrary._filterFavourites(merged, favourites or {})
+    elseif active_chip == "all" or not active_chip then
         for _i, t in ipairs(TokensLibrary.TOKENS) do items[#items + 1] = t end
         for _i, c in ipairs(TokensLibrary.CONDITIONALS) do items[#items + 1] = c end
     else
@@ -92,14 +156,17 @@ end
 ---   Line 2:        for conditionals: expression; for tokens: '%token → live'
 ---                  (or just the literal if expansion fails or no ctx);
 ---                  for snippets: full template.
-function TokensLibrary._renderRow(item, slot_dimen, doc_ctx)
-    local Font = require("ui/font")
-    local TextWidget = require("ui/widget/textwidget")
+function TokensLibrary._renderRow(item, slot_dimen, doc_ctx, is_fav, on_select, on_toggle_fav)
     local InputContainer = require("ui/widget/container/inputcontainer")
     local GestureRange = require("ui/gesturerange")
     local inner_pad = Screen:scaleBySize(12)
     local card_h = slot_dimen.h
-    local content_w = slot_dimen.w - 2 * inner_pad - 2 * Size.border.thin
+    -- Reserve a right-hand star column (matches preset_manager_modal layout:
+    -- 40px star + 6px gap). The card occupies the remaining width.
+    local star_width = Screen:scaleBySize(40)
+    local star_gap = Screen:scaleBySize(6)
+    local card_outer_w = slot_dimen.w - star_gap - star_width
+    local content_w = card_outer_w - 2 * inner_pad - 2 * Size.border.thin
 
     local line1 = TextWidget:new{
         text = item.description or "",
@@ -180,14 +247,56 @@ function TokensLibrary._renderRow(item, slot_dimen, doc_ctx)
         },
     }
     local card = InputContainer:new{
-        dimen = Geom:new{ w = slot_dimen.w, h = card_h },
+        dimen = Geom:new{ w = card_outer_w, h = card_h },
         card_frame,
     }
     card.ges_events = {
         TapSelect = { GestureRange:new{ ges = "tap", range = card.dimen } },
     }
+    card.onTapSelect = function() if on_select then on_select() end; return true end
     LibraryModal._attachFocus(card, card_frame)
-    return card
+
+    -- Right-hand tappable star, same glyphs/size as the preset chooser
+    -- (preset_manager_modal.lua): ★ filled = favourited, ☆ outline = not.
+    local star_widget = TextWidget:new{
+        text = is_fav and "\xE2\x98\x85" or "\xE2\x98\x86",
+        face = Font:getFace("infofont", 22),
+        bold = true,
+        fgcolor = Blitbuffer.COLOR_BLACK,
+    }
+    -- Reserved focus-border slot (white = invisible) so the star is a
+    -- d-pad-focusable cell with no glyph reflow on focus. The inner
+    -- CenterContainer shrinks by the border so the outer size holds.
+    -- Mirrors preset_manager_modal.lua's accent-column star.
+    local fb = LibraryModal.FOCUS_BORDER
+    local star_frame = FrameContainer:new{
+        bordersize = fb, color = Blitbuffer.COLOR_WHITE,
+        padding = 0, margin = 0, radius = Size.radius.default,
+        background = Blitbuffer.COLOR_WHITE,
+        CenterContainer:new{
+            dimen = Geom:new{ w = star_width - 2 * fb, h = card_h - 2 * fb },
+            star_widget,
+        },
+    }
+    local star_ic = InputContainer:new{
+        dimen = Geom:new{ w = star_width, h = card_h },
+        star_frame,
+    }
+    star_ic.ges_events = {
+        TapSelect = { GestureRange:new{ ges = "tap", range = star_ic.dimen } },
+    }
+    star_ic.onTapSelect = function() if on_toggle_fav then on_toggle_fav() end; return true end
+    LibraryModal._attachFocus(star_ic, star_frame)
+
+    local row = HorizontalGroup:new{
+        align = "center",
+        card,
+        HorizontalSpan:new{ width = star_gap },
+        star_ic,
+    }
+    -- Both cells d-pad reachable left->right (LibraryModal reads _focus_row).
+    row._focus_row = { card, star_ic }
+    return row
 end
 
 --- Show the tokens library modal. on_select(value) is called with the
@@ -202,6 +311,13 @@ function TokensLibrary:show(bookends, on_select)
     -- query change; nothing else mutates the underlying catalogues.
     local items_key, items_cache = nil, nil
     local function items()
+        -- Favourites view: never cache -- a star toggle mutates the list
+        -- without changing the (chip, query) key, and the list is small.
+        if state.active_chip == "favourites" then
+            local favs = bookends.settings:readSetting("token_favourites") or {}
+            items_key = nil  -- force a fresh build on the next non-favourites view
+            return TokensLibrary._currentItems("favourites", state.search_query, favs)
+        end
         local key = (state.active_chip or "") .. "\0" .. (state.search_query or "")
         if items_key ~= key then
             items_cache = TokensLibrary._currentItems(state.active_chip, state.search_query)
@@ -259,7 +375,15 @@ EXAMPLES
   [if:not series]Standalone[/if]
 ]]),
         chip_strip = function()
-            local out = {}
+            -- Favourites is injected here (not in tokens_catalogue.lua's CHIPS)
+            -- because the curator web app overwrites the catalogue file wholesale.
+            local out = {
+                {
+                    key = "favourites",
+                    label = _("\xE2\x98\x85 Favourites"),
+                    is_active = (state.active_chip == "favourites") and true or false,
+                },
+            }
             for _i, c in ipairs(CHIPS) do
                 out[#out + 1] = {
                     key = c.key, label = c.label,
@@ -283,6 +407,20 @@ EXAMPLES
             end
         end,
         search_placeholder = function() return _("Search tokens by name, value, or expression…") end,
+        empty_state = function(content_width, area_height)
+            if state.active_chip ~= "favourites" then return nil end
+            local hint = TextWidget:new{
+                -- Plain hyphen, no em dash (project style).
+                text = _("No favourites yet. Tap the \xE2\x98\x86 on any token to add it."),
+                face = Font:getFace("cfont", 15),
+                fgcolor = Blitbuffer.COLOR_GRAY_5,
+                max_width = content_width - Screen:scaleBySize(24),
+            }
+            return CenterContainer:new{
+                dimen = Geom:new{ w = content_width, h = area_height },
+                hint,
+            }
+        end,
         on_search_submit = function(query)
             state.search_query = query
             -- Search hits the merged TOKENS + CONDITIONALS pool regardless
@@ -297,18 +435,24 @@ EXAMPLES
         item_count = function() return #items() end,
         item_at = function(idx) return items()[idx] end,
         row_renderer = function(item, dimen)
-            local row = TokensLibrary._renderRow(item, dimen, doc_ctx)
-            -- Bind the tap inside the row_renderer closure rather than via a
-            -- generic config.on_item_tap hook — the row's InputContainer is
-            -- already gesture-ranged in _renderRow, we just need to attach
-            -- the action that fires the on_select callback + closes the modal.
-            row.onTapSelect = function()
-                local val = item.token or item.expression
+            local val = item.token or item.expression
+            local favs = bookends.settings:readSetting("token_favourites") or {}
+            local is_fav = TokensLibrary._isFavourite(favs, val)
+            -- Card tap: insert the token + close. Star tap: toggle favourite,
+            -- persist, and refresh the modal so the glyph + (in the Favourites
+            -- view) the filtered list both update.
+            local function selectRow()
                 if self_ref.modal then UIManager:close(self_ref.modal); self_ref.modal = nil end
                 if on_select and val then on_select(val) end
-                return true
             end
-            return row
+            local function toggleFav()
+                if not val then return end
+                local cur = bookends.settings:readSetting("token_favourites") or {}
+                bookends.settings:saveSetting("token_favourites",
+                    TokensLibrary._toggleFavourite(cur, val))
+                if self_ref.modal then self_ref.modal:refresh() end
+            end
+            return TokensLibrary._renderRow(item, dimen, doc_ctx, is_fav, selectRow, toggleFav)
         end,
         footer_actions = {
             { key = "close", label = _("Close"), on_tap = function()
