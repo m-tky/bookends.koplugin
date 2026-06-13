@@ -2314,6 +2314,14 @@ msgstr ""
 msgid "Install as"
 msgstr ""
 
+#: menu/icons_catalogue.lua:33
+msgid "SVG icon folder"
+msgstr "SVG icon folder"
+
+#: menu/icons_library.lua:435
+msgid "Drop .svg or .png files in koreader/icons/"
+msgstr "Drop .svg or .png files in koreader/icons/"
+
 #~ msgid "Read color"
 #~ msgstr "Read colour"
 

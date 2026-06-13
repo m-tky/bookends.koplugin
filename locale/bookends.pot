@@ -2314,3 +2314,11 @@ msgstr ""
 #: menu/preset_manager_modal.lua:1728
 msgid "Install as"
 msgstr ""
+
+#: menu/icons_catalogue.lua:33
+msgid "SVG icon folder"
+msgstr ""
+
+#: menu/icons_library.lua:435
+msgid "Drop .svg or .png files in koreader/icons/"
+msgstr ""
