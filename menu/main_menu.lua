@@ -8,9 +8,15 @@ local _ = require("bookends_i18n").gettext
 return function(Bookends)
 
 function Bookends:addToMainMenu(menu_items)
+    -- Anchor under the typeset (Style) tab, which is only registered for
+    -- reflowable documents. Paged documents (PDF/CBZ/DjVu) have no typeset
+    -- module, so referencing "typeset" there leaves an orphaned sorting_hint
+    -- and crashes KOReader's menu sorter -- fall back to the settings tab,
+    -- which is present for every document type.
+    local anchor = self.ui.typeset and "typeset" or "setting"
     menu_items.bookends = {
         text = _("Bookends"),
-        sorting_hint = "typeset",
+        sorting_hint = anchor,
         sub_item_table_func = function()
             return self:buildMainMenu()
         end,
