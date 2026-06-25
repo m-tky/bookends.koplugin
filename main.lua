@@ -1193,21 +1193,48 @@ function Bookends:getSessionPages()
 end
 function Bookends:onSuspend()
     self:stopRefreshTimer()
+    -- Drop any pending resume repaint; the next onResume re-arms it if needed.
+    self._resume_repaint_pending = nil
 end
 function Bookends:onResume()
     -- Each wake from suspend starts a new reading session
     self.session_elapsed = 0
     self.session_resume_time = os.time()
     self.session_start_page = self.session_max_page
+    self:backgroundUpdateCheck()
+
+    -- A repaint here would blit our overlay onto a screensaver that's still
+    -- showing (some devices, e.g. Kobo Clara Color, keep the screensaver up with
+    -- a delay / tap-to-dismiss), corrupting the screensaver image (issue #73).
+    -- When the screensaver is still up, defer the repaint to onOutOfScreenSaver,
+    -- mirroring ReaderFooter:onResume / :onOutOfScreenSaver. With no screensaver
+    -- delay, OutOfScreenSaver + Screensaver:cleanup() run *before* this Resume
+    -- event, so screen_saver_mode is already false here and we repaint now.
+    if Device.screen_saver_mode then
+        self._resume_repaint_pending = true
+        return
+    end
+    self:_repaintAfterResume()
+end
+
+-- Fires when the screensaver is dismissed. NOTE: broadcast *before*
+-- Screensaver:cleanup(), so Device.screen_saver_mode is still true in here —
+-- do NOT re-guard on it, or the deferred repaint would never run.
+function Bookends:onOutOfScreenSaver()
+    if not self._resume_repaint_pending then return end
+    self._resume_repaint_pending = nil
+    self:_repaintAfterResume()
+end
+
+-- Repaint the overlay after a resume, allowing for the stock footer's async
+-- resume refresh painting over us first (only needed when the footer is shown).
+function Bookends:_repaintAfterResume()
     self:markDirty()
-    -- Repaint after the footer's async resume refresh paints over us
-    -- (only needed when the stock footer is visible)
     if self.ui.view.footer_visible then
         UIManager:scheduleIn(1.5, function()
             self:markDirty()
         end)
     end
-    self:backgroundUpdateCheck()
 end
 
 -- Mirror ReaderFlipping:paintTo's visibility conditions so we know whether
