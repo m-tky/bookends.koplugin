@@ -66,6 +66,7 @@ function LineEditor.attach(Bookends)
         pos_settings.line_bar_direction = pos_settings.line_bar_direction or {}
         pos_settings.line_bar_unread_height = pos_settings.line_bar_unread_height or {}
         pos_settings.line_bar_colors = pos_settings.line_bar_colors or {}
+        pos_settings.line_bar_markers = pos_settings.line_bar_markers or {}
 
         -- Snapshot for cancel/restore (style / font / nudge / etc.; the
         -- canonicalise migration above is already baked into this snapshot
@@ -86,6 +87,7 @@ function LineEditor.attach(Bookends)
         local line_bar_direction = pos_settings.line_bar_direction[line_idx] -- nil = "ltr"
         local line_bar_unread_height = pos_settings.line_bar_unread_height[line_idx] -- nil = symmetric
         local line_bar_colors = pos_settings.line_bar_colors[line_idx] -- nil = inherit global
+        local line_bar_markers = pos_settings.line_bar_markers[line_idx] -- nil = no markers
 
         -- Live preview: write current local state to settings and repaint.
         local function applyLivePreview()
@@ -103,6 +105,7 @@ function LineEditor.attach(Bookends)
             pos_settings.line_bar_direction[line_idx] = line_bar_direction
             pos_settings.line_bar_unread_height[line_idx] = line_bar_unread_height
             pos_settings.line_bar_colors[line_idx] = line_bar_colors
+            pos_settings.line_bar_markers[line_idx] = line_bar_markers
             self:markDirty()
         end
 
@@ -225,8 +228,36 @@ function LineEditor.attach(Bookends)
         local plugin = self  -- captured so openColoursMenu can call self:_buildColorItems
         local _bar_style_dialog
 
-        -- Forward declare so the two menus can call each other.
-        local openBarStyleMenu, openColoursMenu
+        -- Forward declare so the menus can call each other.
+        local openBarStyleMenu, openColoursMenu, openMarkersMenu, openMarkerSlotMenu
+
+        -- Bar marker (#77) menu helpers. line_bar_markers is nil or
+        -- { top = {type,size,offset,color}, bottom = {...} }; an absent slot = Off.
+        local MARKER_TYPE_CYCLE = { "off", "session", "book_open" }
+        local MARKER_TYPE_LABELS = {
+            off = _("Off"),
+            session = _("Start of session"),
+            book_open = _("Book opened"),
+        }
+        local MARKER_STYLE_CYCLE = { "chevron", "solid" }
+        local MARKER_STYLE_LABELS = {
+            chevron = _("Chevron"), solid = _("Solid"),
+        }
+        local function saveMarkers()
+            if line_bar_markers and next(line_bar_markers) == nil then
+                line_bar_markers = nil
+            end
+            applyLivePreview()
+        end
+        -- stored colour value ({hex=…}/{grey=…}) -> hex string for the picker
+        local function markerHex(v)
+            if type(v) == "table" and v.hex then return v.hex end
+            if type(v) == "table" and v.grey then
+                local g = string.format("%02X", v.grey)
+                return "#" .. g .. g .. g
+            end
+            return nil
+        end
 
         openColoursMenu = function()
             local lc = line_bar_colors or {}
@@ -299,6 +330,38 @@ function LineEditor.attach(Bookends)
                     }
                     table.insert(sub_rows, {row_button})
                 end
+
+                -- Tick height (% of bar thickness) — parity with full-width bars.
+                table.insert(sub_rows, {{
+                    text = _("Tick height") .. ": " .. (lc.tick_height_pct or 100) .. "%",
+                    callback = function()
+                        UIManager:close(_bar_style_dialog)
+                        self:showNudgeDialog(_("Tick height"), lc.tick_height_pct or 100, 1, 400, 100, "%",
+                            function(val)
+                                lc.tick_height_pct = val ~= 100 and val or nil
+                                saveColors()
+                            end,
+                            function() openColoursMenu() end)
+                    end,
+                }})
+
+                -- Tick width (multiplier) — parity with full-width bars. Changes
+                -- the computed tick fractions, so drop the tick cache.
+                table.insert(sub_rows, {{
+                    text = _("Tick width") .. ": " .. (lc.tick_width_multiplier or self.DEFAULT_TICK_WIDTH_MULTIPLIER) .. "x",
+                    callback = function()
+                        UIManager:close(_bar_style_dialog)
+                        self:showNudgeDialog(_("Tick width"),
+                            lc.tick_width_multiplier or self.DEFAULT_TICK_WIDTH_MULTIPLIER, 1, 5,
+                            self.DEFAULT_TICK_WIDTH_MULTIPLIER, "x",
+                            function(val)
+                                lc.tick_width_multiplier = val ~= self.DEFAULT_TICK_WIDTH_MULTIPLIER and val or nil
+                                self._tick_cache = nil
+                                saveColors()
+                            end,
+                            function() openColoursMenu() end, 1)
+                    end,
+                }})
             end
 
             -- Final row: Back navigates to the parent Bar style menu.
@@ -313,6 +376,141 @@ function LineEditor.attach(Bookends)
                 title = _("Bar colours"),
                 buttons = sub_rows,
             }
+            UIManager:show(_bar_style_dialog)
+        end
+
+        openMarkersMenu = function()
+            local m = line_bar_markers or {}
+            local function slotLabel(slot, name)
+                local s = m[slot]
+                local t = (s and s.type) or "off"
+                return name .. ": " .. (MARKER_TYPE_LABELS[t] or MARKER_TYPE_LABELS.off)
+            end
+            local rows = {
+                {{ text = slotLabel("top", _("Top marker")), callback = function()
+                    UIManager:close(_bar_style_dialog); openMarkerSlotMenu("top")
+                end }},
+                {{ text = slotLabel("bottom", _("Bottom marker")), callback = function()
+                    UIManager:close(_bar_style_dialog); openMarkerSlotMenu("bottom")
+                end }},
+                {{ text = _("Back"), callback = function()
+                    UIManager:close(_bar_style_dialog); openBarStyleMenu()
+                end }},
+            }
+            _bar_style_dialog = ButtonDialog:new{ title = _("Markers"), buttons = rows }
+            UIManager:show(_bar_style_dialog)
+        end
+
+        openMarkerSlotMenu = function(slot)
+            local Colour = require("bookends_colour")
+            line_bar_markers = line_bar_markers or {}
+            local mk = line_bar_markers
+            local title = (slot == "top") and _("Top marker") or _("Bottom marker")
+            local s = mk[slot]
+            local cur_type = (s and s.type) or "off"
+            local enabled = cur_type ~= "off"
+            local rows = {}
+
+            -- Type: Off | Start of session | Book opened
+            table.insert(rows, {{
+                text = _("Type") .. ": " .. (MARKER_TYPE_LABELS[cur_type] or MARKER_TYPE_LABELS.off),
+                callback = function()
+                    local nt = Utils.cycleNext(MARKER_TYPE_CYCLE, cur_type)
+                    if nt == "off" then
+                        mk[slot] = nil
+                    else
+                        mk[slot] = mk[slot] or { size = 50, offset = 0 }
+                        mk[slot].type = nt
+                    end
+                    saveMarkers()
+                    UIManager:close(_bar_style_dialog); openMarkerSlotMenu(slot)
+                end,
+            }})
+
+            -- Style (Chevron / Solid). Unknown/legacy values (e.g. a removed
+            -- "outline") fall back to Chevron so the row never errors.
+            table.insert(rows, {{
+                text = _("Style") .. ": " .. (MARKER_STYLE_LABELS[s and s.style] or MARKER_STYLE_LABELS.chevron),
+                enabled = enabled,
+                callback = function()
+                    if not mk[slot] then return end
+                    local cur = mk[slot].style == "solid" and "solid" or "chevron"
+                    mk[slot].style = Utils.cycleNext(MARKER_STYLE_CYCLE, cur)
+                    saveMarkers()
+                    UIManager:close(_bar_style_dialog); openMarkerSlotMenu(slot)
+                end,
+            }})
+
+            -- Size (% of a fixed screen-scaled base; independent of bar thickness)
+            table.insert(rows, {{
+                text = _("Size") .. ": " .. ((s and s.size) or 50) .. "%",
+                enabled = enabled,
+                callback = function()
+                    UIManager:close(_bar_style_dialog)
+                    self:showNudgeDialog(title .. " \xE2\x80\x94 " .. _("size"),
+                        (mk[slot] and mk[slot].size) or 50, 10, 400, 50, "%",
+                        function(val) if mk[slot] then mk[slot].size = val; saveMarkers() end end,
+                        function() openMarkerSlotMenu(slot) end)
+                end,
+            }})
+
+            -- Offset (px from the bar edge; negative overlaps onto the bar)
+            table.insert(rows, {{
+                text = _("Offset") .. ": " .. ((s and s.offset) or 0) .. "px",
+                enabled = enabled,
+                callback = function()
+                    UIManager:close(_bar_style_dialog)
+                    self:showNudgeDialog(title .. " \xE2\x80\x94 " .. _("offset"),
+                        (mk[slot] and mk[slot].offset) or 0, -50, 200, 0, "px",
+                        function(val) if mk[slot] then mk[slot].offset = val; saveMarkers() end end,
+                        function() openMarkerSlotMenu(slot) end)
+                end,
+            }})
+
+            -- Colour. Gated like the bar colour rows: palette on colour devices,
+            -- a % black nudge on greyscale. nil = inherit the bar's tick colour.
+            table.insert(rows, {{
+                text = (s and s.color) and (_("Colour") .. " \u{2713}") or _("Colour"),
+                enabled = enabled,
+                callback = function()
+                    UIManager:close(_bar_style_dialog)
+                    local ctitle = title .. " \xE2\x80\x94 " .. _("colour")
+                    if Screen:isColorEnabled() then
+                        self:showColourPicker(ctitle,
+                            markerHex(mk[slot] and mk[slot].color), "#000000",
+                            function(new_hex)
+                                if mk[slot] then mk[slot].color = Colour.toStorageShape(new_hex); saveMarkers() end
+                            end,
+                            function()
+                                if mk[slot] then mk[slot].color = nil; saveMarkers() end
+                            end,
+                            nil, nil, nil, nil,
+                            function() openMarkerSlotMenu(slot) end)
+                    else
+                        local v = mk[slot] and mk[slot].color
+                        local byte = (type(v) == "table" and v.grey) or nil
+                        local current = byte and math.floor((0xFF - byte) * 100 / 0xFF + 0.5) or 100
+                        self:showNudgeDialog(ctitle, current, 0, 100, 100, "%",
+                            function(val)
+                                if mk[slot] then
+                                    mk[slot].color = { grey = 0xFF - math.floor(val * 0xFF / 100 + 0.5) }
+                                    saveMarkers()
+                                end
+                            end,
+                            function() openMarkerSlotMenu(slot) end,
+                            nil, nil, nil,
+                            function() if mk[slot] then mk[slot].color = nil; saveMarkers() end end,
+                            _("Default") .. " (" .. _("tick colour") .. ")")
+                    end
+                end,
+            }})
+
+            table.insert(rows, {{
+                text = _("Back"),
+                callback = function() UIManager:close(_bar_style_dialog); openMarkersMenu() end,
+            }})
+
+            _bar_style_dialog = ButtonDialog:new{ title = title, buttons = rows }
             UIManager:show(_bar_style_dialog)
         end
 
@@ -443,6 +641,16 @@ function LineEditor.attach(Bookends)
                 callback = function()
                     UIManager:close(_bar_style_dialog)
                     openColoursMenu()
+                end,
+            }})
+
+            -- Row 7: Markers (session / book-open triangle markers, #77)
+            local markers_label = line_bar_markers and (_("Markers") .. " \u{2713}") or _("Markers")
+            table.insert(rows, {{
+                text = markers_label .. "\u{2026}",
+                callback = function()
+                    UIManager:close(_bar_style_dialog)
+                    openMarkersMenu()
                 end,
             }})
 

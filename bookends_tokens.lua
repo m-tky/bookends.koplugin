@@ -25,6 +25,41 @@ local function getCurrentPageNumber(ui)
 end
 Tokens.getCurrentPageNumber = getCurrentPageNumber
 
+--- Map a marker page onto a bar's fraction scale (#77), matching how the bar's
+--- own fill fraction is computed. Used by full-width bars; inline bars compute
+--- the equivalent inline where book_pct/ch_pct are derived.
+-- @param doc document
+-- @param toc table or nil
+-- @param kind "book" or "chapter"
+-- @param current_pageno number: the page the bar is currently showing (defines
+--   the chapter window for chapter bars)
+-- @param marker_page number or nil: the raw page the marker sits at
+-- @return number 0..1, or nil when unavailable
+function Tokens.markerFracForBar(doc, toc, kind, current_pageno, marker_page)
+    if not marker_page or not doc then return nil end
+    if kind == "book" then
+        local raw_total = doc:getPageCount()
+        if not raw_total or raw_total <= 0 then return nil end
+        if doc:hasHiddenFlows() then
+            local flow = doc:getPageFlow(marker_page)
+            local ft = doc:getTotalPagesInFlow(flow)
+            local fp = doc:getPageNumberInFlow(marker_page)
+            return (ft and ft > 0) and (fp / ft) or nil
+        end
+        return marker_page / raw_total
+    end
+    -- chapter scale: marker position within the CURRENTLY shown chapter
+    if not toc then return nil end
+    local cs = toc:getPreviousChapter(current_pageno)
+    if toc:isChapterStart(current_pageno) then cs = current_pageno end
+    if not cs then return nil end
+    local nc = toc:getNextChapter(current_pageno)
+    local ce = nc or (doc:getPageCount() + 1)
+    local ctotal = ce - cs
+    if ctotal <= 1 then return nil end
+    return math.max(0, math.min(1, (marker_page - cs) / (ctotal - 1)))
+end
+
 --- Return the last digit of a numeric value as a string.
 -- Used by the %<token>_lastdigit family (#55) to expose the units digit
 -- of page/chapter counters for languages whose grammar branches on it
@@ -1910,6 +1945,42 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             end
         end
         bar_info.chapter = { kind = "chapter", pct = ch_pct, ticks = {} }
+
+        -- Marker fractions (#77): map session-start / book-open RAW pages onto
+        -- the same book and chapter scales as the pct values above, so a
+        -- triangle marker lines up with where the fill would sit at that page.
+        -- Computed with the identical (flow-aware) math; nil when unavailable.
+        local mp = opts.marker_pages
+        if mp then
+            local function bookFrac(p)
+                if not p or not raw_total or raw_total <= 0 then return nil end
+                if bar_doc:hasHiddenFlows() then
+                    local flow = bar_doc:getPageFlow(p)
+                    local ft = bar_doc:getTotalPagesInFlow(flow)
+                    local fp = bar_doc:getPageNumberInFlow(p)
+                    return (ft and ft > 0) and (fp / ft) or nil
+                end
+                return p / raw_total
+            end
+            bar_info.book.session_frac   = bookFrac(mp.session)
+            bar_info.book.book_open_frac = bookFrac(mp.book_open)
+            if ui.toc then
+                local cs = ui.toc:getPreviousChapter(bar_pageno)
+                if ui.toc:isChapterStart(bar_pageno) then cs = bar_pageno end
+                if cs then
+                    local nc = ui.toc:getNextChapter(bar_pageno)
+                    local ce = nc or (bar_doc:getPageCount() + 1)
+                    local ctotal = ce - cs
+                    local function chFrac(p)
+                        if not p or ctotal <= 1 then return nil end
+                        return math.max(0, math.min(1, (p - cs) / (ctotal - 1)))
+                    end
+                    bar_info.chapter.session_frac   = chFrac(mp.session)
+                    bar_info.chapter.book_open_frac = chFrac(mp.book_open)
+                end
+            end
+        end
+
         if bar_limit_w then
             bar_info.width = bar_limit_w
         end

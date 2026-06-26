@@ -3,6 +3,8 @@
 local DialogHelpers = require("bookends_dialog_helpers")
 local UIManager = require("ui/uimanager")
 local Utils = require("bookends_utils")
+local Screen = require("device").screen
+local Colour = require("bookends_colour")
 local _ = require("bookends_i18n").gettext
 local T = require("ffi/util").template
 
@@ -394,6 +396,124 @@ function Bookends:buildSingleBarMenu(bar_idx, bar_cfg)
 
                 return custom_items
             end,
+        },
+        {
+            text_func = function()
+                return bar_cfg.markers and (_("Markers") .. " (\u{2713})") or _("Markers")
+            end,
+            enabled_func = isEnabled,
+            sub_item_table_func = function()
+                return self:buildBarMarkerMenu(bar_cfg, saveBar)
+            end,
+        },
+    }
+end
+
+-- Markers submenu (#77) for a full-width bar. Mirrors the line editor's marker
+-- menu but as TouchMenu items. Reads/writes bar_cfg.markers = { top=…, bottom=… }.
+function Bookends:buildBarMarkerMenu(bar_cfg, saveBar)
+    local MARKER_TYPE_CYCLE = { "off", "session", "book_open" }
+    local LABELS = { off = _("Off"), session = _("Start of session"), book_open = _("Book opened") }
+    local STYLE_CYCLE = { "chevron", "solid" }
+    local STYLE_LABELS = { chevron = _("Chevron"), solid = _("Solid") }
+    local function getS(slot) return bar_cfg.markers and bar_cfg.markers[slot] end
+    local function markerHex(v)
+        if type(v) == "table" and v.hex then return v.hex end
+        if type(v) == "table" and v.grey then
+            local g = string.format("%02X", v.grey); return "#" .. g .. g .. g
+        end
+        return nil
+    end
+    local function slotMenu(slot)
+        local enabledSlot = function() local s = getS(slot); return s ~= nil and s.type ~= nil end
+        return {
+            {
+                text_func = function()
+                    local s = getS(slot); return _("Type") .. ": " .. (LABELS[(s and s.type) or "off"])
+                end,
+                keep_menu_open = true,
+                callback = function(tmi)
+                    local s = getS(slot)
+                    local nt = Utils.cycleNext(MARKER_TYPE_CYCLE, (s and s.type) or "off")
+                    bar_cfg.markers = bar_cfg.markers or {}
+                    if nt == "off" then
+                        bar_cfg.markers[slot] = nil
+                        if next(bar_cfg.markers) == nil then bar_cfg.markers = nil end
+                    else
+                        bar_cfg.markers[slot] = bar_cfg.markers[slot] or { size = 50, offset = 0 }
+                        bar_cfg.markers[slot].type = nt
+                    end
+                    saveBar(); if tmi then tmi:updateItems() end
+                end,
+            },
+            {
+                text_func = function() local s = getS(slot); return _("Style") .. ": " .. (STYLE_LABELS[s and s.style] or STYLE_LABELS.chevron) end,
+                enabled_func = enabledSlot,
+                keep_menu_open = true,
+                callback = function(tmi)
+                    if getS(slot) then
+                        local cur = getS(slot).style == "solid" and "solid" or "chevron"
+                        getS(slot).style = Utils.cycleNext(STYLE_CYCLE, cur)
+                        saveBar()
+                    end
+                    if tmi then tmi:updateItems() end
+                end,
+            },
+            {
+                text_func = function() local s = getS(slot); return _("Size") .. ": " .. ((s and s.size) or 50) .. "%" end,
+                enabled_func = enabledSlot,
+                keep_menu_open = true,
+                callback = function(tmi)
+                    local s = getS(slot)
+                    self:showNudgeDialog(_("Marker size"), (s and s.size) or 50, 10, 400, 50, "%",
+                        function(val) if getS(slot) then getS(slot).size = val; saveBar() end end,
+                        nil, nil, nil, tmi)
+                end,
+            },
+            {
+                text_func = function() local s = getS(slot); return _("Offset") .. ": " .. ((s and s.offset) or 0) .. "px" end,
+                enabled_func = enabledSlot,
+                keep_menu_open = true,
+                callback = function(tmi)
+                    local s = getS(slot)
+                    self:showNudgeDialog(_("Marker offset"), (s and s.offset) or 0, -50, 200, 0, "px",
+                        function(val) if getS(slot) then getS(slot).offset = val; saveBar() end end,
+                        nil, nil, nil, tmi)
+                end,
+            },
+            {
+                text_func = function() local s = getS(slot); return (s and s.color) and (_("Colour") .. " \u{2713}") or _("Colour") end,
+                enabled_func = enabledSlot,
+                keep_menu_open = true,
+                callback = function(tmi)
+                    if Screen:isColorEnabled() then
+                        self:showColourPicker(_("Marker colour"),
+                            markerHex(getS(slot) and getS(slot).color), "#000000",
+                            function(new_hex) if getS(slot) then getS(slot).color = Colour.toStorageShape(new_hex); saveBar() end end,
+                            function() if getS(slot) then getS(slot).color = nil; saveBar() end end,
+                            nil, tmi)
+                    else
+                        local v = getS(slot) and getS(slot).color
+                        local byte = (type(v) == "table" and v.grey) or nil
+                        local current = byte and math.floor((0xFF - byte) * 100 / 0xFF + 0.5) or 100
+                        self:showNudgeDialog(_("Marker colour"), current, 0, 100, 100, "%",
+                            function(val) if getS(slot) then getS(slot).color = { grey = 0xFF - math.floor(val * 0xFF / 100 + 0.5) }; saveBar() end end,
+                            nil, nil, nil, tmi,
+                            function() if getS(slot) then getS(slot).color = nil; saveBar() end end,
+                            _("Default") .. " (" .. _("tick colour") .. ")")
+                    end
+                end,
+            },
+        }
+    end
+    return {
+        {
+            text_func = function() local s = getS("top"); return _("Top marker") .. ": " .. (LABELS[(s and s.type) or "off"]) end,
+            sub_item_table_func = function() return slotMenu("top") end,
+        },
+        {
+            text_func = function() local s = getS("bottom"); return _("Bottom marker") .. ": " .. (LABELS[(s and s.type) or "off"]) end,
+            sub_item_table_func = function() return slotMenu("bottom") end,
         },
     }
 end

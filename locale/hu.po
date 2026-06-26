@@ -4,13 +4,338 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bookends\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-13 00:14+0100\n"
+"POT-Creation-Date: 2026-06-26 08:12+0100\n"
 "Language-Team: Hungarian\n"
 "Language: hu\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
+
+#: bookends_colour_palette.lua:400 bookends_dialog_helpers.lua:101
+#: bookends_line_editor.lua:790 bookends_line_editor.lua:1056 main.lua:2219
+#: main.lua:2918 menu/main_menu.lua:38 menu/main_menu.lua:78
+#: menu/preset_manager_modal.lua:1131 menu/preset_manager_modal.lua:1252
+#: menu/preset_manager_modal.lua:1293 menu/preset_manager_modal.lua:1394
+#: menu/preset_manager_modal.lua:1438 menu/preset_manager_modal.lua:1540
+#: menu/preset_manager_modal.lua:1612 menu/preset_manager_modal.lua:1707
+#: menu/preset_manager_modal.lua:1731 menu/preset_manager_modal.lua:1755
+#: menu/progress_bar_menu.lua:64
+msgid "Cancel"
+msgstr "Mégse"
+
+#: bookends_colour_palette.lua:402 bookends_dialog_helpers.lua:109
+#: bookends_line_editor.lua:503 bookends_line_editor.lua:630 main.lua:2229
+#: main.lua:2461 menu/colours_menu.lua:73 menu/colours_menu.lua:269
+#: menu/progress_bar_menu.lua:270 menu/progress_bar_menu.lua:503
+#: menu/progress_bar_menu.lua:545
+msgid "Default"
+msgstr "Alapértelmezett"
+
+#: bookends_colour_palette.lua:404 bookends_dialog_helpers.lua:116
+#: main.lua:2258 menu/preset_manager_modal.lua:587
+msgid "Apply"
+msgstr "Alkalmaz"
+
+#: bookends_colour_palette.lua:406 menu/colours_menu.lua:257
+msgid "White"
+msgstr "Fehér"
+
+#: bookends_colour_palette.lua:441 bookends_colour_palette.lua:561
+msgid "Pick a color"
+msgstr "Válassz színt"
+
+#: bookends_colour_palette.lua:529
+msgid "Invalid hex colour (use #RGB or #RRGGBB)"
+msgstr "Érvénytelen hexa szín (használj #RGB vagy #RRGGBB formátumot)"
+
+#: bookends_line_editor.lua:115 main.lua:1010
+msgid "Regular"
+msgstr "Normál"
+
+#: bookends_line_editor.lua:121 bookends_line_editor.lua:446
+#: menu/progress_bar_menu.lua:463
+msgid "Size"
+msgstr "Méret"
+
+#: bookends_line_editor.lua:128
+msgid "Font"
+msgstr "Betűtípus"
+
+#: bookends_line_editor.lua:130
+msgid "Font..."
+msgstr "Betűtípus..."
+
+#: bookends_line_editor.lua:142
+msgid "Odd pg"
+msgstr "Páratlan old."
+
+#: bookends_line_editor.lua:143
+msgid "Even pg"
+msgstr "Páros old."
+
+#: bookends_line_editor.lua:144
+msgid "All pg"
+msgstr "Minden old."
+
+#: bookends_line_editor.lua:180
+msgid "- Progress bar"
+msgstr "- Folyamatjelző"
+
+#: bookends_line_editor.lua:180
+msgid "+ Progress bar"
+msgstr "+ Folyamatjelző"
+
+#: bookends_line_editor.lua:185
+msgid "Bar style…"
+msgstr "Sávstílus…"
+
+#: bookends_line_editor.lua:216 bookends_line_editor.lua:565
+#: menu/progress_bar_menu.lua:143
+msgid "Bordered"
+msgstr "Szegélyezett"
+
+#: bookends_line_editor.lua:216 bookends_line_editor.lua:244
+#: menu/progress_bar_menu.lua:143 menu/progress_bar_menu.lua:144
+#: menu/progress_bar_menu.lua:418
+msgid "Solid"
+msgstr "Teli"
+
+#: bookends_line_editor.lua:216 menu/progress_bar_menu.lua:143
+msgid "Rounded"
+msgstr "Lekerekített"
+
+#: bookends_line_editor.lua:217 menu/progress_bar_menu.lua:143
+msgid "Metro"
+msgstr "Metro"
+
+#: bookends_line_editor.lua:217 menu/progress_bar_menu.lua:143
+msgid "Wave"
+msgstr "Hullám"
+
+#: bookends_line_editor.lua:217 menu/progress_bar_menu.lua:143
+msgid "Radial"
+msgstr "Radiális"
+
+#: bookends_line_editor.lua:218 menu/progress_bar_menu.lua:143
+msgid "Radial hollow"
+msgstr "Radiális, üres"
+
+#: bookends_line_editor.lua:218 menu/progress_bar_menu.lua:143
+msgid "Pacman"
+msgstr "Pacman"
+
+#: bookends_line_editor.lua:222 menu/progress_bar_menu.lua:124
+msgid "Chapter ticks: off"
+msgstr "Fejezetjelölők: ki"
+
+#: bookends_line_editor.lua:223 menu/progress_bar_menu.lua:126
+msgid "Chapter ticks: top level"
+msgstr "Fejezetjelölők: legfelső szint"
+
+#: bookends_line_editor.lua:224 menu/progress_bar_menu.lua:127
+msgid "Chapter ticks: top 2 levels"
+msgstr "Fejezetjelölők: felső 2 szint"
+
+#: bookends_line_editor.lua:225 menu/progress_bar_menu.lua:125
+msgid "Chapter ticks: all levels"
+msgstr "Fejezetjelölők: minden szint"
+
+#: bookends_line_editor.lua:238 menu/progress_bar_menu.lua:416
+msgid "Off"
+msgstr "ki"
+
+#: bookends_line_editor.lua:239 menu/progress_bar_menu.lua:416
+msgid "Start of session"
+msgstr "Munkamenet kezdete"
+
+#: bookends_line_editor.lua:240 menu/progress_bar_menu.lua:416
+msgid "Book opened"
+msgstr "Könyv megnyitása"
+
+#: bookends_line_editor.lua:244 menu/progress_bar_menu.lua:418
+msgid "Chevron"
+msgstr "Nyíl"
+
+#: bookends_line_editor.lua:283
+msgid "Disable custom colours"
+msgstr "Egyéni színek letiltása"
+
+#: bookends_line_editor.lua:283
+msgid "Enable custom colours"
+msgstr "Egyéni színek engedélyezése"
+
+#: bookends_line_editor.lua:336 bookends_line_editor.lua:339
+#: menu/progress_bar_menu.lua:332 menu/progress_bar_menu.lua:337
+msgid "Tick height"
+msgstr "Jelölővonal magassága"
+
+#: bookends_line_editor.lua:351 bookends_line_editor.lua:354
+#: menu/progress_bar_menu.lua:358 menu/progress_bar_menu.lua:360
+#: menu/progress_bar_menu.lua:366
+msgid "Tick width"
+msgstr "Jelölővonal szélessége"
+
+#: bookends_line_editor.lua:369 bookends_line_editor.lua:396
+#: bookends_line_editor.lua:509
+msgid "Back"
+msgstr "Vissza"
+
+#: bookends_line_editor.lua:376
+msgid "Bar colours"
+msgstr "Sáv színei"
+
+#: bookends_line_editor.lua:390 bookends_line_editor.lua:408
+#: menu/progress_bar_menu.lua:511
+msgid "Top marker"
+msgstr "Felső jelölő"
+
+#: bookends_line_editor.lua:393 bookends_line_editor.lua:408
+#: menu/progress_bar_menu.lua:515
+msgid "Bottom marker"
+msgstr "Alsó jelölő"
+
+#: bookends_line_editor.lua:400 bookends_line_editor.lua:648
+#: menu/progress_bar_menu.lua:402
+msgid "Markers"
+msgstr "Jelölők"
+
+#: bookends_line_editor.lua:416 bookends_line_editor.lua:541
+#: menu/progress_bar_menu.lua:111 menu/progress_bar_menu.lua:432
+msgid "Type"
+msgstr "Típus"
+
+#: bookends_line_editor.lua:433 bookends_line_editor.lua:565
+#: menu/progress_bar_menu.lua:144 menu/progress_bar_menu.lua:450
+msgid "Style"
+msgstr "Stílus"
+
+#: bookends_line_editor.lua:450
+msgid "size"
+msgstr "méret"
+
+#: bookends_line_editor.lua:459 menu/progress_bar_menu.lua:474
+msgid "Offset"
+msgstr "Eltolás"
+
+#: bookends_line_editor.lua:463
+msgid "offset"
+msgstr "eltolás"
+
+#: bookends_line_editor.lua:473 menu/progress_bar_menu.lua:485
+msgid "Colour"
+msgstr "Szín"
+
+#: bookends_line_editor.lua:477
+msgid "colour"
+msgstr "szín"
+
+#: bookends_line_editor.lua:503 menu/progress_bar_menu.lua:503
+msgid "tick colour"
+msgstr "jelölés színe"
+
+#: bookends_line_editor.lua:541 menu/progress_bar_menu.lua:111
+#: menu/tokens_catalogue.lua:21
+msgid "Book"
+msgstr "Könyv"
+
+#: bookends_line_editor.lua:541 menu/progress_bar_menu.lua:111
+msgid "Chapter"
+msgstr "Fejezet"
+
+#: bookends_line_editor.lua:577 menu/progress_bar_menu.lua:188
+msgid "Fill: right to left"
+msgstr "Feltöltés: jobbról balra"
+
+#: bookends_line_editor.lua:577 menu/progress_bar_menu.lua:187
+msgid "Fill: left to right"
+msgstr "Feltöltés: balról jobbra"
+
+#: bookends_line_editor.lua:593 bookends_line_editor.lua:595
+#: bookends_line_editor.lua:597 menu/progress_bar_menu.lua:226
+msgid "Thickness"
+msgstr "Vastagság"
+
+#: bookends_line_editor.lua:593 bookends_line_editor.lua:630
+msgid "auto"
+msgstr "auto"
+
+#: bookends_line_editor.lua:605 menu/progress_bar_menu.lua:238
+msgid "Bar thickness"
+msgstr "Sáv vastagsága"
+
+#: bookends_line_editor.lua:607 menu/progress_bar_menu.lua:243
+msgid "Read"
+msgstr "Olvasott"
+
+#: bookends_line_editor.lua:608 menu/progress_bar_menu.lua:244
+msgid "Unread"
+msgstr "Olvasatlan"
+
+#: bookends_line_editor.lua:638
+msgid "Custom colours"
+msgstr "Egyéni színek"
+
+#: bookends_line_editor.lua:659 bookends_updater.lua:267 main.lua:2756
+#: menu/icons_library.lua:453 menu/preset_manager_modal.lua:561
+#: menu/tokens_library.lua:458
+msgid "Close"
+msgstr "Bezárás"
+
+#: bookends_line_editor.lua:664
+msgid "Bar style"
+msgstr "Sávstílus"
+
+#: bookends_line_editor.lua:685
+msgid "Font size"
+msgstr "Betűméret"
+
+#: bookends_line_editor.lua:685
+msgid "line"
+msgstr "sor"
+
+#: bookends_line_editor.lua:748
+msgid "Position"
+msgstr "Pozíció"
+
+#: bookends_line_editor.lua:805
+msgid "Icons"
+msgstr "Ikonok"
+
+#: bookends_line_editor.lua:814
+msgid "Tokens"
+msgstr "Tokenek"
+
+#: bookends_line_editor.lua:824 main.lua:2920 menu/main_menu.lua:40
+#: menu/preset_manager_modal.lua:1135 menu/preset_manager_modal.lua:1294
+#: menu/preset_manager_modal.lua:1395
+msgid "Save"
+msgstr "Mentés"
+
+#: bookends_line_editor.lua:865 menu/position_menu.lua:44
+msgid "Line"
+msgstr "Sor"
+
+#: bookends_line_editor.lua:976 menu/progress_bar_menu.lua:46
+msgid "Move up"
+msgstr "Felfelé"
+
+#: bookends_line_editor.lua:986 menu/progress_bar_menu.lua:55
+msgid "Move down"
+msgstr "Lefelé"
+
+#: bookends_line_editor.lua:1040
+msgid "Move to"
+msgstr "Áthelyezés ide"
+
+#: bookends_line_editor.lua:1050
+msgid "Line %1: %2"
+msgstr "%1. sor: %2"
+
+#: bookends_line_editor.lua:1052 menu/preset_manager_modal.lua:1237
+#: menu/preset_manager_modal.lua:1631
+msgid "Delete"
+msgstr "Törlés"
 
 #: bookends_updater.lua:105
 msgid "Open the releases page in a browser?"
@@ -35,12 +360,6 @@ msgstr "A Bookends naprakész."
 #: bookends_updater.lua:239
 msgid "Version: "
 msgstr "Verzió: "
-
-#: bookends_updater.lua:267 bookends_line_editor.lua:451 main.lua:2654
-#: menu/tokens_library.lua:458 menu/icons_library.lua:355
-#: menu/preset_manager_modal.lua:561
-msgid "Close"
-msgstr "Bezárás"
 
 #: bookends_updater.lua:273
 msgid "Update and restart"
@@ -102,236 +421,6 @@ msgstr "A legújabb kiadás lekérése sikertelen."
 msgid "Latest release has no downloadable zip."
 msgstr "A legújabb kiadáshoz nincs letölthető zip."
 
-#: bookends_line_editor.lua:112 main.lua:1000
-msgid "Regular"
-msgstr "Normál"
-
-#: bookends_line_editor.lua:118
-msgid "Size"
-msgstr "Méret"
-
-#: bookends_line_editor.lua:125
-msgid "Font"
-msgstr "Betűtípus"
-
-#: bookends_line_editor.lua:127
-msgid "Font..."
-msgstr "Betűtípus..."
-
-#: bookends_line_editor.lua:139
-msgid "Odd pg"
-msgstr "Páratlan old."
-
-#: bookends_line_editor.lua:140
-msgid "Even pg"
-msgstr "Páros old."
-
-#: bookends_line_editor.lua:141
-msgid "All pg"
-msgstr "Minden old."
-
-#: bookends_line_editor.lua:177
-msgid "- Progress bar"
-msgstr "- Folyamatjelző"
-
-#: bookends_line_editor.lua:177
-msgid "+ Progress bar"
-msgstr "+ Folyamatjelző"
-
-#: bookends_line_editor.lua:182
-msgid "Bar style…"
-msgstr "Sávstílus…"
-
-#: bookends_line_editor.lua:213 bookends_line_editor.lua:367
-#: menu/progress_bar_menu.lua:141
-msgid "Bordered"
-msgstr "Szegélyezett"
-
-#: bookends_line_editor.lua:213 menu/progress_bar_menu.lua:141
-#: menu/progress_bar_menu.lua:142
-msgid "Solid"
-msgstr "Teli"
-
-#: bookends_line_editor.lua:213 menu/progress_bar_menu.lua:141
-msgid "Rounded"
-msgstr "Lekerekített"
-
-#: bookends_line_editor.lua:214 menu/progress_bar_menu.lua:141
-msgid "Metro"
-msgstr "Metro"
-
-#: bookends_line_editor.lua:214 menu/progress_bar_menu.lua:141
-msgid "Wave"
-msgstr "Hullám"
-
-#: bookends_line_editor.lua:214 menu/progress_bar_menu.lua:141
-msgid "Radial"
-msgstr "Radiális"
-
-#: bookends_line_editor.lua:215 menu/progress_bar_menu.lua:141
-msgid "Radial hollow"
-msgstr "Radiális, üres"
-
-#: bookends_line_editor.lua:215 menu/progress_bar_menu.lua:141
-msgid "Pacman"
-msgstr "Pacman"
-
-#: bookends_line_editor.lua:219 menu/progress_bar_menu.lua:122
-msgid "Chapter ticks: off"
-msgstr "Fejezetjelölők: ki"
-
-#: bookends_line_editor.lua:220 menu/progress_bar_menu.lua:124
-msgid "Chapter ticks: top level"
-msgstr "Fejezetjelölők: legfelső szint"
-
-#: bookends_line_editor.lua:221 menu/progress_bar_menu.lua:125
-msgid "Chapter ticks: top 2 levels"
-msgstr "Fejezetjelölők: felső 2 szint"
-
-#: bookends_line_editor.lua:222 menu/progress_bar_menu.lua:123
-msgid "Chapter ticks: all levels"
-msgstr "Fejezetjelölők: minden szint"
-
-#: bookends_line_editor.lua:252
-msgid "Disable custom colours"
-msgstr "Egyéni színek letiltása"
-
-#: bookends_line_editor.lua:252
-msgid "Enable custom colours"
-msgstr "Egyéni színek engedélyezése"
-
-#: bookends_line_editor.lua:306
-msgid "Back"
-msgstr "Vissza"
-
-#: bookends_line_editor.lua:313
-msgid "Bar colours"
-msgstr "Sáv színei"
-
-#: bookends_line_editor.lua:343 menu/progress_bar_menu.lua:109
-msgid "Type"
-msgstr "Típus"
-
-#: bookends_line_editor.lua:343 menu/tokens_catalogue.lua:21
-#: menu/progress_bar_menu.lua:109
-msgid "Book"
-msgstr "Könyv"
-
-#: bookends_line_editor.lua:343 menu/progress_bar_menu.lua:109
-msgid "Chapter"
-msgstr "Fejezet"
-
-#: bookends_line_editor.lua:367 menu/progress_bar_menu.lua:142
-msgid "Style"
-msgstr "Stílus"
-
-#: bookends_line_editor.lua:379 menu/progress_bar_menu.lua:186
-msgid "Fill: right to left"
-msgstr "Feltöltés: jobbról balra"
-
-#: bookends_line_editor.lua:379 menu/progress_bar_menu.lua:185
-msgid "Fill: left to right"
-msgstr "Feltöltés: balról jobbra"
-
-#: bookends_line_editor.lua:395 bookends_line_editor.lua:397
-#: bookends_line_editor.lua:399 menu/progress_bar_menu.lua:224
-msgid "Thickness"
-msgstr "Vastagság"
-
-#: bookends_line_editor.lua:395 bookends_line_editor.lua:432
-msgid "auto"
-msgstr "auto"
-
-#: bookends_line_editor.lua:407 menu/progress_bar_menu.lua:236
-msgid "Bar thickness"
-msgstr "Sáv vastagsága"
-
-#: bookends_line_editor.lua:409 menu/progress_bar_menu.lua:241
-msgid "Read"
-msgstr "Olvasott"
-
-#: bookends_line_editor.lua:410 menu/progress_bar_menu.lua:242
-msgid "Unread"
-msgstr "Olvasatlan"
-
-#: bookends_line_editor.lua:432 bookends_colour_palette.lua:402 main.lua:2127
-#: main.lua:2359 bookends_dialog_helpers.lua:109 menu/colours_menu.lua:73
-#: menu/colours_menu.lua:269 menu/progress_bar_menu.lua:268
-#: menu/progress_bar_menu.lua:425
-msgid "Default"
-msgstr "Alapértelmezett"
-
-#: bookends_line_editor.lua:440
-msgid "Custom colours"
-msgstr "Egyéni színek"
-
-#: bookends_line_editor.lua:456
-msgid "Bar style"
-msgstr "Sávstílus"
-
-#: bookends_line_editor.lua:477
-msgid "Font size"
-msgstr "Betűméret"
-
-#: bookends_line_editor.lua:477
-msgid "line"
-msgstr "sor"
-
-#: bookends_line_editor.lua:540
-msgid "Position"
-msgstr "Pozíció"
-
-#: bookends_line_editor.lua:582 bookends_line_editor.lua:848
-#: bookends_colour_palette.lua:400 main.lua:2117 main.lua:2816
-#: bookends_dialog_helpers.lua:101 menu/main_menu.lua:32 menu/main_menu.lua:72
-#: menu/progress_bar_menu.lua:62 menu/preset_manager_modal.lua:1131
-#: menu/preset_manager_modal.lua:1252 menu/preset_manager_modal.lua:1293
-#: menu/preset_manager_modal.lua:1394 menu/preset_manager_modal.lua:1438
-#: menu/preset_manager_modal.lua:1540 menu/preset_manager_modal.lua:1612
-#: menu/preset_manager_modal.lua:1707 menu/preset_manager_modal.lua:1731
-#: menu/preset_manager_modal.lua:1755
-msgid "Cancel"
-msgstr "Mégse"
-
-#: bookends_line_editor.lua:597
-msgid "Icons"
-msgstr "Ikonok"
-
-#: bookends_line_editor.lua:606
-msgid "Tokens"
-msgstr "Tokenek"
-
-#: bookends_line_editor.lua:616 main.lua:2818 menu/main_menu.lua:34
-#: menu/preset_manager_modal.lua:1135 menu/preset_manager_modal.lua:1294
-#: menu/preset_manager_modal.lua:1395
-msgid "Save"
-msgstr "Mentés"
-
-#: bookends_line_editor.lua:657 menu/position_menu.lua:44
-msgid "Line"
-msgstr "Sor"
-
-#: bookends_line_editor.lua:768 menu/progress_bar_menu.lua:44
-msgid "Move up"
-msgstr "Felfelé"
-
-#: bookends_line_editor.lua:778 menu/progress_bar_menu.lua:53
-msgid "Move down"
-msgstr "Lefelé"
-
-#: bookends_line_editor.lua:832
-msgid "Move to"
-msgstr "Áthelyezés ide"
-
-#: bookends_line_editor.lua:842
-msgid "Line %1: %2"
-msgstr "%1. sor: %2"
-
-#: bookends_line_editor.lua:844 menu/preset_manager_modal.lua:1237
-#: menu/preset_manager_modal.lua:1631
-msgid "Delete"
-msgstr "Törlés"
-
 #: bookends_utils.lua:8 bookends_utils.lua:197
 msgid "UI font"
 msgstr "Felhasználói felület betűtípusa"
@@ -355,35 +444,6 @@ msgstr "Kézírás (Cursive)"
 #: bookends_utils.lua:13
 msgid "Fantasy"
 msgstr "Díszes (Fantasy)"
-
-#: _meta.lua:7 menu/main_menu.lua:12
-msgid "Bookends"
-msgstr "Bookends"
-
-#: _meta.lua:8
-msgid ""
-"Configurable text overlays at screen corners and edges with token expansion "
-"and icon support."
-msgstr ""
-"Beállítható szöveges overlay-ek a képernyő sarkaiban és szélein, token-"
-"helyettesítéssel és ikontámogatással."
-
-#: bookends_colour_palette.lua:404 main.lua:2156
-#: bookends_dialog_helpers.lua:116 menu/preset_manager_modal.lua:587
-msgid "Apply"
-msgstr "Alkalmaz"
-
-#: bookends_colour_palette.lua:406 menu/colours_menu.lua:257
-msgid "White"
-msgstr "Fehér"
-
-#: bookends_colour_palette.lua:441 bookends_colour_palette.lua:561
-msgid "Pick a color"
-msgstr "Válassz színt"
-
-#: bookends_colour_palette.lua:529
-msgid "Invalid hex colour (use #RGB or #RRGGBB)"
-msgstr "Érvénytelen hexa szín (használj #RGB vagy #RRGGBB formátumot)"
 
 #: main.lua:60
 msgid "Dismiss"
@@ -413,123 +473,880 @@ msgstr "Alul középen"
 msgid "Bottom-right"
 msgstr "Jobb alsó"
 
-#: main.lua:252
+#: main.lua:262
 msgid "Bookends: toggle visibility"
 msgstr "Bookends: láthatóság váltása"
 
-#: main.lua:258
+#: main.lua:268
 msgid "Bookends: cycle preset"
 msgstr "Bookends: előbeállítás váltása"
 
-#: main.lua:264
+#: main.lua:274
 msgid "Bookends: set visibility"
 msgstr "Bookends: láthatóság beállítása"
 
-#: main.lua:267
+#: main.lua:277
 msgid "on"
 msgstr "be"
 
-#: main.lua:267 menu/colours_menu.lua:302 menu/colours_menu.lua:309
+#: main.lua:277 menu/colours_menu.lua:302 menu/colours_menu.lua:309
 #: menu/colours_menu.lua:349
 msgid "off"
 msgstr "ki"
 
-#: main.lua:272
+#: main.lua:282
 msgid "Bookends: open preset library"
 msgstr "Bookends: előbeállítás-könyvtár megnyitása"
 
-#: main.lua:361 main.lua:399 menu/preset_manager_modal.lua:1501
+#: main.lua:371 main.lua:409 menu/preset_manager_modal.lua:1501
 msgid "My setup"
 msgstr "Saját beállításom"
 
-#: main.lua:362 main.lua:400 menu/preset_manager_modal.lua:1505
+#: main.lua:372 main.lua:410 menu/preset_manager_modal.lua:1505
 msgid "Imported from your earlier Bookends settings"
 msgstr "Importálva a korábbi Bookends-beállításaidból"
 
-#: main.lua:542
+#: main.lua:552
 msgid "Preset error: %1"
 msgstr "Előbeállítás hiba: %1"
 
-#: main.lua:551
+#: main.lua:561
 msgid "Preset: %1"
 msgstr "Előbeállítás: %1"
 
-#: main.lua:1001
+#: main.lua:1011
 msgid "Bold"
 msgstr "Félkövér"
 
-#: main.lua:1002
+#: main.lua:1012
 msgid "Italic"
 msgstr "Dőlt"
 
-#: main.lua:1003
+#: main.lua:1013
 msgid "Bold italic"
 msgstr "Félkövér dőlt"
 
-#: main.lua:2375
+#: main.lua:2477
 msgid "Select font"
 msgstr "Betűtípus kiválasztása"
 
-#: main.lua:2416
+#: main.lua:2518
 msgid "Font-family fonts"
 msgstr "Betűtípus-családok"
 
-#: main.lua:2481
+#: main.lua:2583
 msgid "Fonts"
 msgstr "Betűtípusok"
 
-#: main.lua:2575 menu/library_modal.lua:932
+#: main.lua:2677 menu/library_modal.lua:937
 msgid "Page %1 of %2"
 msgstr "%1 / %2 oldal"
 
-#: main.lua:2664 main.lua:2838
+#: main.lua:2766 main.lua:2940
 msgid "Reset"
 msgstr "Visszaállítás"
 
-#: main.lua:2673
+#: main.lua:2775
 msgid "Set font"
 msgstr "Betűtípus beállítása"
 
-#: main.lua:2812 menu/main_menu.lua:416 menu/main_menu.lua:418
+#: main.lua:2914 menu/main_menu.lua:422 menu/main_menu.lua:424
 msgid "Development branch"
 msgstr "Fejlesztői branch"
 
-#: main.lua:2814
+#: main.lua:2916
 msgid "Branch name (leave empty for stable)"
 msgstr "Branch neve (üresen hagyva: stabil)"
 
-#: main.lua:2837
-msgid ""
-"This will clear the development branch setting and install the latest stable"
-" release of Bookends, then restart KOReader. Continue?"
-msgstr ""
-"Ez törli a fejlesztői branch beállítást, és telepíti a Bookends legújabb "
-"stabil kiadását, majd újraindítja a KOReadert. Folytatod?"
+#: main.lua:2939
+msgid "This will clear the development branch setting and install the latest stable release of Bookends, then restart KOReader. Continue?"
+msgstr "Ez törli a fejlesztői branch beállítást, és telepíti a Bookends legújabb stabil kiadását, majd újraindítja a KOReadert. Folytatod?"
 
-#: main.lua:2856
+#: main.lua:2958
 msgid "Bookends update available: v"
 msgstr "Bookends frissítés elérhető: v"
 
-#: main.lua:2864 menu/main_menu.lua:522 menu/progress_bar_menu.lua:275
-#: menu/progress_bar_menu.lua:409
+#: main.lua:2966 menu/main_menu.lua:528 menu/progress_bar_menu.lua:277
+#: menu/progress_bar_menu.lua:529
 msgid "Adjust margins"
 msgstr "Margók beállítása"
 
-#: main.lua:2866 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
+#: main.lua:2968 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
 msgid "Top"
 msgstr "Fent"
 
-#: main.lua:2867 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
+#: main.lua:2969 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
 msgid "Bottom"
 msgstr "Lent"
 
-#: main.lua:2868 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:412
+#: main.lua:2970 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
 msgid "Left"
 msgstr "Bal"
 
-#: main.lua:2869 menu/progress_bar_menu.lua:156 menu/progress_bar_menu.lua:413
+#: main.lua:2971 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
 msgid "Right"
 msgstr "Jobb"
+
+#: menu/colours_menu.lua:73
+msgid "per style"
+msgstr "stílus szerint"
+
+#: menu/colours_menu.lua:75
+msgid "Transparent"
+msgstr "Átlátszó"
+
+#: menu/colours_menu.lua:90 menu/colours_menu.lua:104 menu/colours_menu.lua:276
+#: menu/colours_menu.lua:283 menu/colours_menu.lua:289
+#: menu/colours_menu.lua:296 menu/progress_bar_menu.lua:360
+msgid "default"
+msgstr "alapértelmezett"
+
+#: menu/colours_menu.lua:91
+msgid "transparent"
+msgstr "átlátszó"
+
+#: menu/colours_menu.lua:110
+msgid "Progress bar colour"
+msgstr "Folyamatjelző színe"
+
+#: menu/colours_menu.lua:114
+msgid "Progress bar colour (% black)"
+msgstr "Folyamatjelző színe (% fekete)"
+
+#: menu/colours_menu.lua:123
+msgid "Progress bar track colour"
+msgstr "Folyamatjelző nyomvonal színe"
+
+#: menu/colours_menu.lua:127
+msgid "Progress bar track colour (% black)"
+msgstr "Folyamatjelző nyomvonal színe (% fekete)"
+
+#: menu/colours_menu.lua:136
+msgid "Tick color"
+msgstr "Jelölés színe"
+
+#: menu/colours_menu.lua:140
+msgid "Tick color (% black)"
+msgstr "Jelölés színe (% fekete)"
+
+#: menu/colours_menu.lua:148
+msgid "Invert tick color on read portion"
+msgstr "Jelölésszín invertálása az olvasott részen"
+
+#: menu/colours_menu.lua:161
+msgid "Border color"
+msgstr "Szegély színe"
+
+#: menu/colours_menu.lua:165
+msgid "Border color (% black)"
+msgstr "Szegély színe (% fekete)"
+
+#: menu/colours_menu.lua:175 menu/colours_menu.lua:177
+#: menu/colours_menu.lua:183
+msgid "Border thickness"
+msgstr "Szegély vastagsága"
+
+#: menu/colours_menu.lua:197
+msgid "Tick inversion color"
+msgstr "Jelölés-invertálási szín"
+
+#: menu/colours_menu.lua:201
+msgid "Tick inversion color (% black)"
+msgstr "Jelölés-invertálási szín (% fekete)"
+
+#: menu/colours_menu.lua:225
+msgid "No background"
+msgstr "Nincs háttér"
+
+#: menu/colours_menu.lua:276 menu/colours_menu.lua:283
+#: menu/colours_menu.lua:319 menu/progress_bar_menu.lua:34
+msgid "book"
+msgstr "könyv"
+
+#: menu/colours_menu.lua:289 menu/colours_menu.lua:296
+#: menu/colours_menu.lua:334
+msgid "text"
+msgstr "szöveg"
+
+#: menu/colours_menu.lua:315 menu/colours_menu.lua:319
+msgid "Text color"
+msgstr "Szöveg színe"
+
+#: menu/colours_menu.lua:329 menu/colours_menu.lua:334
+msgid "Icon color"
+msgstr "Ikon színe"
+
+#: menu/colours_menu.lua:331
+msgid ""
+"Applies to Nerd Font and FontAwesome icon glyphs (the Private Use Area range, e.g. %W, %B, %k). Unicode symbols in the regular text ranges (like the hourglass \"⌛\") follow the text color instead.\n"
+"\n"
+"An inline [c=#RRGGBB]…[/c] tag in a line overrides the icon colour for any glyphs inside it."
+msgstr ""
+"A Nerd Font és FontAwesome ikon-glifekre vonatkozik (Private Use Area tartomány, pl. %W, %B, %k). A normál szövegtartományok Unicode szimbólumai (mint a „⌛” homokóra) a szöveg színét követik.\n"
+"\n"
+"Egy soron belüli [c=#RRGGBB]…[/c] tag felülírja az ikonszínt minden benne lévő glifre."
+
+#: menu/colours_menu.lua:344 menu/colours_menu.lua:349
+msgid "Background colour"
+msgstr "Háttérszín"
+
+#: menu/colours_menu.lua:346
+msgid "Solid fill drawn behind the top and bottom overlay regions, edge to edge across the screen. Choose a colour to enable, hold this row or tap Default in the picker to turn off."
+msgstr "A felső és alsó overlay-régiók mögé rajzolt teli kitöltés, a képernyő teljes szélességében. Válassz színt a bekapcsoláshoz, vagy tartsd lenyomva ezt a sort, illetve koppints az Alapértelmezett gombra a színválasztóban a kikapcsoláshoz."
+
+#: menu/icons_catalogue.lua:24 menu/tokens_catalogue.lua:20
+msgid "All"
+msgstr "Mind"
+
+#: menu/icons_catalogue.lua:25
+msgid "Dynamic"
+msgstr "Dinamikus"
+
+#: menu/icons_catalogue.lua:26 menu/tokens_catalogue.lua:25
+msgid "Device"
+msgstr "Eszköz"
+
+#: menu/icons_catalogue.lua:27
+msgid "Reading"
+msgstr "Olvasás"
+
+#: menu/icons_catalogue.lua:28 menu/tokens_catalogue.lua:23
+msgid "Time"
+msgstr "Idő"
+
+#: menu/icons_catalogue.lua:29
+msgid "Symbols"
+msgstr "Szimbólumok"
+
+#: menu/icons_catalogue.lua:30
+msgid "Arrows"
+msgstr "Nyilak"
+
+#: menu/icons_catalogue.lua:31
+msgid "Blocks"
+msgstr "Blokkok"
+
+#: menu/icons_catalogue.lua:32
+msgid "Separators"
+msgstr "Elválasztók"
+
+#: menu/icons_catalogue.lua:33
+msgid "SVG icon folder"
+msgstr "SVG ikonmappa"
+
+#: menu/icons_catalogue.lua:38
+msgid "Battery"
+msgstr "Akkumulátor"
+
+#: menu/icons_catalogue.lua:39
+msgid "Wi-Fi"
+msgstr "Wi-Fi"
+
+#: menu/icons_catalogue.lua:40
+msgid "Frontlight"
+msgstr "Háttérvilágítás"
+
+#: menu/icons_catalogue.lua:41
+msgid "Warmth"
+msgstr "Melegség"
+
+#: menu/icons_catalogue.lua:42
+msgid "Night mode"
+msgstr "Éjszakai mód"
+
+#: menu/icons_catalogue.lua:173
+msgid "Sun (outline)"
+msgstr "Nap (kontúr)"
+
+#: menu/icons_catalogue.lua:174
+msgid "Hot springs / warmth"
+msgstr "Forrás / melegség"
+
+#: menu/icons_catalogue.lua:175
+msgid "Spade"
+msgstr "Pikk"
+
+#: menu/icons_catalogue.lua:176
+msgid "Club"
+msgstr "Treff"
+
+#: menu/icons_catalogue.lua:177
+msgid "Heart"
+msgstr "Szív"
+
+#: menu/icons_catalogue.lua:178
+msgid "Diamond suit"
+msgstr "Káró"
+
+#: menu/icons_catalogue.lua:179
+msgid "Star (filled)"
+msgstr "Csillag (kitöltött)"
+
+#: menu/icons_catalogue.lua:180
+msgid "Star (outline)"
+msgstr "Csillag (kontúr)"
+
+#: menu/icons_catalogue.lua:181
+msgid "Infinity"
+msgstr "Végtelen"
+
+#: menu/icons_catalogue.lua:182
+msgid "Section sign"
+msgstr "Szakaszjel"
+
+#: menu/icons_catalogue.lua:183
+msgid "Pilcrow / paragraph"
+msgstr "Bekezdésjel"
+
+#: menu/icons_catalogue.lua:184
+msgid "Dagger"
+msgstr "Kereszt (dagger)"
+
+#: menu/icons_catalogue.lua:185
+msgid "Double dagger"
+msgstr "Dupla kereszt (double dagger)"
+
+#: menu/icons_catalogue.lua:186
+msgid "Numero"
+msgstr "Numero jel"
+
+#: menu/icons_catalogue.lua:187
+msgid "High voltage"
+msgstr "Magasfeszültség"
+
+#: menu/icons_catalogue.lua:213
+msgid "Arrow left"
+msgstr "Balra nyíl"
+
+#: menu/icons_catalogue.lua:214
+msgid "Arrow right"
+msgstr "Jobbra nyíl"
+
+#: menu/icons_catalogue.lua:215
+msgid "Arrow up"
+msgstr "Felfelé nyíl"
+
+#: menu/icons_catalogue.lua:216
+msgid "Arrow down"
+msgstr "Lefelé nyíl"
+
+#: menu/icons_catalogue.lua:217
+msgid "Double arrow left"
+msgstr "Dupla balra nyíl"
+
+#: menu/icons_catalogue.lua:218
+msgid "Double arrow right"
+msgstr "Dupla jobbra nyíl"
+
+#: menu/icons_catalogue.lua:219
+msgid "Double arrow up"
+msgstr "Dupla felfelé nyíl"
+
+#: menu/icons_catalogue.lua:220
+msgid "Double arrow down"
+msgstr "Dupla lefelé nyíl"
+
+#: menu/icons_catalogue.lua:221
+msgid "Arrows left-right"
+msgstr "Balra-jobbra nyilak"
+
+#: menu/icons_catalogue.lua:222
+msgid "Double arrows right"
+msgstr "Dupla jobbra nyilak"
+
+#: menu/icons_catalogue.lua:223
+msgid "Left harpoon with right arrow"
+msgstr "Bal szigony jobbra nyíllal"
+
+#: menu/icons_catalogue.lua:224
+msgid "Curved back arrow"
+msgstr "Görbe visszanyíl"
+
+#: menu/icons_catalogue.lua:225
+msgid "Arrow left with tail"
+msgstr "Balra nyíl farokkal"
+
+#: menu/icons_catalogue.lua:226
+msgid "Arrow right with tail"
+msgstr "Jobbra nyíl farokkal"
+
+#: menu/icons_catalogue.lua:227
+msgid "Arrow left to bar"
+msgstr "Balra nyíl korlátig"
+
+#: menu/icons_catalogue.lua:228
+msgid "Arrow right to bar"
+msgstr "Jobbra nyíl korlátig"
+
+#: menu/icons_catalogue.lua:229
+msgid "Arrow left hooked"
+msgstr "Balra horgos nyíl"
+
+#: menu/icons_catalogue.lua:230
+msgid "Arrow right hooked"
+msgstr "Jobbra horgos nyíl"
+
+#: menu/icons_catalogue.lua:231
+msgid "Arrow right then up"
+msgstr "Jobbra majd fel nyíl"
+
+#: menu/icons_catalogue.lua:232
+msgid "Arrow right then down"
+msgstr "Jobbra majd le nyíl"
+
+#: menu/icons_catalogue.lua:233
+msgid "Arrow up then left"
+msgstr "Fel majd balra nyíl"
+
+#: menu/icons_catalogue.lua:234
+msgid "Arrow up then right"
+msgstr "Fel majd jobbra nyíl"
+
+#: menu/icons_catalogue.lua:235
+msgid "Arrow down then left"
+msgstr "Le majd balra nyíl"
+
+#: menu/icons_catalogue.lua:236
+msgid "Arrow down then right"
+msgstr "Le majd jobbra nyíl"
+
+#: menu/icons_catalogue.lua:237
+msgid "Circle arrow left"
+msgstr "Körbe balra nyíl"
+
+#: menu/icons_catalogue.lua:238
+msgid "Circle arrow right"
+msgstr "Körbe jobbra nyíl"
+
+#: menu/icons_catalogue.lua:239
+msgid "Heavy arrow right"
+msgstr "Vastag jobbra nyíl"
+
+#: menu/icons_catalogue.lua:240
+msgid "Heavy round arrow right"
+msgstr "Vastag kerek jobbra nyíl"
+
+#: menu/icons_catalogue.lua:241
+msgid "Triangle-head right"
+msgstr "Háromszögfejű jobbra nyíl"
+
+#: menu/icons_catalogue.lua:242
+msgid "Heavy triangle right"
+msgstr "Vastag háromszög jobbra"
+
+#: menu/icons_catalogue.lua:243
+msgid "Arrowhead right"
+msgstr "Nyílhegy jobbra"
+
+#: menu/icons_catalogue.lua:244
+msgid "Long arrow left"
+msgstr "Hosszú balra nyíl"
+
+#: menu/icons_catalogue.lua:245
+msgid "Long arrow right"
+msgstr "Hosszú jobbra nyíl"
+
+#: menu/icons_catalogue.lua:246
+msgid "Single angle left"
+msgstr "Egyszerű balra szögjel"
+
+#: menu/icons_catalogue.lua:247
+msgid "Single angle right"
+msgstr "Egyszerű jobbra szögjel"
+
+#: menu/icons_catalogue.lua:248
+msgid "Double angle left"
+msgstr "Dupla balra szögjel"
+
+#: menu/icons_catalogue.lua:249
+msgid "Double angle right"
+msgstr "Dupla jobbra szögjel"
+
+#: menu/icons_catalogue.lua:350
+msgid "Block (full)"
+msgstr "Blokk (teljes)"
+
+#: menu/icons_catalogue.lua:351
+msgid "Block (dark)"
+msgstr "Blokk (sötét)"
+
+#: menu/icons_catalogue.lua:352
+msgid "Block (medium)"
+msgstr "Blokk (közepes)"
+
+#: menu/icons_catalogue.lua:353
+msgid "Block (light)"
+msgstr "Blokk (világos)"
+
+#: menu/icons_catalogue.lua:354
+msgid "Upper half block"
+msgstr "Felső fél blokk"
+
+#: menu/icons_catalogue.lua:355
+msgid "Right half block"
+msgstr "Jobb fél blokk"
+
+#: menu/icons_catalogue.lua:356
+msgid "Lower 1/8 block"
+msgstr "Alsó 1/8 blokk"
+
+#: menu/icons_catalogue.lua:357
+msgid "Lower 2/8 block"
+msgstr "Alsó 2/8 blokk"
+
+#: menu/icons_catalogue.lua:358
+msgid "Lower 3/8 block"
+msgstr "Alsó 3/8 blokk"
+
+#: menu/icons_catalogue.lua:359
+msgid "Lower 4/8 block"
+msgstr "Alsó 4/8 blokk"
+
+#: menu/icons_catalogue.lua:360
+msgid "Lower 5/8 block"
+msgstr "Alsó 5/8 blokk"
+
+#: menu/icons_catalogue.lua:361
+msgid "Lower 6/8 block"
+msgstr "Alsó 6/8 blokk"
+
+#: menu/icons_catalogue.lua:362
+msgid "Lower 7/8 block"
+msgstr "Alsó 7/8 blokk"
+
+#: menu/icons_catalogue.lua:363
+msgid "Left 1/8 block"
+msgstr "Bal 1/8 blokk"
+
+#: menu/icons_catalogue.lua:364
+msgid "Left 2/8 block"
+msgstr "Bal 2/8 blokk"
+
+#: menu/icons_catalogue.lua:365
+msgid "Left 3/8 block"
+msgstr "Bal 3/8 blokk"
+
+#: menu/icons_catalogue.lua:366
+msgid "Left 4/8 block"
+msgstr "Bal 4/8 blokk"
+
+#: menu/icons_catalogue.lua:367
+msgid "Left 5/8 block"
+msgstr "Bal 5/8 blokk"
+
+#: menu/icons_catalogue.lua:368
+msgid "Left 6/8 block"
+msgstr "Bal 6/8 blokk"
+
+#: menu/icons_catalogue.lua:369
+msgid "Left 7/8 block"
+msgstr "Bal 7/8 blokk"
+
+#: menu/icons_catalogue.lua:370
+msgid "Square (filled)"
+msgstr "Négyzet (kitöltött)"
+
+#: menu/icons_catalogue.lua:371
+msgid "Square (empty)"
+msgstr "Négyzet (üres)"
+
+#: menu/icons_catalogue.lua:372
+msgid "Rectangle (filled)"
+msgstr "Téglalap (kitöltött)"
+
+#: menu/icons_catalogue.lua:373
+msgid "Rectangle (empty)"
+msgstr "Téglalap (üres)"
+
+#: menu/icons_catalogue.lua:374
+msgid "Vertical block"
+msgstr "Vízszintes blokk"
+
+#: menu/icons_catalogue.lua:375
+msgid "Vertical block (empty)"
+msgstr "Vízszintes blokk (üres)"
+
+#: menu/icons_catalogue.lua:376
+msgid "Slant block"
+msgstr "Dőlt blokk"
+
+#: menu/icons_catalogue.lua:377
+msgid "Slant block (empty)"
+msgstr "Dőlt blokk (üres)"
+
+#: menu/icons_catalogue.lua:378
+msgid "Circle (filled)"
+msgstr "Kör (kitöltött)"
+
+#: menu/icons_catalogue.lua:379
+msgid "Circle (empty)"
+msgstr "Kör (üres)"
+
+#: menu/icons_catalogue.lua:380
+msgid "Circle (left half)"
+msgstr "Kör (bal fél)"
+
+#: menu/icons_catalogue.lua:381
+msgid "Circle (right half)"
+msgstr "Kör (jobb fél)"
+
+#: menu/icons_catalogue.lua:382
+msgid "Circle (lower half)"
+msgstr "Kör (alsó fél)"
+
+#: menu/icons_catalogue.lua:383
+msgid "Circle (upper half)"
+msgstr "Kör (felső fél)"
+
+#: menu/icons_catalogue.lua:384
+msgid "Diamond (filled)"
+msgstr "Káró (kitöltött)"
+
+#: menu/icons_catalogue.lua:385
+msgid "Diamond (empty)"
+msgstr "Káró (üres)"
+
+#: menu/icons_catalogue.lua:388
+msgid "Vertical bar"
+msgstr "Függőleges vonal"
+
+#: menu/icons_catalogue.lua:389
+msgid "Bullet"
+msgstr "Pont (bullet)"
+
+#: menu/icons_catalogue.lua:390
+msgid "Middle dot"
+msgstr "Középső pont"
+
+#: menu/icons_catalogue.lua:391
+msgid "Vertical ellipsis"
+msgstr "Függőleges három pont"
+
+#: menu/icons_catalogue.lua:392
+msgid "Em dash"
+msgstr "Gondolatjel (em dash)"
+
+#: menu/icons_catalogue.lua:393
+msgid "En dash"
+msgstr "Kötőjel (en dash)"
+
+#: menu/icons_catalogue.lua:394
+msgid "Horizontal ellipsis"
+msgstr "Vízszintes három pont"
+
+#: menu/icons_catalogue.lua:395
+msgid "Slash"
+msgstr "Perjel"
+
+#: menu/icons_catalogue.lua:396
+msgid "Division slash"
+msgstr "Osztásjel"
+
+#: menu/icons_catalogue.lua:397
+msgid "Fraction slash"
+msgstr "Törtjel"
+
+#: menu/icons_catalogue.lua:398
+msgid "Double fraction slash"
+msgstr "Dupla törtjel"
+
+#: menu/icons_catalogue.lua:399
+msgid "Tilde"
+msgstr "Hullámjel"
+
+#: menu/icons_catalogue.lua:400
+msgid "Triangular bullet"
+msgstr "Háromszög pont"
+
+#: menu/icons_library.lua:366
+msgid "Icons library"
+msgstr "Ikonkönyvtár"
+
+#: menu/icons_library.lua:398
+msgid "Search %1 icons by name…"
+msgstr "%1 ikon keresése név szerint…"
+
+#: menu/icons_library.lua:435
+msgid "Drop .svg or .png files in koreader/icons/"
+msgstr "Helyezz .svg vagy .png fájlokat a koreader/icons/ mappába"
+
+#: menu/library_modal.lua:442
+msgid "Search…"
+msgstr "Keresés…"
+
+#: menu/library_modal.lua:478
+msgid "Search"
+msgstr "Keresés"
+
+#: menu/main_menu.lua:18 _meta.lua:19
+msgid "Bookends"
+msgstr "Bookends"
+
+#: menu/main_menu.lua:34 menu/preset_manager_modal.lua:1127
+msgid "Save preset"
+msgstr "Előbeállítás mentése"
+
+#: menu/main_menu.lua:36 menu/preset_manager_modal.lua:1129
+msgid "Preset name"
+msgstr "Előbeállítás neve"
+
+#: menu/main_menu.lua:51
+msgid "Saved preset:"
+msgstr "Mentett előbeállítás:"
+
+#: menu/main_menu.lua:75 menu/preset_manager_modal.lua:1249
+msgid "Rename preset"
+msgstr "Előbeállítás átnevezése"
+
+#: menu/main_menu.lua:80 menu/main_menu.lua:496
+#: menu/preset_manager_modal.lua:1253 menu/preset_manager_modal.lua:1440
+msgid "Rename"
+msgstr "Átnevezés"
+
+#: menu/main_menu.lua:113 menu/main_menu.lua:115
+msgid "Bookends settings"
+msgstr "Bookends beállítások"
+
+#: menu/main_menu.lua:113
+msgid "plugin update available"
+msgstr "plugin frissítés elérhető"
+
+#: menu/main_menu.lua:130 menu/main_menu.lua:132
+msgid "Preset"
+msgstr "Előbeállítás"
+
+#: menu/main_menu.lua:182
+msgid "Full width progress bars"
+msgstr "Teljes szélességű folyamatjelzők"
+
+#: menu/main_menu.lua:194
+msgid "Save current as new preset…"
+msgstr "Jelenlegi mentése új előbeállításként…"
+
+#: menu/main_menu.lua:212
+msgid "Enable bookends"
+msgstr "Bookends engedélyezése"
+
+#: menu/main_menu.lua:223 menu/main_menu.lua:225
+msgid "Disable stock status bar"
+msgstr "Beépített állapotsor letiltása"
+
+#: menu/main_menu.lua:223
+msgid "recommended"
+msgstr "ajánlott"
+
+#: menu/main_menu.lua:228
+msgid "Hides KOReader's built-in status bar. This simplifies the render pipeline and can reduce e-ink flicker on some devices. All status bar features are available as Bookends tokens."
+msgstr "Elrejti a KOReader beépített állapotsorát. Ez egyszerűsíti a renderelési folyamatot, és csökkentheti az e-ink villódzást egyes eszközökön. Az állapotsor minden funkciója elérhető Bookends tokenként."
+
+#: menu/main_menu.lua:249 menu/main_menu.lua:259
+#: menu/preset_manager_modal.lua:1332
+msgid "Default font"
+msgstr "Alapértelmezett betűtípus"
+
+#: menu/main_menu.lua:285
+msgid "Bottom center tap gesture"
+msgstr "Alul középre koppintás gesztusa"
+
+#: menu/main_menu.lua:287
+msgid "toggle bookends"
+msgstr "bookends váltása"
+
+#: menu/main_menu.lua:289
+msgid "cycle presets"
+msgstr "előbeállítások váltása"
+
+#: menu/main_menu.lua:291
+msgid "preset library"
+msgstr "előbeállítás-könyvtár"
+
+#: menu/main_menu.lua:295
+msgid "Configure what happens when you tap the centre of the status bar area, and whether long-pressing a progress bar opens the skim dialog."
+msgstr "Itt állíthatod be, mi történjen, ha az állapotsor közepére koppintasz, és hogy egy folyamatjelző hosszú érintése megnyitja-e az átfutás párbeszédablakot."
+
+#: menu/main_menu.lua:306
+msgid "Pass through"
+msgstr "Áteresztés"
+
+#: menu/main_menu.lua:314
+msgid "Toggle bookends"
+msgstr "Bookends váltása"
+
+#: menu/main_menu.lua:328
+msgid "Cycle starred presets"
+msgstr "Csillagozott előbeállítások váltása"
+
+#: menu/main_menu.lua:342
+msgid "Open preset library"
+msgstr "Előbeállítás-könyvtár megnyitása"
+
+#: menu/main_menu.lua:357
+msgid "Long-press progress bars to skim document"
+msgstr "Folyamatjelzők hosszú érintése az átfutáshoz"
+
+#: menu/main_menu.lua:365
+msgid "Opens the skim dialog when you long-press on a full-width progress bar. Replaces the stock status bar's long-press to skim feature."
+msgstr "Megnyitja az átfutás párbeszédablakot, ha hosszan megérintesz egy teljes szélességű folyamatjelzőt. Az állapotsor eredeti hosszan-érintéses átfutás funkcióját helyettesíti."
+
+#: menu/main_menu.lua:372
+msgid "Include current page in pages-left tokens"
+msgstr "A jelenlegi oldal beleszámítása a hátralévő oldalakat jelző tokenekbe"
+
+#: menu/main_menu.lua:373
+msgid "Affects %L (pages left in book) and %l (pages left in chapter). Off (default): 'n−1 → 0'. On: 'n → 1'."
+msgstr "A %L (hátralévő oldalak a könyvben) és %l (hátralévő oldalak a fejezetben) tokeneket érinti. Ki (alapértelmezett): „n−1 → 0”. Be: „n → 1”."
+
+#: menu/main_menu.lua:386
+msgid "Notify on wake when update available"
+msgstr "Értesítés ébredéskor, ha frissítés elérhető"
+
+#: menu/main_menu.lua:406
+msgid "Update available"
+msgstr "Frissítés elérhető"
+
+#: menu/main_menu.lua:408
+msgid "Installed version"
+msgstr "Telepített verzió"
+
+#: menu/main_menu.lua:416
+msgid "Advanced"
+msgstr "Speciális"
+
+#: menu/main_menu.lua:435
+msgid "Check for updates"
+msgstr "Frissítések keresése"
+
+#: menu/main_menu.lua:437
+msgid "Install branch"
+msgstr "Branch telepítése"
+
+#: menu/main_menu.lua:445
+msgid "Reset to latest stable release"
+msgstr "Visszaállítás a legújabb stabil kiadásra"
+
+#: menu/main_menu.lua:456 menu/main_menu.lua:459
+msgid "Installed: v"
+msgstr "Telepítve: v"
+
+#: menu/main_menu.lua:476
+msgid "Preset library…"
+msgstr "Előbeállítás-könyvtár…"
+
+#: menu/main_menu.lua:510 menu/main_menu.lua:514
+msgid "Font scale"
+msgstr "Betűméret-arány"
+
+#: menu/main_menu.lua:538
+msgid "Truncation gap between regions"
+msgstr "Csonkolási hézag a régiók között"
+
+#: menu/main_menu.lua:542
+msgid "Truncation gap"
+msgstr "Csonkolási hézag"
+
+#: menu/main_menu.lua:553
+msgid "Prioritise left/right and truncate long center text"
+msgstr "Bal/jobb oldal előnyben, a hosszú középső szöveg csonkolása"
 
 #: menu/position_menu.lua:16
 msgid "Enabled"
@@ -559,25 +1376,342 @@ msgstr "Extra bal margó"
 msgid "Extra right margin"
 msgstr "Extra jobb margó"
 
-#: menu/tokens_catalogue.lua:20 menu/icons_catalogue.lua:24
-msgid "All"
-msgstr "Mind"
+#: menu/preset_manager_modal.lua:295
+msgid "+ New blank preset"
+msgstr "+ Új üres előbeállítás"
+
+#: menu/preset_manager_modal.lua:311
+msgid "Discover more presets"
+msgstr "További előbeállítások felfedezése"
+
+#: menu/preset_manager_modal.lua:317
+msgid "Browse presets others have shared, preview them on your own status bar, and install the ones you like. Once installed, you can edit each preset freely on the My presets tab."
+msgstr "Nézd át a másokkal megosztott előbeállításokat, próbáld ki őket a saját állapotsávodon, és telepítsd a tetszőeket. Telepítés után a Saját előbeállítások lapon szabadon szerkesztheted bármelyiket."
+
+#: menu/preset_manager_modal.lua:324
+msgid "Made something worth sharing? Submit it with the Manage button while viewing one of your own presets."
+msgstr "Csináltál valami megosztásra érdemeset? Küldd be a Kezelés gombbal, miközben az egyik saját előbeállításodat nézed."
+
+#: menu/preset_manager_modal.lua:331
+msgid "Tap Latest or Popular above to load the gallery."
+msgstr "Koppints a Legújabb vagy a Népszerű gombra fent a galéria betöltéséhez."
+
+#: menu/preset_manager_modal.lua:470
+msgid "Preset library"
+msgstr "Előbeállítás-könyvtár"
+
+#: menu/preset_manager_modal.lua:472
+msgid "My presets"
+msgstr "Saját előbeállítások"
+
+#: menu/preset_manager_modal.lua:473
+msgid "Gallery"
+msgstr "Galéria"
+
+#: menu/preset_manager_modal.lua:483 menu/preset_manager_modal.lua:495
+msgid "Latest"
+msgstr "Legújabb"
+
+#: menu/preset_manager_modal.lua:484
+msgid "Starred"
+msgstr "Csillagozott"
+
+#: menu/preset_manager_modal.lua:497
+msgid "Popular"
+msgstr "Népszerű"
+
+#: menu/preset_manager_modal.lua:509
+msgid "Loading gallery…"
+msgstr "Galéria betöltése…"
+
+#: menu/preset_manager_modal.lua:522
+msgid "Search my presets by name or author…"
+msgstr "Saját előbeállítások keresése név vagy szerző szerint…"
+
+#: menu/preset_manager_modal.lua:524
+msgid "Search gallery presets by name or author…"
+msgstr "Galéria előbeállítások keresése név vagy szerző szerint…"
+
+#: menu/preset_manager_modal.lua:566
+msgid "Manage…"
+msgstr "Kezelés…"
+
+#: menu/preset_manager_modal.lua:584 menu/preset_manager_modal.lua:587
+#: menu/preset_manager_modal.lua:1733
+msgid "Install"
+msgstr "Telepítés"
+
+#: menu/preset_manager_modal.lua:824 menu/preset_manager_modal.lua:1691
+msgid "Could not preview preset"
+msgstr "Az előbeállítás előnézete nem sikerült"
+
+#: menu/preset_manager_modal.lua:939
+msgid "by"
+msgstr "tőle:"
+
+#: menu/preset_manager_modal.lua:1188 menu/preset_manager_modal.lua:1502
+msgid "Untitled"
+msgstr "Névtelen"
+
+#: menu/preset_manager_modal.lua:1217
+msgid "Rename…"
+msgstr "Átnevezés…"
+
+#: menu/preset_manager_modal.lua:1221
+msgid "Edit description…"
+msgstr "Leírás szerkesztése…"
+
+#: menu/preset_manager_modal.lua:1225
+msgid "Edit author…"
+msgstr "Szerző szerkesztése…"
+
+#: menu/preset_manager_modal.lua:1229
+msgid "Duplicate"
+msgstr "Másolat"
+
+#: menu/preset_manager_modal.lua:1233
+msgid "Submit to gallery…"
+msgstr "Beküldés a galériába…"
+
+#: menu/preset_manager_modal.lua:1343
+msgid "%1, line %2"
+msgstr "%1, %2. sor"
+
+#: menu/preset_manager_modal.lua:1380
+msgid "Edit description"
+msgstr "Leírás szerkesztése"
+
+#: menu/preset_manager_modal.lua:1384
+msgid "Edit author"
+msgstr "Szerző szerkesztése"
+
+#: menu/preset_manager_modal.lua:1388
+msgid "copy"
+msgstr "másolat"
+
+#: menu/preset_manager_modal.lua:1391
+msgid "Duplicate preset"
+msgstr "Előbeállítás duplikálása"
+
+#: menu/preset_manager_modal.lua:1434
+msgid "Rename before sharing"
+msgstr "Átnevezés megosztás előtt"
+
+#: menu/preset_manager_modal.lua:1485
+msgid "Who should we credit as the author?"
+msgstr "Kit jelöljünk meg szerzőként?"
+
+#: menu/preset_manager_modal.lua:1490
+msgid "One-line description of this preset"
+msgstr "Egysoros leírás erről az előbeállításról"
+
+#: menu/preset_manager_modal.lua:1509
+msgid "'%1' is one of Bookends' default placeholder names. Give your preset something distinctive — that's how it'll appear in the gallery."
+msgstr "„%1” a Bookends egyik alapértelmezett helykitöltő neve. Adj egyedi nevet az előbeállításodnak — így fog megjelenni a galériában."
+
+#: menu/preset_manager_modal.lua:1515
+msgid "Write a short description that tells gallery users what your preset shows"
+msgstr "Írj egy rövid leírást, amely megmutatja a galéria felhasználóinak, mit jelenít meg az előbeállítás"
+
+#: menu/preset_manager_modal.lua:1537
+msgid "Submit '%1' by %2 to the gallery? A pull request will be opened for review."
+msgstr "Beküldöd a galériába „%1”-t %2 nevében? Egy pull request fog megnyílni felülvizsgálatra."
+
+#: menu/preset_manager_modal.lua:1539
+msgid "Submit"
+msgstr "Beküldés"
+
+#: menu/preset_manager_modal.lua:1549
+msgid "A preset called '%1' is already in the gallery. Rename your preset (Manage… → Rename…) before submitting, so it doesn't collide with the existing entry."
+msgstr "„%1” nevű előbeállítás már szerepel a galériában. Nevezd át az előbeállításodat (Kezelés… → Átnevezés…), mielőtt beküldöd, hogy ne ütközzön a meglévő bejegyzéssel."
+
+#: menu/preset_manager_modal.lua:1560
+msgid "Submitting to gallery…"
+msgstr "Beküldés a galériába…"
+
+#: menu/preset_manager_modal.lua:1572
+msgid ""
+"Thanks! Your submission is PR #%1.\n"
+"\n"
+"The maintainer will review it before it appears in the Gallery."
+msgstr ""
+"Köszönjük! A beküldésed a #%1 pull request.\n"
+"\n"
+"A karbantartó felülvizsgálja, mielőtt megjelenne a Galériában."
+
+#: menu/preset_manager_modal.lua:1581
+msgid "A preset called '%1' is already in the gallery. Rename your preset (Manage… → Rename…) before submitting."
+msgstr "„%1” nevű előbeállítás már szerepel a galériában. Nevezd át az előbeállításodat (Kezelés… → Átnevezés…), mielőtt beküldöd."
+
+#: menu/preset_manager_modal.lua:1584
+msgid "A submission for '%1' is already awaiting review. Wait for that one to be reviewed, or rename your preset to submit under a different name."
+msgstr "„%1” nevű beküldés már felülvizsgálatra várakozik. Várj, amíg azt felülvizsgálják, vagy nevezd át az előbeállításodat, hogy más néven küldhesd be."
+
+#: menu/preset_manager_modal.lua:1587
+msgid "Submission failed: %1"
+msgstr "A beküldés sikertelen: %1"
+
+#: menu/preset_manager_modal.lua:1600
+msgid "This preset uses specific fonts that won't exist on other devices. These overrides will be stripped from your submission so other users see their own default font."
+msgstr "Ez az előbeállítás olyan betűtípusokat használ, amelyek más eszközökön nem léteznek. Ezek a felülírások eltávolításra kerülnek a beküldésedből, így a többi felhasználó a saját alapértelmezett betűtípusát látja."
+
+#: menu/preset_manager_modal.lua:1602
+msgid "Custom fonts in this preset:"
+msgstr "Egyéni betűtípusok ebben az előbeállításban:"
+
+#: menu/preset_manager_modal.lua:1608
+msgid "Tip: for portable presets, pick a Font-family font (Serif, Sans-serif, etc.) instead of a specific one — those adapt to each user's font settings."
+msgstr "Tipp: hordozható előbeállításokhoz válassz betűtípus-családot (Serif, Sans-serif, stb.) egy konkrét betűtípus helyett — ezek minden felhasználó betűtípus-beállításához igazodnak."
+
+#: menu/preset_manager_modal.lua:1611
+msgid "Submit anyway"
+msgstr "Mégis beküldés"
+
+#: menu/preset_manager_modal.lua:1624
+msgid "Submission failed — details in the KOReader log."
+msgstr "A beküldés sikertelen — részletek a KOReader naplóban."
+
+#: menu/preset_manager_modal.lua:1630
+msgid "Delete preset '%1'?"
+msgstr "Törlöd az „%1” előbeállítást?"
+
+#: menu/preset_manager_modal.lua:1673
+msgid "Offline — connect to preview this preset."
+msgstr "Offline — csatlakozz az előbeállítás előnézetéhez."
+
+#: menu/preset_manager_modal.lua:1675
+msgid "Couldn't download '%1'."
+msgstr "„%1” letöltése nem sikerült."
+
+#: menu/preset_manager_modal.lua:1681
+msgid "This preset appears invalid; skipping."
+msgstr "Ez az előbeállítás érvénytelennek tűnik; kihagyva."
+
+#: menu/preset_manager_modal.lua:1704
+msgid ""
+"'%1' already exists in your library.\n"
+"\n"
+"Replacing it will overwrite your local copy with the current gallery version. Any local edits will be lost.\n"
+"\n"
+"Install under a new name to keep both."
+msgstr ""
+"„%1” már létezik a könyvtáradban.\n"
+"\n"
+"Ha lecseréled, a helyi másolatod felülíródik a galéria jelenlegi verziójával. A helyi módosítások elvesznek.\n"
+"\n"
+"Telepítsd új néven, hogy mindkettő megmaradjon."
+
+#: menu/preset_manager_modal.lua:1710
+msgid "Replace"
+msgstr "Csere"
+
+#: menu/preset_manager_modal.lua:1724
+msgid "Install as new name…"
+msgstr "Telepítés új néven…"
+
+#: menu/preset_manager_modal.lua:1728
+msgid "Install as"
+msgstr "Telepítés mint"
+
+#: menu/progress_bar_menu.lua:32
+msgid "Bar"
+msgstr "Sáv"
+
+#: menu/progress_bar_menu.lua:34
+msgid "chapter"
+msgstr "fejezet"
+
+#: menu/progress_bar_menu.lua:35
+msgid "top"
+msgstr "fent"
+
+#: menu/progress_bar_menu.lua:35
+msgid "bottom"
+msgstr "lent"
+
+#: menu/progress_bar_menu.lua:35
+msgid "left"
+msgstr "bal"
+
+#: menu/progress_bar_menu.lua:35
+msgid "right"
+msgstr "jobb"
+
+#: menu/progress_bar_menu.lua:71
+msgid "Bar %1"
+msgstr "%1. sáv"
+
+#: menu/progress_bar_menu.lua:82
+msgid "Long press to change render order"
+msgstr "Hosszan nyomva változtathatod a megjelenítési sorrendet"
+
+#: menu/progress_bar_menu.lua:86
+msgid "Inline progress bars can be added via the line editor"
+msgstr "Beágyazott folyamatjelzők a sorszerkesztőben adhatók hozzá"
+
+#: menu/progress_bar_menu.lua:102
+msgid "Enable"
+msgstr "Engedélyezés"
+
+#: menu/progress_bar_menu.lua:159
+msgid "Anchor"
+msgstr "Horgony"
+
+#: menu/progress_bar_menu.lua:184
+msgid "Fill: clockwise"
+msgstr "Feltöltés: óramutató járásával"
+
+#: menu/progress_bar_menu.lua:189
+msgid "Fill: top to bottom"
+msgstr "Feltöltés: fentről le"
+
+#: menu/progress_bar_menu.lua:190
+msgid "Fill: bottom to top"
+msgstr "Feltöltés: lentről fel"
+
+#: menu/progress_bar_menu.lua:226 menu/progress_bar_menu.lua:238
+msgid "Diameter"
+msgstr "Átmérő"
+
+#: menu/progress_bar_menu.lua:291 menu/progress_bar_menu.lua:293
+msgid "Custom colors and tick marks"
+msgstr "Egyéni színek és jelölővonalak"
+
+#: menu/progress_bar_menu.lua:301
+msgid "Use custom colors"
+msgstr "Egyéni színek használata"
+
+#: menu/progress_bar_menu.lua:386
+msgid "Reset custom to defaults"
+msgstr "Egyéni beállítások visszaállítása alapértelmezettre"
+
+#: menu/progress_bar_menu.lua:468
+msgid "Marker size"
+msgstr "Jelölő mérete"
+
+#: menu/progress_bar_menu.lua:479
+msgid "Marker offset"
+msgstr "Jelölő eltolása"
+
+#: menu/progress_bar_menu.lua:490 menu/progress_bar_menu.lua:499
+msgid "Marker colour"
+msgstr "Jelölő színe"
+
+#: menu/progress_bar_menu.lua:531
+msgid "Edge"
+msgstr "Szél"
+
+#: menu/progress_bar_menu.lua:531
+msgid "Vertical"
+msgstr "Függőleges"
 
 #: menu/tokens_catalogue.lua:22
 msgid "Progress"
 msgstr "Folyamat"
 
-#: menu/tokens_catalogue.lua:23 menu/icons_catalogue.lua:28
-msgid "Time"
-msgstr "Idő"
-
 #: menu/tokens_catalogue.lua:24
 msgid "Session"
 msgstr "Munkamenet"
-
-#: menu/tokens_catalogue.lua:25 menu/icons_catalogue.lua:26
-msgid "Device"
-msgstr "Eszköz"
 
 #: menu/tokens_catalogue.lua:26
 msgid "If/else"
@@ -1147,192 +2281,6 @@ msgstr "Fejezetcím csak akkor, ha különbözik a könyv címétől"
 msgid "Battery bars"
 msgstr "Akkumulátor szintsávok"
 
-#: menu/main_menu.lua:28 menu/preset_manager_modal.lua:1127
-msgid "Save preset"
-msgstr "Előbeállítás mentése"
-
-#: menu/main_menu.lua:30 menu/preset_manager_modal.lua:1129
-msgid "Preset name"
-msgstr "Előbeállítás neve"
-
-#: menu/main_menu.lua:45
-msgid "Saved preset:"
-msgstr "Mentett előbeállítás:"
-
-#: menu/main_menu.lua:69 menu/preset_manager_modal.lua:1249
-msgid "Rename preset"
-msgstr "Előbeállítás átnevezése"
-
-#: menu/main_menu.lua:74 menu/main_menu.lua:490
-#: menu/preset_manager_modal.lua:1253 menu/preset_manager_modal.lua:1440
-msgid "Rename"
-msgstr "Átnevezés"
-
-#: menu/main_menu.lua:107 menu/main_menu.lua:109
-msgid "Bookends settings"
-msgstr "Bookends beállítások"
-
-#: menu/main_menu.lua:107
-msgid "plugin update available"
-msgstr "plugin frissítés elérhető"
-
-#: menu/main_menu.lua:124 menu/main_menu.lua:126
-msgid "Preset"
-msgstr "Előbeállítás"
-
-#: menu/main_menu.lua:176
-msgid "Full width progress bars"
-msgstr "Teljes szélességű folyamatjelzők"
-
-#: menu/main_menu.lua:188
-msgid "Save current as new preset…"
-msgstr "Jelenlegi mentése új előbeállításként…"
-
-#: menu/main_menu.lua:206
-msgid "Enable bookends"
-msgstr "Bookends engedélyezése"
-
-#: menu/main_menu.lua:217 menu/main_menu.lua:219
-msgid "Disable stock status bar"
-msgstr "Beépített állapotsor letiltása"
-
-#: menu/main_menu.lua:217
-msgid "recommended"
-msgstr "ajánlott"
-
-#: menu/main_menu.lua:222
-msgid ""
-"Hides KOReader's built-in status bar. This simplifies the render pipeline "
-"and can reduce e-ink flicker on some devices. All status bar features are "
-"available as Bookends tokens."
-msgstr ""
-"Elrejti a KOReader beépített állapotsorát. Ez egyszerűsíti a renderelési "
-"folyamatot, és csökkentheti az e-ink villódzást egyes eszközökön. Az "
-"állapotsor minden funkciója elérhető Bookends tokenként."
-
-#: menu/main_menu.lua:243 menu/main_menu.lua:253
-#: menu/preset_manager_modal.lua:1332
-msgid "Default font"
-msgstr "Alapértelmezett betűtípus"
-
-#: menu/main_menu.lua:279
-msgid "Bottom center tap gesture"
-msgstr "Alul középre koppintás gesztusa"
-
-#: menu/main_menu.lua:281
-msgid "toggle bookends"
-msgstr "bookends váltása"
-
-#: menu/main_menu.lua:283
-msgid "cycle presets"
-msgstr "előbeállítások váltása"
-
-#: menu/main_menu.lua:285
-msgid "preset library"
-msgstr "előbeállítás-könyvtár"
-
-#: menu/main_menu.lua:289
-msgid ""
-"Configure what happens when you tap the centre of the status bar area, and "
-"whether long-pressing a progress bar opens the skim dialog."
-msgstr ""
-"Itt állíthatod be, mi történjen, ha az állapotsor közepére koppintasz, és "
-"hogy egy folyamatjelző hosszú érintése megnyitja-e az átfutás "
-"párbeszédablakot."
-
-#: menu/main_menu.lua:300
-msgid "Pass through"
-msgstr "Áteresztés"
-
-#: menu/main_menu.lua:308
-msgid "Toggle bookends"
-msgstr "Bookends váltása"
-
-#: menu/main_menu.lua:322
-msgid "Cycle starred presets"
-msgstr "Csillagozott előbeállítások váltása"
-
-#: menu/main_menu.lua:336
-msgid "Open preset library"
-msgstr "Előbeállítás-könyvtár megnyitása"
-
-#: menu/main_menu.lua:351
-msgid "Long-press progress bars to skim document"
-msgstr "Folyamatjelzők hosszú érintése az átfutáshoz"
-
-#: menu/main_menu.lua:359
-msgid ""
-"Opens the skim dialog when you long-press on a full-width progress bar. "
-"Replaces the stock status bar's long-press to skim feature."
-msgstr ""
-"Megnyitja az átfutás párbeszédablakot, ha hosszan megérintesz egy teljes "
-"szélességű folyamatjelzőt. Az állapotsor eredeti hosszan-érintéses átfutás "
-"funkcióját helyettesíti."
-
-#: menu/main_menu.lua:366
-msgid "Include current page in pages-left tokens"
-msgstr "A jelenlegi oldal beleszámítása a hátralévő oldalakat jelző tokenekbe"
-
-#: menu/main_menu.lua:367
-msgid ""
-"Affects %L (pages left in book) and %l (pages left in chapter). Off "
-"(default): 'n−1 → 0'. On: 'n → 1'."
-msgstr ""
-"A %L (hátralévő oldalak a könyvben) és %l (hátralévő oldalak a fejezetben) "
-"tokeneket érinti. Ki (alapértelmezett): „n−1 → 0”. Be: „n → 1”."
-
-#: menu/main_menu.lua:380
-msgid "Notify on wake when update available"
-msgstr "Értesítés ébredéskor, ha frissítés elérhető"
-
-#: menu/main_menu.lua:400
-msgid "Update available"
-msgstr "Frissítés elérhető"
-
-#: menu/main_menu.lua:402
-msgid "Installed version"
-msgstr "Telepített verzió"
-
-#: menu/main_menu.lua:410
-msgid "Advanced"
-msgstr "Speciális"
-
-#: menu/main_menu.lua:429
-msgid "Check for updates"
-msgstr "Frissítések keresése"
-
-#: menu/main_menu.lua:431
-msgid "Install branch"
-msgstr "Branch telepítése"
-
-#: menu/main_menu.lua:439
-msgid "Reset to latest stable release"
-msgstr "Visszaállítás a legújabb stabil kiadásra"
-
-#: menu/main_menu.lua:450 menu/main_menu.lua:453
-msgid "Installed: v"
-msgstr "Telepítve: v"
-
-#: menu/main_menu.lua:470
-msgid "Preset library…"
-msgstr "Előbeállítás-könyvtár…"
-
-#: menu/main_menu.lua:504 menu/main_menu.lua:508
-msgid "Font scale"
-msgstr "Betűméret-arány"
-
-#: menu/main_menu.lua:532
-msgid "Truncation gap between regions"
-msgstr "Csonkolási hézag a régiók között"
-
-#: menu/main_menu.lua:536
-msgid "Truncation gap"
-msgstr "Csonkolási hézag"
-
-#: menu/main_menu.lua:547
-msgid "Prioritise left/right and truncate long center text"
-msgstr "Bal/jobb oldal előnyben, a hosszú középső szöveg csonkolása"
-
 #: menu/tokens_library.lua:335
 msgid "Tokens library"
 msgstr "Token-könyvtár"
@@ -1439,964 +2387,9 @@ msgstr "Még nincsenek kedvencek. Koppints egy token ☆ jelére, hogy hozzáadd
 msgid "Help"
 msgstr "Segítség"
 
-#: menu/icons_library.lua:287
-msgid "Icons library"
-msgstr "Ikonkönyvtár"
-
-#: menu/icons_library.lua:319
-msgid "Search %1 icons by name…"
-msgstr "%1 ikon keresése név szerint…"
-
-#: menu/icons_catalogue.lua:25
-msgid "Dynamic"
-msgstr "Dinamikus"
-
-#: menu/icons_catalogue.lua:27
-msgid "Reading"
-msgstr "Olvasás"
-
-#: menu/icons_catalogue.lua:29
-msgid "Symbols"
-msgstr "Szimbólumok"
-
-#: menu/icons_catalogue.lua:30
-msgid "Arrows"
-msgstr "Nyilak"
-
-#: menu/icons_catalogue.lua:31
-msgid "Blocks"
-msgstr "Blokkok"
-
-#: menu/icons_catalogue.lua:32
-msgid "Separators"
-msgstr "Elválasztók"
-
-#: menu/icons_catalogue.lua:37
-msgid "Battery"
-msgstr "Akkumulátor"
-
-#: menu/icons_catalogue.lua:38
-msgid "Wi-Fi"
-msgstr "Wi-Fi"
-
-#: menu/icons_catalogue.lua:39
-msgid "Frontlight"
-msgstr "Háttérvilágítás"
-
-#: menu/icons_catalogue.lua:40
-msgid "Warmth"
-msgstr "Melegség"
-
-#: menu/icons_catalogue.lua:41
-msgid "Night mode"
-msgstr "Éjszakai mód"
-
-#: menu/icons_catalogue.lua:172
-msgid "Sun (outline)"
-msgstr "Nap (kontúr)"
-
-#: menu/icons_catalogue.lua:173
-msgid "Hot springs / warmth"
-msgstr "Forrás / melegség"
-
-#: menu/icons_catalogue.lua:174
-msgid "Spade"
-msgstr "Pikk"
-
-#: menu/icons_catalogue.lua:175
-msgid "Club"
-msgstr "Treff"
-
-#: menu/icons_catalogue.lua:176
-msgid "Heart"
-msgstr "Szív"
-
-#: menu/icons_catalogue.lua:177
-msgid "Diamond suit"
-msgstr "Káró"
-
-#: menu/icons_catalogue.lua:178
-msgid "Star (filled)"
-msgstr "Csillag (kitöltött)"
-
-#: menu/icons_catalogue.lua:179
-msgid "Star (outline)"
-msgstr "Csillag (kontúr)"
-
-#: menu/icons_catalogue.lua:180
-msgid "Infinity"
-msgstr "Végtelen"
-
-#: menu/icons_catalogue.lua:181
-msgid "Section sign"
-msgstr "Szakaszjel"
-
-#: menu/icons_catalogue.lua:182
-msgid "Pilcrow / paragraph"
-msgstr "Bekezdésjel"
-
-#: menu/icons_catalogue.lua:183
-msgid "Dagger"
-msgstr "Kereszt (dagger)"
-
-#: menu/icons_catalogue.lua:184
-msgid "Double dagger"
-msgstr "Dupla kereszt (double dagger)"
-
-#: menu/icons_catalogue.lua:185
-msgid "Numero"
-msgstr "Numero jel"
-
-#: menu/icons_catalogue.lua:186
-msgid "High voltage"
-msgstr "Magasfeszültség"
-
-#: menu/icons_catalogue.lua:212
-msgid "Arrow left"
-msgstr "Balra nyíl"
-
-#: menu/icons_catalogue.lua:213
-msgid "Arrow right"
-msgstr "Jobbra nyíl"
-
-#: menu/icons_catalogue.lua:214
-msgid "Arrow up"
-msgstr "Felfelé nyíl"
-
-#: menu/icons_catalogue.lua:215
-msgid "Arrow down"
-msgstr "Lefelé nyíl"
-
-#: menu/icons_catalogue.lua:216
-msgid "Double arrow left"
-msgstr "Dupla balra nyíl"
-
-#: menu/icons_catalogue.lua:217
-msgid "Double arrow right"
-msgstr "Dupla jobbra nyíl"
-
-#: menu/icons_catalogue.lua:218
-msgid "Double arrow up"
-msgstr "Dupla felfelé nyíl"
-
-#: menu/icons_catalogue.lua:219
-msgid "Double arrow down"
-msgstr "Dupla lefelé nyíl"
-
-#: menu/icons_catalogue.lua:220
-msgid "Arrows left-right"
-msgstr "Balra-jobbra nyilak"
-
-#: menu/icons_catalogue.lua:221
-msgid "Double arrows right"
-msgstr "Dupla jobbra nyilak"
-
-#: menu/icons_catalogue.lua:222
-msgid "Left harpoon with right arrow"
-msgstr "Bal szigony jobbra nyíllal"
-
-#: menu/icons_catalogue.lua:223
-msgid "Curved back arrow"
-msgstr "Görbe visszanyíl"
-
-#: menu/icons_catalogue.lua:224
-msgid "Arrow left with tail"
-msgstr "Balra nyíl farokkal"
-
-#: menu/icons_catalogue.lua:225
-msgid "Arrow right with tail"
-msgstr "Jobbra nyíl farokkal"
-
-#: menu/icons_catalogue.lua:226
-msgid "Arrow left to bar"
-msgstr "Balra nyíl korlátig"
-
-#: menu/icons_catalogue.lua:227
-msgid "Arrow right to bar"
-msgstr "Jobbra nyíl korlátig"
-
-#: menu/icons_catalogue.lua:228
-msgid "Arrow left hooked"
-msgstr "Balra horgos nyíl"
-
-#: menu/icons_catalogue.lua:229
-msgid "Arrow right hooked"
-msgstr "Jobbra horgos nyíl"
-
-#: menu/icons_catalogue.lua:230
-msgid "Arrow right then up"
-msgstr "Jobbra majd fel nyíl"
-
-#: menu/icons_catalogue.lua:231
-msgid "Arrow right then down"
-msgstr "Jobbra majd le nyíl"
-
-#: menu/icons_catalogue.lua:232
-msgid "Arrow up then left"
-msgstr "Fel majd balra nyíl"
-
-#: menu/icons_catalogue.lua:233
-msgid "Arrow up then right"
-msgstr "Fel majd jobbra nyíl"
-
-#: menu/icons_catalogue.lua:234
-msgid "Arrow down then left"
-msgstr "Le majd balra nyíl"
-
-#: menu/icons_catalogue.lua:235
-msgid "Arrow down then right"
-msgstr "Le majd jobbra nyíl"
-
-#: menu/icons_catalogue.lua:236
-msgid "Circle arrow left"
-msgstr "Körbe balra nyíl"
-
-#: menu/icons_catalogue.lua:237
-msgid "Circle arrow right"
-msgstr "Körbe jobbra nyíl"
-
-#: menu/icons_catalogue.lua:238
-msgid "Heavy arrow right"
-msgstr "Vastag jobbra nyíl"
-
-#: menu/icons_catalogue.lua:239
-msgid "Heavy round arrow right"
-msgstr "Vastag kerek jobbra nyíl"
-
-#: menu/icons_catalogue.lua:240
-msgid "Triangle-head right"
-msgstr "Háromszögfejű jobbra nyíl"
-
-#: menu/icons_catalogue.lua:241
-msgid "Heavy triangle right"
-msgstr "Vastag háromszög jobbra"
-
-#: menu/icons_catalogue.lua:242
-msgid "Arrowhead right"
-msgstr "Nyílhegy jobbra"
-
-#: menu/icons_catalogue.lua:243
-msgid "Long arrow left"
-msgstr "Hosszú balra nyíl"
-
-#: menu/icons_catalogue.lua:244
-msgid "Long arrow right"
-msgstr "Hosszú jobbra nyíl"
-
-#: menu/icons_catalogue.lua:245
-msgid "Single angle left"
-msgstr "Egyszerű balra szögjel"
-
-#: menu/icons_catalogue.lua:246
-msgid "Single angle right"
-msgstr "Egyszerű jobbra szögjel"
-
-#: menu/icons_catalogue.lua:247
-msgid "Double angle left"
-msgstr "Dupla balra szögjel"
-
-#: menu/icons_catalogue.lua:248
-msgid "Double angle right"
-msgstr "Dupla jobbra szögjel"
-
-#: menu/icons_catalogue.lua:349
-msgid "Block (full)"
-msgstr "Blokk (teljes)"
-
-#: menu/icons_catalogue.lua:350
-msgid "Block (dark)"
-msgstr "Blokk (sötét)"
-
-#: menu/icons_catalogue.lua:351
-msgid "Block (medium)"
-msgstr "Blokk (közepes)"
-
-#: menu/icons_catalogue.lua:352
-msgid "Block (light)"
-msgstr "Blokk (világos)"
-
-#: menu/icons_catalogue.lua:353
-msgid "Upper half block"
-msgstr "Felső fél blokk"
-
-#: menu/icons_catalogue.lua:354
-msgid "Right half block"
-msgstr "Jobb fél blokk"
-
-#: menu/icons_catalogue.lua:355
-msgid "Lower 1/8 block"
-msgstr "Alsó 1/8 blokk"
-
-#: menu/icons_catalogue.lua:356
-msgid "Lower 2/8 block"
-msgstr "Alsó 2/8 blokk"
-
-#: menu/icons_catalogue.lua:357
-msgid "Lower 3/8 block"
-msgstr "Alsó 3/8 blokk"
-
-#: menu/icons_catalogue.lua:358
-msgid "Lower 4/8 block"
-msgstr "Alsó 4/8 blokk"
-
-#: menu/icons_catalogue.lua:359
-msgid "Lower 5/8 block"
-msgstr "Alsó 5/8 blokk"
-
-#: menu/icons_catalogue.lua:360
-msgid "Lower 6/8 block"
-msgstr "Alsó 6/8 blokk"
-
-#: menu/icons_catalogue.lua:361
-msgid "Lower 7/8 block"
-msgstr "Alsó 7/8 blokk"
-
-#: menu/icons_catalogue.lua:362
-msgid "Left 1/8 block"
-msgstr "Bal 1/8 blokk"
-
-#: menu/icons_catalogue.lua:363
-msgid "Left 2/8 block"
-msgstr "Bal 2/8 blokk"
-
-#: menu/icons_catalogue.lua:364
-msgid "Left 3/8 block"
-msgstr "Bal 3/8 blokk"
-
-#: menu/icons_catalogue.lua:365
-msgid "Left 4/8 block"
-msgstr "Bal 4/8 blokk"
-
-#: menu/icons_catalogue.lua:366
-msgid "Left 5/8 block"
-msgstr "Bal 5/8 blokk"
-
-#: menu/icons_catalogue.lua:367
-msgid "Left 6/8 block"
-msgstr "Bal 6/8 blokk"
-
-#: menu/icons_catalogue.lua:368
-msgid "Left 7/8 block"
-msgstr "Bal 7/8 blokk"
-
-#: menu/icons_catalogue.lua:369
-msgid "Square (filled)"
-msgstr "Négyzet (kitöltött)"
-
-#: menu/icons_catalogue.lua:370
-msgid "Square (empty)"
-msgstr "Négyzet (üres)"
-
-#: menu/icons_catalogue.lua:371
-msgid "Rectangle (filled)"
-msgstr "Téglalap (kitöltött)"
-
-#: menu/icons_catalogue.lua:372
-msgid "Rectangle (empty)"
-msgstr "Téglalap (üres)"
-
-#: menu/icons_catalogue.lua:373
-msgid "Vertical block"
-msgstr "Vízszintes blokk"
-
-#: menu/icons_catalogue.lua:374
-msgid "Vertical block (empty)"
-msgstr "Vízszintes blokk (üres)"
-
-#: menu/icons_catalogue.lua:375
-msgid "Slant block"
-msgstr "Dőlt blokk"
-
-#: menu/icons_catalogue.lua:376
-msgid "Slant block (empty)"
-msgstr "Dőlt blokk (üres)"
-
-#: menu/icons_catalogue.lua:377
-msgid "Circle (filled)"
-msgstr "Kör (kitöltött)"
-
-#: menu/icons_catalogue.lua:378
-msgid "Circle (empty)"
-msgstr "Kör (üres)"
-
-#: menu/icons_catalogue.lua:379
-msgid "Circle (left half)"
-msgstr "Kör (bal fél)"
-
-#: menu/icons_catalogue.lua:380
-msgid "Circle (right half)"
-msgstr "Kör (jobb fél)"
-
-#: menu/icons_catalogue.lua:381
-msgid "Circle (lower half)"
-msgstr "Kör (alsó fél)"
-
-#: menu/icons_catalogue.lua:382
-msgid "Circle (upper half)"
-msgstr "Kör (felső fél)"
-
-#: menu/icons_catalogue.lua:383
-msgid "Diamond (filled)"
-msgstr "Káró (kitöltött)"
-
-#: menu/icons_catalogue.lua:384
-msgid "Diamond (empty)"
-msgstr "Káró (üres)"
-
-#: menu/icons_catalogue.lua:387
-msgid "Vertical bar"
-msgstr "Függőleges vonal"
-
-#: menu/icons_catalogue.lua:388
-msgid "Bullet"
-msgstr "Pont (bullet)"
-
-#: menu/icons_catalogue.lua:389
-msgid "Middle dot"
-msgstr "Középső pont"
-
-#: menu/icons_catalogue.lua:390
-msgid "Vertical ellipsis"
-msgstr "Függőleges három pont"
-
-#: menu/icons_catalogue.lua:391
-msgid "Em dash"
-msgstr "Gondolatjel (em dash)"
-
-#: menu/icons_catalogue.lua:392
-msgid "En dash"
-msgstr "Kötőjel (en dash)"
-
-#: menu/icons_catalogue.lua:393
-msgid "Horizontal ellipsis"
-msgstr "Vízszintes három pont"
-
-#: menu/icons_catalogue.lua:394
-msgid "Slash"
-msgstr "Perjel"
-
-#: menu/icons_catalogue.lua:395
-msgid "Division slash"
-msgstr "Osztásjel"
-
-#: menu/icons_catalogue.lua:396
-msgid "Fraction slash"
-msgstr "Törtjel"
-
-#: menu/icons_catalogue.lua:397
-msgid "Double fraction slash"
-msgstr "Dupla törtjel"
-
-#: menu/icons_catalogue.lua:398
-msgid "Tilde"
-msgstr "Hullámjel"
-
-#: menu/icons_catalogue.lua:399
-msgid "Triangular bullet"
-msgstr "Háromszög pont"
-
-#: menu/colours_menu.lua:73
-msgid "per style"
-msgstr "stílus szerint"
-
-#: menu/colours_menu.lua:75
-msgid "Transparent"
-msgstr "Átlátszó"
-
-#: menu/colours_menu.lua:90 menu/colours_menu.lua:104
-#: menu/colours_menu.lua:276 menu/colours_menu.lua:283
-#: menu/colours_menu.lua:289 menu/colours_menu.lua:296
-#: menu/progress_bar_menu.lua:358
-msgid "default"
-msgstr "alapértelmezett"
-
-#: menu/colours_menu.lua:91
-msgid "transparent"
-msgstr "átlátszó"
-
-#: menu/colours_menu.lua:110
-msgid "Progress bar colour"
-msgstr "Folyamatjelző színe"
-
-#: menu/colours_menu.lua:114
-msgid "Progress bar colour (% black)"
-msgstr "Folyamatjelző színe (% fekete)"
-
-#: menu/colours_menu.lua:123
-msgid "Progress bar track colour"
-msgstr "Folyamatjelző nyomvonal színe"
-
-#: menu/colours_menu.lua:127
-msgid "Progress bar track colour (% black)"
-msgstr "Folyamatjelző nyomvonal színe (% fekete)"
-
-#: menu/colours_menu.lua:136
-msgid "Tick color"
-msgstr "Jelölés színe"
-
-#: menu/colours_menu.lua:140
-msgid "Tick color (% black)"
-msgstr "Jelölés színe (% fekete)"
-
-#: menu/colours_menu.lua:148
-msgid "Invert tick color on read portion"
-msgstr "Jelölésszín invertálása az olvasott részen"
-
-#: menu/colours_menu.lua:161
-msgid "Border color"
-msgstr "Szegély színe"
-
-#: menu/colours_menu.lua:165
-msgid "Border color (% black)"
-msgstr "Szegély színe (% fekete)"
-
-#: menu/colours_menu.lua:175 menu/colours_menu.lua:177
-#: menu/colours_menu.lua:183
-msgid "Border thickness"
-msgstr "Szegély vastagsága"
-
-#: menu/colours_menu.lua:197
-msgid "Tick inversion color"
-msgstr "Jelölés-invertálási szín"
-
-#: menu/colours_menu.lua:201
-msgid "Tick inversion color (% black)"
-msgstr "Jelölés-invertálási szín (% fekete)"
-
-#: menu/colours_menu.lua:225
-msgid "No background"
-msgstr "Nincs háttér"
-
-#: menu/colours_menu.lua:276 menu/colours_menu.lua:283
-#: menu/colours_menu.lua:319 menu/progress_bar_menu.lua:32
-msgid "book"
-msgstr "könyv"
-
-#: menu/colours_menu.lua:289 menu/colours_menu.lua:296
-#: menu/colours_menu.lua:334
-msgid "text"
-msgstr "szöveg"
-
-#: menu/colours_menu.lua:315 menu/colours_menu.lua:319
-msgid "Text color"
-msgstr "Szöveg színe"
-
-#: menu/colours_menu.lua:329 menu/colours_menu.lua:334
-msgid "Icon color"
-msgstr "Ikon színe"
-
-#: menu/colours_menu.lua:331
-msgid ""
-"Applies to Nerd Font and FontAwesome icon glyphs (the Private Use Area range, e.g. %W, %B, %k). Unicode symbols in the regular text ranges (like the hourglass \"⌛\") follow the text color instead.\n"
-"\n"
-"An inline [c=#RRGGBB]…[/c] tag in a line overrides the icon colour for any glyphs inside it."
-msgstr ""
-"A Nerd Font és FontAwesome ikon-glifekre vonatkozik (Private Use Area tartomány, pl. %W, %B, %k). A normál szövegtartományok Unicode szimbólumai (mint a „⌛” homokóra) a szöveg színét követik.\n"
-"\n"
-"Egy soron belüli [c=#RRGGBB]…[/c] tag felülírja az ikonszínt minden benne lévő glifre."
-
-#: menu/colours_menu.lua:344 menu/colours_menu.lua:349
-msgid "Background colour"
-msgstr "Háttérszín"
-
-#: menu/colours_menu.lua:346
-msgid ""
-"Solid fill drawn behind the top and bottom overlay regions, edge to edge "
-"across the screen. Choose a colour to enable, hold this row or tap Default "
-"in the picker to turn off."
-msgstr ""
-"A felső és alsó overlay-régiók mögé rajzolt teli kitöltés, a képernyő teljes"
-" szélességében. Válassz színt a bekapcsoláshoz, vagy tartsd lenyomva ezt a "
-"sort, illetve koppints az Alapértelmezett gombra a színválasztóban a "
-"kikapcsoláshoz."
-
-#: menu/library_modal.lua:442
-msgid "Search…"
-msgstr "Keresés…"
-
-#: menu/library_modal.lua:478
-msgid "Search"
-msgstr "Keresés"
-
-#: menu/progress_bar_menu.lua:30
-msgid "Bar"
-msgstr "Sáv"
-
-#: menu/progress_bar_menu.lua:32
-msgid "chapter"
-msgstr "fejezet"
-
-#: menu/progress_bar_menu.lua:33
-msgid "top"
-msgstr "fent"
-
-#: menu/progress_bar_menu.lua:33
-msgid "bottom"
-msgstr "lent"
-
-#: menu/progress_bar_menu.lua:33
-msgid "left"
-msgstr "bal"
-
-#: menu/progress_bar_menu.lua:33
-msgid "right"
-msgstr "jobb"
-
-#: menu/progress_bar_menu.lua:69
-msgid "Bar %1"
-msgstr "%1. sáv"
-
-#: menu/progress_bar_menu.lua:80
-msgid "Long press to change render order"
-msgstr "Hosszan nyomva változtathatod a megjelenítési sorrendet"
-
-#: menu/progress_bar_menu.lua:84
-msgid "Inline progress bars can be added via the line editor"
-msgstr "Beágyazott folyamatjelzők a sorszerkesztőben adhatók hozzá"
-
-#: menu/progress_bar_menu.lua:100
-msgid "Enable"
-msgstr "Engedélyezés"
-
-#: menu/progress_bar_menu.lua:157
-msgid "Anchor"
-msgstr "Horgony"
-
-#: menu/progress_bar_menu.lua:182
-msgid "Fill: clockwise"
-msgstr "Feltöltés: óramutató járásával"
-
-#: menu/progress_bar_menu.lua:187
-msgid "Fill: top to bottom"
-msgstr "Feltöltés: fentről le"
-
-#: menu/progress_bar_menu.lua:188
-msgid "Fill: bottom to top"
-msgstr "Feltöltés: lentről fel"
-
-#: menu/progress_bar_menu.lua:224 menu/progress_bar_menu.lua:236
-msgid "Diameter"
-msgstr "Átmérő"
-
-#: menu/progress_bar_menu.lua:289 menu/progress_bar_menu.lua:291
-msgid "Custom colors and tick marks"
-msgstr "Egyéni színek és jelölővonalak"
-
-#: menu/progress_bar_menu.lua:299
-msgid "Use custom colors"
-msgstr "Egyéni színek használata"
-
-#: menu/progress_bar_menu.lua:330 menu/progress_bar_menu.lua:335
-msgid "Tick height"
-msgstr "Jelölővonal magassága"
-
-#: menu/progress_bar_menu.lua:356 menu/progress_bar_menu.lua:358
-#: menu/progress_bar_menu.lua:364
-msgid "Tick width"
-msgstr "Jelölővonal szélessége"
-
-#: menu/progress_bar_menu.lua:384
-msgid "Reset custom to defaults"
-msgstr "Egyéni beállítások visszaállítása alapértelmezettre"
-
-#: menu/progress_bar_menu.lua:411
-msgid "Edge"
-msgstr "Szél"
-
-#: menu/progress_bar_menu.lua:411
-msgid "Vertical"
-msgstr "Függőleges"
-
-#: menu/preset_manager_modal.lua:295
-msgid "+ New blank preset"
-msgstr "+ Új üres előbeállítás"
-
-#: menu/preset_manager_modal.lua:311
-msgid "Discover more presets"
-msgstr "További előbeállítások felfedezése"
-
-#: menu/preset_manager_modal.lua:317
-msgid ""
-"Browse presets others have shared, preview them on your own status bar, and "
-"install the ones you like. Once installed, you can edit each preset freely "
-"on the My presets tab."
-msgstr ""
-"Nézd át a másokkal megosztott előbeállításokat, próbáld ki őket a saját "
-"állapotsávodon, és telepítsd a tetszőeket. Telepítés után a Saját "
-"előbeállítások lapon szabadon szerkesztheted bármelyiket."
-
-#: menu/preset_manager_modal.lua:324
-msgid ""
-"Made something worth sharing? Submit it with the Manage button while viewing"
-" one of your own presets."
-msgstr ""
-"Csináltál valami megosztásra érdemeset? Küldd be a Kezelés gombbal, miközben"
-" az egyik saját előbeállításodat nézed."
-
-#: menu/preset_manager_modal.lua:331
-msgid "Tap Latest or Popular above to load the gallery."
-msgstr ""
-"Koppints a Legújabb vagy a Népszerű gombra fent a galéria betöltéséhez."
-
-#: menu/preset_manager_modal.lua:470
-msgid "Preset library"
-msgstr "Előbeállítás-könyvtár"
-
-#: menu/preset_manager_modal.lua:472
-msgid "My presets"
-msgstr "Saját előbeállítások"
-
-#: menu/preset_manager_modal.lua:473
-msgid "Gallery"
-msgstr "Galéria"
-
-#: menu/preset_manager_modal.lua:483 menu/preset_manager_modal.lua:495
-msgid "Latest"
-msgstr "Legújabb"
-
-#: menu/preset_manager_modal.lua:484
-msgid "Starred"
-msgstr "Csillagozott"
-
-#: menu/preset_manager_modal.lua:497
-msgid "Popular"
-msgstr "Népszerű"
-
-#: menu/preset_manager_modal.lua:509
-msgid "Loading gallery…"
-msgstr "Galéria betöltése…"
-
-#: menu/preset_manager_modal.lua:522
-msgid "Search my presets by name or author…"
-msgstr "Saját előbeállítások keresése név vagy szerző szerint…"
-
-#: menu/preset_manager_modal.lua:524
-msgid "Search gallery presets by name or author…"
-msgstr "Galéria előbeállítások keresése név vagy szerző szerint…"
-
-#: menu/preset_manager_modal.lua:566
-msgid "Manage…"
-msgstr "Kezelés…"
-
-#: menu/preset_manager_modal.lua:584 menu/preset_manager_modal.lua:587
-#: menu/preset_manager_modal.lua:1733
-msgid "Install"
-msgstr "Telepítés"
-
-#: menu/preset_manager_modal.lua:824 menu/preset_manager_modal.lua:1691
-msgid "Could not preview preset"
-msgstr "Az előbeállítás előnézete nem sikerült"
-
-#: menu/preset_manager_modal.lua:939
-msgid "by"
-msgstr "tőle:"
-
-#: menu/preset_manager_modal.lua:1188 menu/preset_manager_modal.lua:1502
-msgid "Untitled"
-msgstr "Névtelen"
-
-#: menu/preset_manager_modal.lua:1217
-msgid "Rename…"
-msgstr "Átnevezés…"
-
-#: menu/preset_manager_modal.lua:1221
-msgid "Edit description…"
-msgstr "Leírás szerkesztése…"
-
-#: menu/preset_manager_modal.lua:1225
-msgid "Edit author…"
-msgstr "Szerző szerkesztése…"
-
-#: menu/preset_manager_modal.lua:1229
-msgid "Duplicate"
-msgstr "Másolat"
-
-#: menu/preset_manager_modal.lua:1233
-msgid "Submit to gallery…"
-msgstr "Beküldés a galériába…"
-
-#: menu/preset_manager_modal.lua:1343
-msgid "%1, line %2"
-msgstr "%1, %2. sor"
-
-#: menu/preset_manager_modal.lua:1380
-msgid "Edit description"
-msgstr "Leírás szerkesztése"
-
-#: menu/preset_manager_modal.lua:1384
-msgid "Edit author"
-msgstr "Szerző szerkesztése"
-
-#: menu/preset_manager_modal.lua:1388
-msgid "copy"
-msgstr "másolat"
-
-#: menu/preset_manager_modal.lua:1391
-msgid "Duplicate preset"
-msgstr "Előbeállítás duplikálása"
-
-#: menu/preset_manager_modal.lua:1434
-msgid "Rename before sharing"
-msgstr "Átnevezés megosztás előtt"
-
-#: menu/preset_manager_modal.lua:1485
-msgid "Who should we credit as the author?"
-msgstr "Kit jelöljünk meg szerzőként?"
-
-#: menu/preset_manager_modal.lua:1490
-msgid "One-line description of this preset"
-msgstr "Egysoros leírás erről az előbeállításról"
-
-#: menu/preset_manager_modal.lua:1509
-msgid ""
-"'%1' is one of Bookends' default placeholder names. Give your preset "
-"something distinctive — that's how it'll appear in the gallery."
-msgstr ""
-"„%1” a Bookends egyik alapértelmezett helykitöltő neve. Adj egyedi nevet az "
-"előbeállításodnak — így fog megjelenni a galériában."
-
-#: menu/preset_manager_modal.lua:1515
-msgid ""
-"Write a short description that tells gallery users what your preset shows"
-msgstr ""
-"Írj egy rövid leírást, amely megmutatja a galéria felhasználóinak, mit "
-"jelenít meg az előbeállítás"
-
-#: menu/preset_manager_modal.lua:1537
-msgid ""
-"Submit '%1' by %2 to the gallery? A pull request will be opened for review."
-msgstr ""
-"Beküldöd a galériába „%1”-t %2 nevében? Egy pull request fog megnyílni "
-"felülvizsgálatra."
-
-#: menu/preset_manager_modal.lua:1539
-msgid "Submit"
-msgstr "Beküldés"
-
-#: menu/preset_manager_modal.lua:1549
-msgid ""
-"A preset called '%1' is already in the gallery. Rename your preset (Manage… "
-"→ Rename…) before submitting, so it doesn't collide with the existing entry."
-msgstr ""
-"„%1” nevű előbeállítás már szerepel a galériában. Nevezd át az "
-"előbeállításodat (Kezelés… → Átnevezés…), mielőtt beküldöd, hogy ne ütközzön"
-" a meglévő bejegyzéssel."
-
-#: menu/preset_manager_modal.lua:1560
-msgid "Submitting to gallery…"
-msgstr "Beküldés a galériába…"
-
-#: menu/preset_manager_modal.lua:1572
-msgid ""
-"Thanks! Your submission is PR #%1.\n"
-"\n"
-"The maintainer will review it before it appears in the Gallery."
-msgstr ""
-"Köszönjük! A beküldésed a #%1 pull request.\n"
-"\n"
-"A karbantartó felülvizsgálja, mielőtt megjelenne a Galériában."
-
-#: menu/preset_manager_modal.lua:1581
-msgid ""
-"A preset called '%1' is already in the gallery. Rename your preset (Manage… "
-"→ Rename…) before submitting."
-msgstr ""
-"„%1” nevű előbeállítás már szerepel a galériában. Nevezd át az "
-"előbeállításodat (Kezelés… → Átnevezés…), mielőtt beküldöd."
-
-#: menu/preset_manager_modal.lua:1584
-msgid ""
-"A submission for '%1' is already awaiting review. Wait for that one to be "
-"reviewed, or rename your preset to submit under a different name."
-msgstr ""
-"„%1” nevű beküldés már felülvizsgálatra várakozik. Várj, amíg azt "
-"felülvizsgálják, vagy nevezd át az előbeállításodat, hogy más néven küldhesd"
-" be."
-
-#: menu/preset_manager_modal.lua:1587
-msgid "Submission failed: %1"
-msgstr "A beküldés sikertelen: %1"
-
-#: menu/preset_manager_modal.lua:1600
-msgid ""
-"This preset uses specific fonts that won't exist on other devices. These "
-"overrides will be stripped from your submission so other users see their own"
-" default font."
-msgstr ""
-"Ez az előbeállítás olyan betűtípusokat használ, amelyek más eszközökön nem "
-"léteznek. Ezek a felülírások eltávolításra kerülnek a beküldésedből, így a "
-"többi felhasználó a saját alapértelmezett betűtípusát látja."
-
-#: menu/preset_manager_modal.lua:1602
-msgid "Custom fonts in this preset:"
-msgstr "Egyéni betűtípusok ebben az előbeállításban:"
-
-#: menu/preset_manager_modal.lua:1608
-msgid ""
-"Tip: for portable presets, pick a Font-family font (Serif, Sans-serif, etc.)"
-" instead of a specific one — those adapt to each user's font settings."
-msgstr ""
-"Tipp: hordozható előbeállításokhoz válassz betűtípus-családot (Serif, Sans-"
-"serif, stb.) egy konkrét betűtípus helyett — ezek minden felhasználó "
-"betűtípus-beállításához igazodnak."
-
-#: menu/preset_manager_modal.lua:1611
-msgid "Submit anyway"
-msgstr "Mégis beküldés"
-
-#: menu/preset_manager_modal.lua:1624
-msgid "Submission failed — details in the KOReader log."
-msgstr "A beküldés sikertelen — részletek a KOReader naplóban."
-
-#: menu/preset_manager_modal.lua:1630
-msgid "Delete preset '%1'?"
-msgstr "Törlöd az „%1” előbeállítást?"
-
-#: menu/preset_manager_modal.lua:1673
-msgid "Offline — connect to preview this preset."
-msgstr "Offline — csatlakozz az előbeállítás előnézetéhez."
-
-#: menu/preset_manager_modal.lua:1675
-msgid "Couldn't download '%1'."
-msgstr "„%1” letöltése nem sikerült."
-
-#: menu/preset_manager_modal.lua:1681
-msgid "This preset appears invalid; skipping."
-msgstr "Ez az előbeállítás érvénytelennek tűnik; kihagyva."
-
-#: menu/preset_manager_modal.lua:1704
-msgid ""
-"'%1' already exists in your library.\n"
-"\n"
-"Replacing it will overwrite your local copy with the current gallery version. Any local edits will be lost.\n"
-"\n"
-"Install under a new name to keep both."
-msgstr ""
-"„%1” már létezik a könyvtáradban.\n"
-"\n"
-"Ha lecseréled, a helyi másolatod felülíródik a galéria jelenlegi verziójával. A helyi módosítások elvesznek.\n"
-"\n"
-"Telepítsd új néven, hogy mindkettő megmaradjon."
-
-#: menu/preset_manager_modal.lua:1710
-msgid "Replace"
-msgstr "Csere"
-
-#: menu/preset_manager_modal.lua:1724
-msgid "Install as new name…"
-msgstr "Telepítés új néven…"
-
-#: menu/preset_manager_modal.lua:1728
-msgid "Install as"
-msgstr "Telepítés mint"
-
-#: menu/icons_catalogue.lua:33
-msgid "SVG icon folder"
-msgstr "SVG ikonmappa"
-
-#: menu/icons_library.lua:435
-msgid "Drop .svg or .png files in koreader/icons/"
-msgstr "Helyezz .svg vagy .png fájlokat a koreader/icons/ mappába"
+#: _meta.lua:20
+msgid "Configurable text overlays at screen corners and edges with token expansion and icon support."
+msgstr "Beállítható szöveges overlay-ek a képernyő sarkaiban és szélein, token-helyettesítéssel és ikontámogatással."
 
 #~ msgid "Wi-Fi is not enabled."
 #~ msgstr "A Wi-Fi nincs engedélyezve."
@@ -2629,9 +2622,6 @@ msgstr "Helyezz .svg vagy .png fájlokat a koreader/icons/ mappába"
 #~ msgid "Check mark"
 #~ msgstr "Pipa jel"
 
-#~ msgid "Cross mark"
-#~ msgstr "X jelölés"
-
 #~ msgid "Copyright"
 #~ msgstr "Copyright"
 
@@ -2678,12 +2668,10 @@ msgstr "Helyezz .svg vagy .png fájlokat a koreader/icons/ mappába"
 #~ msgstr "Frissítés…"
 
 #~ msgid "Offline — connect and tap a sort to retry"
-#~ msgstr ""
-#~ "Offline — csatlakozz, és koppints egy rendezésre az újrapróbálkozáshoz"
+#~ msgstr "Offline — csatlakozz, és koppints egy rendezésre az újrapróbálkozáshoz"
 
 #~ msgid "Refresh failed — tap a sort to retry"
-#~ msgstr ""
-#~ "A frissítés sikertelen — koppints egy rendezésre az újrapróbálkozáshoz"
+#~ msgstr "A frissítés sikertelen — koppints egy rendezésre az újrapróbálkozáshoz"
 
 #~ msgid "1 preset in the approval queue"
 #~ msgstr "1 előbeállítás vár jóváhagyásra"
