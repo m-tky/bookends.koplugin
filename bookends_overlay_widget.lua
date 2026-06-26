@@ -283,7 +283,7 @@ function BarWidget:paintTo(bb, x, y)
         end
     end
     OverlayWidget.paintProgressBar(bb, x, y, self.width, self.height,
-        self.fraction, self.ticks, self.style, nil, self.reverse, colors)
+        self.fraction, self.ticks, self.style, nil, self.reverse, colors, self.markers)
 end
 
 function BarWidget:free()
@@ -427,6 +427,7 @@ local function buildBarLine(text, cfg, available_w, max_width)
         height = bar_h,
         fraction = bar_info.pct or 0,
         ticks = bar_info.ticks or {},
+        markers = bar_info.markers,
         style = bar_style,
         colors = cfg.bar_colors,
         reverse = cfg.bar_reverse or false,
@@ -1076,6 +1077,7 @@ function OverlayWidget.buildStyledLine(segments, cfg, available_w, max_width)
                 height = bar_h,
                 fraction = bar_info.pct or 0,
                 ticks = bar_info.ticks or {},
+                markers = bar_info.markers,
                 style = bar_style,
                 colors = cfg.bar_colors,
                 reverse = cfg.bar_reverse or false,
@@ -1252,7 +1254,7 @@ OverlayWidget.BAR_STYLES = {
 -- @param orientation "horizontal" (default) or "vertical"
 -- @param reverse boolean: flip fill direction
 -- @param colors table or nil: { fill = Blitbuffer color, bg = Blitbuffer color }
-function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, orientation, reverse, colors)
+function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, orientation, reverse, colors, markers)
     if w < 1 or h < 1 then return end
     fraction = math.max(0, math.min(1, fraction or 0))
     local vertical = orientation == "vertical"
@@ -2334,6 +2336,88 @@ function OverlayWidget.paintProgressBar(bb, x, y, w, h, fraction, ticks, style, 
                 end
             end
         end
+    end
+
+    -- Session / book-open markers (#77): style-agnostic triangle overlays drawn
+    -- on top of the bar with NO layout reservation (approach 3). The top marker
+    -- points down at the bar from above; the bottom marker points up from below.
+    -- Each carries its own fraction, size (% of a fixed screen-scaled base), pixel offset from
+    -- the bar edge, and colour. Drawn in abstract coords via pr(), so vertical
+    -- bars and reverse fill are handled for free. Rows outside the buffer are
+    -- skipped; bbPaintRect clips the horizontal span of the rest.
+    if markers and (markers.top or markers.bottom) then
+        local cross_limit = vertical and bb:getWidth() or bb:getHeight()
+        local default_marker = resolveColor(custom_tick, Blitbuffer.COLOR_BLACK)
+        -- Marker size is relative to a FIXED screen-scaled base, NOT the bar
+        -- thickness — otherwise a thin bar (e.g. 4px) yields invisible markers.
+        -- 100% ≈ a clearly visible caret on any bar; Size% scales from there.
+        local marker_base = Screen:scaleBySize(20)
+        local RenderText = require("ui/rendertext")
+        local function drawMarker(m, is_top)
+            if not m or not m.frac then return end
+            local color = m.color or default_marker
+            if not color then return end
+            local frac = math.max(0, math.min(1, m.frac))
+            if reverse then frac = 1 - frac end
+            local mh = math.max(2, math.floor(marker_base * (m.size or 50) / 100))
+            local offset = m.offset or 0
+            local pos = math.floor(length * frac)
+            -- Chevron is the default and the catch-all: only an explicit "solid"
+            -- draws the filled triangle; any other/legacy value (e.g. a removed
+            -- "outline") renders as a chevron rather than as the wrong shape.
+            local style = m.style or "chevron"
+
+            if style ~= "solid" then
+                -- Render a real Nerd Font chevron glyph (cleaner than drawn
+                -- strokes), pointing toward the bar: down/up for horizontal bars,
+                -- right/left for vertical. The "symbols" face is the same font the
+                -- icon picker renders these from, so it's guaranteed present. We
+                -- blit the glyph's INK bitmap directly (not a TextWidget box) and
+                -- position it by its own dimensions, so offset 0 puts the visible
+                -- chevron flush against the bar edge regardless of the font's
+                -- internal whitespace — exact and size-independent.
+                local cp
+                if vertical then cp = is_top and 0xE841 or 0xE840   -- chevron-right / -left
+                else cp = is_top and 0xE83F or 0xE842 end           -- chevron-down / -up
+                local g = RenderText:getGlyph(Font:getFace("symbols", math.max(8, mh)), cp)
+                if g and g.bb then
+                    local gw, gh = g.bb:getWidth(), g.bb:getHeight()
+                    local ink_x, ink_y
+                    if vertical then
+                        ink_y = ox + pos - math.floor(gh / 2)
+                        ink_x = is_top and (oy - offset - gw) or (oy + thickness + offset)
+                    else
+                        ink_x = ox + pos - math.floor(gw / 2)
+                        ink_y = is_top and (oy - offset - gh) or (oy + thickness + offset)
+                    end
+                    -- Tint the (alpha) glyph with the marker colour. Preserve true
+                    -- colour on colour buffers (plain colorblitFrom flattens RGB32
+                    -- to luminance — same reason bookends_textwidget_patch exists).
+                    if ffi.istype(ColorRGB32_t, color) and bb.colorblitFromRGB32 then
+                        bb:colorblitFromRGB32(g.bb, ink_x, ink_y, 0, 0, gw, gh, color)
+                    else
+                        bb:colorblitFrom(g.bb, ink_x, ink_y, 0, 0, gw, gh, color)
+                    end
+                end
+                return
+            end
+
+            -- solid: filled triangle pointing at the bar
+            local denom = (mh > 1) and (mh - 1) or 1
+            for r = 0, mh - 1 do
+                -- taper toward the apex, which points at the bar
+                local taper = is_top and ((mh - 1 - r) / denom) or (r / denom)
+                local half = math.floor(mh / 2 * taper)
+                local cross_y = is_top
+                    and (oy - offset - mh + r)
+                    or  (oy + thickness + offset + r)
+                if cross_y >= 0 and cross_y < cross_limit then
+                    pr(ox + pos - half, cross_y, half * 2 + 1, 1, color)
+                end
+            end
+        end
+        drawMarker(markers.top, true)
+        drawMarker(markers.bottom, false)
     end
 end
 

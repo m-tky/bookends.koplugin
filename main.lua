@@ -173,6 +173,12 @@ function Bookends:init()
     self.session_resume_time = os.time()
     self.session_start_page = nil -- set on first onPageUpdate (stable or raw per setting)
     self.session_max_page = nil   -- highest page reached (stable or raw per setting)
+    -- RAW page numbers for bar markers (#77), tracked separately from the
+    -- stable session pages above because the bar fill is computed on the raw,
+    -- flow-aware page scale. session marker resets to here on each wake;
+    -- book_open marker is captured once per book open and survives wakes.
+    self._marker_session_page = nil
+    self._marker_book_open_page = nil
     self.dirty = true
     self.position_cache = {}
 
@@ -237,6 +243,10 @@ function Bookends:onCloseDocument()
         UIManager:close(self._flipping_halo)
         self._flipping_halo = nil
     end
+    -- Clear bar-marker anchors (#77) so reopening the book recaptures book_open
+    -- at the reopen position (harmless if the plugin instance is recreated).
+    self._marker_session_page = nil
+    self._marker_book_open_page = nil
 end
 
 function Bookends:onDispatcherRegisterActions()
@@ -1057,6 +1067,13 @@ function Bookends:onPageUpdate()
             self.session_max_page = current
         end
     end
+    -- Capture RAW page anchors for bar markers (#77). Both default to the first
+    -- page seen after open; the session anchor is re-set on wake (see onResume).
+    local raw = Tokens.getCurrentPageNumber(self.ui)
+    if raw then
+        if not self._marker_session_page then self._marker_session_page = raw end
+        if not self._marker_book_open_page then self._marker_book_open_page = raw end
+    end
     -- Re-enable after paint error disable
     if self._error_disabled then
         self._error_disabled = false
@@ -1191,6 +1208,33 @@ end
 function Bookends:getSessionPages()
     return math.max(0, (self.session_max_page or 0) - (self.session_start_page or 0))
 end
+-- Build the renderer-facing markers table (#77) for one bar line.
+-- @param mk_cfg table: per-line config { top = {type,size,offset,color}, bottom = {...} }
+-- @param src table or nil: the chosen bar_info (book/chapter) carrying
+--   session_frac / book_open_frac for this paint.
+-- @return table or nil: { top = {frac,size,offset,color}, bottom = {...} }, or
+--   nil when no marker resolves (so the painter's fast path skips entirely).
+function Bookends:buildBarMarkers(mk_cfg, src)
+    if not mk_cfg or not src then return nil end
+    local out
+    for _, slot in ipairs({ "top", "bottom" }) do
+        local m = mk_cfg[slot]
+        if m and m.type then
+            local frac = (m.type == "book_open") and src.book_open_frac or src.session_frac
+            if frac ~= nil then
+                out = out or {}
+                out[slot] = {
+                    frac = frac,
+                    size = m.size or 50,
+                    offset = m.offset or 0,
+                    style = m.style or "chevron",
+                    color = m.color and Colour.parseColorValue(m.color, Screen:isColorEnabled()) or nil,
+                }
+            end
+        end
+    end
+    return out
+end
 function Bookends:onSuspend()
     self:stopRefreshTimer()
     -- Drop any pending resume repaint; the next onResume re-arms it if needed.
@@ -1201,6 +1245,9 @@ function Bookends:onResume()
     self.session_elapsed = 0
     self.session_resume_time = os.time()
     self.session_start_page = self.session_max_page
+    -- Re-anchor the session bar marker (#77) to where we woke up; the book_open
+    -- anchor is intentionally left untouched so it survives sleep/wake.
+    self._marker_session_page = Tokens.getCurrentPageNumber(self.ui) or self._marker_session_page
     self:backgroundUpdateCheck()
 
     -- A repaint here would blit our overlay onto a screensaver that's still
@@ -1463,8 +1510,21 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
                     colors.read_height_pct = nil
                     colors.unread_height_pct = nil
                 end
+                -- Bar markers (#77) for full-width bars: map the session/book-open
+                -- anchors onto this bar's scale (book or chapter), then resolve the
+                -- per-bar marker config the same way inline bars do.
+                local markers
+                if bar_cfg.markers then
+                    local kind = bar_cfg.type == "chapter" and "chapter" or "book"
+                    local doc, toc = self.ui.document, self.ui.toc
+                    local src = {
+                        session_frac   = Tokens.markerFracForBar(doc, toc, kind, pageno_local, self._marker_session_page),
+                        book_open_frac = Tokens.markerFracForBar(doc, toc, kind, pageno_local, self._marker_book_open_page),
+                    }
+                    markers = self:buildBarMarkers(bar_cfg.markers, src)
+                end
                 OverlayWidget.paintProgressBar(bb, bar_x, bar_y, bar_w, bar_h, pct, ticks,
-                    bar_cfg.style or "solid", paint_vertical and "vertical" or nil, paint_reverse, colors)
+                    bar_cfg.style or "solid", paint_vertical and "vertical" or nil, paint_reverse, colors, markers)
                 table.insert(self._hold_rects, { x = bar_x, y = bar_y, w = bar_w, h = bar_h })
             end
         end
@@ -1616,10 +1676,17 @@ function Bookends:_paintToInner(bb, x, y)
                     -- normally, including legacy tokens in the same preset.
                     local is_edit_line = self._live_edit_position == pos.key
                         and self._live_edit_line_idx == visible_indices[j]
+                    -- Per-line tick width (#77 follow-up): line bars now carry
+                    -- their own tick_width_multiplier in line_bar_colors, matching
+                    -- the full-width bars. Falls back to the global default.
+                    local _lc = pos_settings.line_bar_colors and pos_settings.line_bar_colors[visible_indices[j]]
+                    local line_tw = (_lc and _lc.tick_width_multiplier) or tick_width_multiplier
                     local result, is_empty, line_bar = Tokens.expand(line, self.ui, session_elapsed, session_pages,
-                        nil, tick_width_multiplier,
+                        nil, line_tw,
                         symbol_color, paint_ctx,
-                        { legacy_literal = is_edit_line, stats_cache = stats_cache })
+                        { legacy_literal = is_edit_line, stats_cache = stats_cache,
+                          marker_pages = { session = self._marker_session_page,
+                                           book_open = self._marker_book_open_page } })
                     if not is_empty then
                         table.insert(expanded_lines, result)
                         table.insert(final_indices, visible_indices[j])
@@ -1762,6 +1829,14 @@ function Bookends:_paintToInner(bb, x, y)
                 end
                 if all_bars.width  then cfg.bar.width  = all_bars.width  end
                 if all_bars.height then cfg.bar.height = all_bars.height end
+                -- Bar markers (#77): per-line top/bottom triangle markers. The
+                -- fractions live on the chosen bar_info (book/chapter); the
+                -- per-line config supplies type/size/offset/colour.
+                local mk_cfg = pos_settings.line_bar_markers and pos_settings.line_bar_markers[i]
+                if mk_cfg then
+                    local src = (bar_type == "book") and all_bars.book or all_bars.chapter
+                    cfg.bar.markers = self:buildBarMarkers(mk_cfg, src)
+                end
                 cfg.bar_height        = (pos_settings.line_bar_height and pos_settings.line_bar_height[i]) or nil
                 cfg.bar_unread_height = (pos_settings.line_bar_unread_height and pos_settings.line_bar_unread_height[i]) or nil
                 cfg.bar_style         = (pos_settings.line_bar_style and pos_settings.line_bar_style[i]) or nil
