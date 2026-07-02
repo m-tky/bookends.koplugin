@@ -60,6 +60,25 @@ function Tokens.markerFracForBar(doc, toc, kind, current_pageno, marker_page)
     return math.max(0, math.min(1, (marker_page - cs) / (ctotal - 1)))
 end
 
+--- Chapter page-range [start, end) containing current_pageno, or nil if
+--- there's no chapter info (or the chapter is degenerate, <=1 page). `end`
+--- is exclusive — it's the first page of the *next* chapter, or one past
+--- the book's last page if there is no next chapter.
+--- Shared by markerFracForBar's chapter branch (via duplicated inline math,
+--- unchanged) and by the Bookmarks marker's range filter in main.lua, which
+--- needs to EXCLUDE out-of-chapter pages rather than clamp them the way a
+--- single session/book-open marker legitimately does.
+function Tokens.currentChapterRange(toc, doc, current_pageno)
+    if not toc then return nil end
+    local cs = toc:getPreviousChapter(current_pageno)
+    if toc:isChapterStart(current_pageno) then cs = current_pageno end
+    if not cs then return nil end
+    local nc = toc:getNextChapter(current_pageno)
+    local ce = nc or (doc:getPageCount() + 1)
+    if ce - cs <= 1 then return nil end
+    return cs, ce
+end
+
 --- Return the last digit of a numeric value as a string.
 -- Used by the %<token>_lastdigit family (#55) to expose the units digit
 -- of page/chapter counters for languages whose grammar branches on it
@@ -1964,6 +1983,15 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             end
             bar_info.book.session_frac   = bookFrac(mp.session)
             bar_info.book.book_open_frac = bookFrac(mp.book_open)
+            bar_info.book.today_frac     = bookFrac(mp.today)
+            if mp.bookmarks then
+                local book_fracs = {}
+                for _, p in ipairs(mp.bookmarks) do
+                    local f = bookFrac(p)
+                    if f then book_fracs[#book_fracs + 1] = f end
+                end
+                bar_info.book.bookmark_fracs = book_fracs
+            end
             if ui.toc then
                 local cs = ui.toc:getPreviousChapter(bar_pageno)
                 if ui.toc:isChapterStart(bar_pageno) then cs = bar_pageno end
@@ -1977,6 +2005,17 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
                     end
                     bar_info.chapter.session_frac   = chFrac(mp.session)
                     bar_info.chapter.book_open_frac = chFrac(mp.book_open)
+                    bar_info.chapter.today_frac     = chFrac(mp.today)
+                    if mp.bookmarks then
+                        local chap_fracs = {}
+                        for _, p in ipairs(mp.bookmarks) do
+                            if p and p >= cs and p < ce then
+                                local f = chFrac(p)
+                                if f then chap_fracs[#chap_fracs + 1] = f end
+                            end
+                        end
+                        bar_info.chapter.bookmark_fracs = chap_fracs
+                    end
                 end
             end
         end
@@ -2010,30 +2049,38 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     -- matching stock readerfooter's chapter_time_to_read fallback.
     local time_left_chapter = ""
     local time_left_doc = ""
-    if needs("chap_time_left", "book_time_left") and pageno and ui.statistics and ui.statistics.getTimeForPages then
-        if needs("chap_time_left") then
+    local chap_time_left_h, chap_time_left_m
+    local book_time_left_h, book_time_left_m
+    if needs("chap_time_left", "book_time_left", "chap_time_left_h", "chap_time_left_m",
+             "book_time_left_h", "book_time_left_m")
+            and pageno and ui.statistics and ui.statistics.getTimeForPages then
+        if needs("chap_time_left", "chap_time_left_h", "chap_time_left_m") then
             local ch_left = ui.toc and ui.toc:getChapterPagesLeft(pageno, true)
             if not ch_left then
                 ch_left = doc:getTotalPagesLeft(pageno)
             end
             if ch_left then
                 ch_left = math.max(0, ch_left)
-                if ch_left > 0 then
-                    local result = ui.statistics:getTimeForPages(ch_left)
-                    if result and result ~= "N/A" then time_left_chapter = result end
-                else
-                    time_left_chapter = "0m"
+                local result = ui.statistics:getTimeForPages(ch_left)
+                if result and result ~= "N/A" then time_left_chapter = result end
+                if ui.statistics.avg_time and ui.statistics.avg_time > 0 then
+                    local total_min = math.floor(ch_left * ui.statistics.avg_time / 60)
+                    chap_time_left_h = math.floor(total_min / 60)
+                    chap_time_left_m = total_min % 60
                 end
             end
         end
-        if needs("book_time_left") then
-            -- Use raw page count: getTimeForPages is calibrated against avg_time per raw page
+        if needs("book_time_left", "book_time_left_h", "book_time_left_m") then
             local doc_left = doc:getTotalPagesLeft(pageno)
-            if doc_left and doc_left > 0 then
+            if doc_left then
+                doc_left = math.max(0, doc_left)
                 local result = ui.statistics:getTimeForPages(doc_left)
                 if result and result ~= "N/A" then time_left_doc = result end
-            elseif doc_left then
-                time_left_doc = "0m"
+                if ui.statistics.avg_time and ui.statistics.avg_time > 0 then
+                    local total_min = math.floor(doc_left * ui.statistics.avg_time / 60)
+                    book_time_left_h = math.floor(total_min / 60)
+                    book_time_left_m = total_min % 60
+                end
             end
         end
     end
@@ -2593,6 +2640,10 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         -- Time/Reading
         chap_time_left = tostring(time_left_chapter),
         book_time_left = tostring(time_left_doc),
+        chap_time_left_h   = chap_time_left_h and tostring(chap_time_left_h) or "",
+        chap_time_left_m = chap_time_left_m and tostring(chap_time_left_m) or "",
+        book_time_left_h   = book_time_left_h and tostring(book_time_left_h) or "",
+        book_time_left_m = book_time_left_m and tostring(book_time_left_m) or "",
         chap_time_left_eta = formatEtaEpoch(eta_chap_epoch, date_formats.chap_time_left_eta),
         book_time_left_eta = formatEtaEpoch(eta_book_epoch, date_formats.book_time_left_eta),
         book_finish_date   = formatFinishDate(book_finish_epoch, date_formats.book_finish_date),
@@ -2679,6 +2730,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         chap_pct = true, chap_pct_left = true, chap_read = true, chap_pages = true, chap_pages_left = true,
         chap_num = true, chap_count = true,
         chap_time_left = true, book_time_left = true,
+        chap_time_left_h = true, chap_time_left_m = true,
+        book_time_left_h = true, book_time_left_m = true,
         chap_time_left_eta = true, book_time_left_eta = true,
         book_finish_date = true,
         time_12h = true, time_24h = true,

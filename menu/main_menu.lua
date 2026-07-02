@@ -23,6 +23,23 @@ function Bookends:addToMainMenu(menu_items)
     }
 end
 
+--- Close the menu that fired a callback. A real KOReader TouchMenu has
+--- :onClose; a third-party host (e.g. zen_ui's app launcher) hosts our items in
+--- a plain Menu and passes an instance WITHOUT onClose -- a bare :onClose()
+--- crashed there (Reddit report). Prefer onClose (full TouchMenu teardown);
+--- otherwise close the shown widget via UIManager so the menu still dismisses
+--- rather than lingering behind the modal. Both paths guarded so no host can
+--- crash the callback.
+local function closeMenuInstance(touchmenu_instance)
+    if not touchmenu_instance then return end
+    if touchmenu_instance.onClose then
+        touchmenu_instance:onClose()
+    else
+        local ok, UIManager = pcall(require, "ui/uimanager")
+        if ok then pcall(function() UIManager:close(touchmenu_instance) end) end
+    end
+end
+
 --- Save current overlay as a new preset — opens an input dialog.
 --- Extracted so the top-level Bookends menu and any future entry point
 --- can share the flow.
@@ -195,9 +212,7 @@ function Bookends:buildMainMenu()
         enabled_func = function() return self.enabled end,
         keep_menu_open = false,
         callback = function(touchmenu_instance)
-            if touchmenu_instance then
-                touchmenu_instance:onClose()
-            end
+            closeMenuInstance(touchmenu_instance)
             saveAsNewPresetDialog(self)
         end,
     })
@@ -383,6 +398,22 @@ function Bookends:buildBookendsSettingsMenu()
             separator = true,
         },
         {
+            text = _("Disable automatic clock/battery refresh"),
+            checked_func = function()
+                return self.disable_auto_refresh
+            end,
+            callback = function()
+                self.disable_auto_refresh = not self.disable_auto_refresh
+                self.settings:saveSetting("disable_auto_refresh", self.disable_auto_refresh)
+                if self.disable_auto_refresh then
+                    self:stopRefreshTimer()
+                else
+                    self:startRefreshTimer()
+                end
+            end,
+            help_text = _("Stops the 60-second background timer that keeps the clock, battery, and time-left tokens updating without a page turn. Useful on devices where this timer interferes with sleep/wake (e.g. some Pocketbook models)."),
+        },
+        {
             text = _("Notify on wake when update available"),
             checked_func = function()
                 return self.check_updates
@@ -476,9 +507,7 @@ function Bookends:buildPresetAdjustmentsMenu()
         text = _("Preset library…"),
         keep_menu_open = false,
         callback = function(touchmenu_instance)
-            if touchmenu_instance then
-                touchmenu_instance:onClose()
-            end
+            closeMenuInstance(touchmenu_instance)
             local PresetManagerModal = require("menu/preset_manager_modal")
             PresetManagerModal.show(self)
         end,

@@ -516,6 +516,76 @@ local function stubUiWithStats(stats)
     }
 end
 
+local function stubUiForTimeLeft(opts)
+    opts = opts or {}
+    return {
+        view = { state = { page = opts.page or 10 } },
+        document = {
+            file = "/book.epub",
+            getPageCount = function() return opts.total_pages or 100 end,
+            hasHiddenFlows = function() return false end,
+            getProps = function() return {} end,
+            getTotalPagesLeft = function(_, _) return opts.doc_left end,
+        },
+        toc = nil,
+        doc_props = {},
+        annotation = nil,
+        statistics = {
+            avg_time = opts.avg_time or 30,
+            getTimeForPages = function(_, pages)
+                if pages == 0 then return "00:00" end
+                return string.format("%dm", math.floor(pages * (opts.avg_time or 30) / 60))
+            end,
+        },
+    }
+end
+
+test("book_time_left at last page (0 pages left) renders via getTimeForPages, not a hardcoded literal", function()
+    local ui = stubUiForTimeLeft({ doc_left = 0 })
+    local r = Tokens.expand("%book_time_left", ui, 0, 0)
+    eq(r, "00:00", "zero pages left should format through getTimeForPages(0), matching classic duration format")
+end)
+
+test("chap_time_left at last page (0 pages left, no toc) renders via getTimeForPages", function()
+    local ui = stubUiForTimeLeft({ doc_left = 0 })
+    local r = Tokens.expand("%chap_time_left", ui, 0, 0)
+    eq(r, "00:00", "chap_time_left falls back to doc:getTotalPagesLeft when ui.toc is nil, same zero-case fix applies")
+end)
+
+test("book_time_left with pages remaining still renders the formatted duration", function()
+    local ui = stubUiForTimeLeft({ doc_left = 20, avg_time = 30 })
+    local r = Tokens.expand("%book_time_left", ui, 0, 0)
+    eq(r, "10m", "20 pages * 30s / 60 = 10m, via the stubbed getTimeForPages")
+end)
+
+test("book_time_left_h / book_time_left_m split correctly", function()
+    local ui = stubUiForTimeLeft({ doc_left = 82, avg_time = 60 })
+    -- 82 pages * 60s / 60 = 82 minutes = 1h 22m
+    local r = Tokens.expand("%book_time_left_h:%book_time_left_m", ui, 0, 0)
+    eq(r, "1:22", "82 minutes total splits into 1 hour, 22 minutes")
+end)
+
+test("chap_time_left_h / chap_time_left_m split correctly (no toc, falls back to doc)", function()
+    local ui = stubUiForTimeLeft({ doc_left = 5, avg_time = 60 })
+    -- 5 pages * 60s / 60 = 5 minutes = 0h 5m
+    local r = Tokens.expand("%chap_time_left_h:%chap_time_left_m", ui, 0, 0)
+    eq(r, "0:5", "5 minutes total splits into 0 hours, 5 minutes")
+end)
+
+test("book_time_left_h/_min are empty when avg_time is unavailable", function()
+    local ui = stubUiForTimeLeft({ doc_left = 20, avg_time = 0 })
+    local r = Tokens.expand("[%book_time_left_h][%book_time_left_m]", ui, 0, 0)
+    eq(r, "[][]", "no avg_time -> both split tokens render empty, matching how the composite token behaves")
+end)
+
+test("chap_time_left_m alone does not auto-hide the line when the value is a real zero", function()
+    -- 5 pages * 60s / 60 = 5 minutes = 0h 5m -> chap_time_left_h legitimately renders "0",
+    -- same class of case as the _lastdigit auto-hide gate (0 is meaningful, not "no content").
+    local ui = stubUiForTimeLeft({ doc_left = 5, avg_time = 60 })
+    local _, is_empty = Tokens.expand("%chap_time_left_h", ui, 0, 0)
+    eq(is_empty, false, "chap_time_left_h = 0 is a real value and must not be treated as an empty line")
+end)
+
 test("stats stub: smoke — getCurrentBookStats returns injected values", function()
     local ui = stubUiWithStats({ current_pages = 7, current_duration = 600 })
     local d, p = ui.statistics:getCurrentBookStats()
@@ -1713,6 +1783,63 @@ test("lastDigit: float -> last digit of integer part shown by tostring", functio
     -- Lua's tostring(3.0) is "3.0" on 5.1, so last digit char is "0".
     -- Documents the surprising-but-stable behaviour.
     eq(Tokens.lastDigit(3.0), "0")
+end)
+
+test("currentChapterRange: returns [start, end) for the chapter containing current_pageno", function()
+    local ui = stubUi(5, 100, {
+        toc = { { page = 1, depth = 1, title = "C1" }, { page = 10, depth = 1, title = "C2" } },
+        start = 1, next = 10,
+    })
+    local cs, ce = Tokens.currentChapterRange(ui.toc, ui.document, 5)
+    eq(cs, 1, "chapter start")
+    eq(ce, 10, "chapter end (exclusive, start of next chapter)")
+end)
+
+test("currentChapterRange: nil when there's no toc", function()
+    local cs, ce = Tokens.currentChapterRange(nil, { getPageCount = function() return 100 end }, 5)
+    eq(cs, nil, "no toc -> nil")
+    eq(ce, nil, "no toc -> nil")
+end)
+
+test("inline bar: bookmark_fracs computed on both book and chapter scales", function()
+    local ui = stubUi(5, 100, {
+        toc = { { page = 1, depth = 1, title = "C1" }, { page = 10, depth = 1, title = "C2" } },
+        start = 1, next = 10,
+    })
+    -- Build a minimal preset line that carries a %bar token so Tokens.expand
+    -- returns a line_bar with book/chapter bar_info populated.
+    local _, _, line_bar = Tokens.expand("%bar", ui, 0, 0, nil, 1, nil, nil,
+        { marker_pages = { bookmarks = { 3, 8, 50 } } })
+    -- Page 3 and 8 fall inside the current chapter (1..9); page 50 doesn't.
+    eq(#line_bar.book.bookmark_fracs, 3, "all three bookmarks map onto the book scale")
+    eq(#line_bar.chapter.bookmark_fracs, 2, "only pages 3 and 8 fall inside the current chapter (1..9)")
+end)
+
+test("inline bar: today_frac computed on both book and chapter scales", function()
+    local ui = stubUi(5, 100, {
+        toc = { { page = 1, depth = 1, title = "C1" }, { page = 10, depth = 1, title = "C2" } },
+        start = 1, next = 10,
+    })
+    local _, _, line_bar = Tokens.expand("%bar", ui, 0, 0, nil, 1, nil, nil,
+        { marker_pages = { today = 4 } })
+    eq(line_bar.book.today_frac, 4 / 100, "book-scale today_frac")
+    -- chFrac(p) = (p - cs) / (ctotal - 1) where ctotal = ce - cs = 10 - 1 = 9,
+    -- so chFrac(4) = (4 - 1) / (9 - 1) = 3/8.
+    eq(line_bar.chapter.today_frac, (4 - 1) / (10 - 1 - 1), "chapter-scale today_frac")
+end)
+
+test("inline bar: today_frac clamps to the chapter edge when the anchor page is outside the current chapter", function()
+    local ui = stubUi(5, 100, {
+        toc = { { page = 1, depth = 1, title = "C1" }, { page = 10, depth = 1, title = "C2" } },
+        start = 1, next = 10,
+    })
+    local _, _, line_bar = Tokens.expand("%bar", ui, 0, 0, nil, 1, nil, nil,
+        { marker_pages = { today = 50 } })
+    eq(line_bar.book.today_frac, 0.5, "book-scale still resolves (no range restriction)")
+    -- chFrac clamps: (50 - 1) / (10 - 1) = 5.44, clamped to 1. This matches
+    -- session/book_open's existing behavior (deliberately NOT range-filtered
+    -- like bookmarks — see the design note below).
+    eq(line_bar.chapter.today_frac, 1, "chapter-scale clamps an out-of-chapter anchor to the edge")
 end)
 
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))

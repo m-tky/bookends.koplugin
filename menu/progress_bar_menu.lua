@@ -412,8 +412,8 @@ end
 -- Markers submenu (#77) for a full-width bar. Mirrors the line editor's marker
 -- menu but as TouchMenu items. Reads/writes bar_cfg.markers = { top=…, bottom=… }.
 function Bookends:buildBarMarkerMenu(bar_cfg, saveBar)
-    local MARKER_TYPE_CYCLE = { "off", "session", "book_open" }
-    local LABELS = { off = _("Off"), session = _("Start of session"), book_open = _("Book opened") }
+    local MARKER_TYPE_CYCLE = { "off", "session", "book_open", "bookmarks", "today" }
+    local LABELS = { off = _("Off"), session = _("Start of session"), book_open = _("Book opened"), bookmarks = _("Bookmarks"), today = _("Today") }
     local STYLE_CYCLE = { "chevron", "solid" }
     local STYLE_LABELS = { chevron = _("Chevron"), solid = _("Solid") }
     local function getS(slot) return bar_cfg.markers and bar_cfg.markers[slot] end

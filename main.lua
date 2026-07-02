@@ -567,6 +567,8 @@ function Bookends:openSettings()
     local LuaSettings = require("luasettings")
     local settings_path = DataStorage:getSettingsDir() .. "/bookends.lua"
     self.settings = LuaSettings:open(settings_path)
+    local today_marker_path = DataStorage:getSettingsDir() .. "/bookends_today_marker.lua"
+    self.today_marker_settings = LuaSettings:open(today_marker_path)
 
     -- One-time migration from G_reader_settings
     if not self.settings:has("migrated") then
@@ -606,6 +608,7 @@ function Bookends:loadSettings()
     }
 
     self.skim_on_hold = self.settings:readSetting("skim_on_hold", true)
+    self.disable_auto_refresh = self.settings:isTrue("disable_auto_refresh")
     self.check_updates = self.settings:readSetting("check_updates", false)
     self.dev_branch = self.settings:readSetting("dev_branch", "")
     self.last_install_source = self.settings:readSetting("last_install_source", "release")
@@ -1208,6 +1211,48 @@ end
 function Bookends:getSessionPages()
     return math.max(0, (self.session_max_page or 0) - (self.session_start_page or 0))
 end
+-- Plain page-bookmarks (not highlights) for the current book, deduped by
+-- page, as a flat list of page numbers. Used by the "Bookmarks" bar-marker
+-- type (#79). Returns nil when there's nothing to show (no annotation
+-- module, or an empty/absent annotations list) so callers can treat "nil"
+-- and "empty list" the same way.
+function Bookends:getBookmarkPages()
+    local ann = self.ui.annotation
+    if not ann or not ann.annotations then return nil end
+    local seen, pages = {}, {}
+    for _, item in ipairs(ann.annotations) do
+        if not item.drawer and item.pageno and not seen[item.pageno] then
+            seen[item.pageno] = true
+            pages[#pages + 1] = item.pageno
+        end
+    end
+    return pages
+end
+
+-- Persisted per-book anchor for the "Today" bar marker (#79 follow-up):
+-- the page the reader was on at their first interaction of the current
+-- calendar day, surviving app restarts/sleep/book-switches until the date
+-- rolls over. Unlike session/book-open (in-memory, reset every init), this
+-- needs real persistence, so it lives in its own settings file rather than
+-- the main bookends.lua blob (modeled on the third-party hardcoverapp
+-- plugin's own books[filename]-keyed settings file).
+function Bookends:getTodayMarkerPage()
+    local file = self.ui.document and self.ui.document.file
+    if not file then return nil end
+    local pageno = Tokens.getCurrentPageNumber(self.ui)
+    if not pageno then return nil end
+    local today = os.date("%Y-%m-%d")
+    local books = self.today_marker_settings:readSetting("books") or {}
+    local entry = books[file]
+    if not entry or entry.date ~= today then
+        books[file] = { page = pageno, date = today }
+        self.today_marker_settings:saveSetting("books", books)
+        self.today_marker_settings:flush()
+        return pageno
+    end
+    return entry.page
+end
+
 -- Build the renderer-facing markers table (#77) for one bar line.
 -- @param mk_cfg table: per-line config { top = {type,size,offset,color}, bottom = {...} }
 -- @param src table or nil: the chosen bar_info (book/chapter) carrying
@@ -1220,16 +1265,32 @@ function Bookends:buildBarMarkers(mk_cfg, src)
     for _, slot in ipairs({ "top", "bottom" }) do
         local m = mk_cfg[slot]
         if m and m.type then
-            local frac = (m.type == "book_open") and src.book_open_frac or src.session_frac
-            if frac ~= nil then
+            local entry
+            if m.type == "bookmarks" then
+                local fracs = src.bookmark_fracs
+                if fracs and #fracs > 0 then
+                    entry = { fracs = fracs }
+                end
+            else
+                local frac
+                if m.type == "book_open" then
+                    frac = src.book_open_frac
+                elseif m.type == "today" then
+                    frac = src.today_frac
+                else
+                    frac = src.session_frac
+                end
+                if frac ~= nil then
+                    entry = { frac = frac }
+                end
+            end
+            if entry then
+                entry.size = m.size or 50
+                entry.offset = m.offset or 0
+                entry.style = m.style or "chevron"
+                entry.color = m.color and Colour.parseColorValue(m.color, Screen:isColorEnabled()) or nil
                 out = out or {}
-                out[slot] = {
-                    frac = frac,
-                    size = m.size or 50,
-                    offset = m.offset or 0,
-                    style = m.style or "chevron",
-                    color = m.color and Colour.parseColorValue(m.color, Screen:isColorEnabled()) or nil,
-                }
+                out[slot] = entry
             end
         end
     end
@@ -1524,9 +1585,31 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
                 if bar_cfg.markers then
                     local kind = bar_cfg.type == "chapter" and "chapter" or "book"
                     local doc, toc = self.ui.document, self.ui.toc
+                    local bookmark_fracs
+                    if self._bookmark_pages then
+                        bookmark_fracs = {}
+                        if kind == "book" then
+                            for _, p in ipairs(self._bookmark_pages) do
+                                local f = Tokens.markerFracForBar(doc, toc, kind, pageno_local, p)
+                                if f then bookmark_fracs[#bookmark_fracs + 1] = f end
+                            end
+                        else
+                            local cs, ce = Tokens.currentChapterRange(toc, doc, pageno_local)
+                            if cs then
+                                for _, p in ipairs(self._bookmark_pages) do
+                                    if p >= cs and p < ce then
+                                        local f = Tokens.markerFracForBar(doc, toc, kind, pageno_local, p)
+                                        if f then bookmark_fracs[#bookmark_fracs + 1] = f end
+                                    end
+                                end
+                            end
+                        end
+                    end
                     local src = {
                         session_frac   = Tokens.markerFracForBar(doc, toc, kind, pageno_local, self._marker_session_page),
                         book_open_frac = Tokens.markerFracForBar(doc, toc, kind, pageno_local, self._marker_book_open_page),
+                        today_frac     = Tokens.markerFracForBar(doc, toc, kind, pageno_local, self._marker_today_page),
+                        bookmark_fracs = bookmark_fracs,
                     }
                     markers = self:buildBarMarkers(bar_cfg.markers, src)
                 end
@@ -1601,6 +1684,8 @@ end
 
 function Bookends:_paintToInner(bb, x, y)
     self._hold_rects = {}
+    self._bookmark_pages = self:getBookmarkPages()
+    self._marker_today_page = self:getTodayMarkerPage()
 
     local screen_size = Screen:getSize()
     local screen_w = screen_size.w
@@ -1693,7 +1778,9 @@ function Bookends:_paintToInner(bb, x, y)
                         symbol_color, paint_ctx,
                         { legacy_literal = is_edit_line, stats_cache = stats_cache,
                           marker_pages = { session = self._marker_session_page,
-                                           book_open = self._marker_book_open_page } })
+                                           book_open = self._marker_book_open_page,
+                                           bookmarks = self._bookmark_pages,
+                                           today = self._marker_today_page } })
                     if not is_empty then
                         table.insert(expanded_lines, result)
                         table.insert(final_indices, visible_indices[j])
@@ -1807,6 +1894,13 @@ function Bookends:_paintToInner(bb, x, y)
             cfg.uppercase = (pos_settings.line_uppercase and pos_settings.line_uppercase[i]) or false
             cfg.text_color = text_color
             cfg.symbol_color = symbol_color
+            -- Skim-gesture parity (#83): inline bars register their paint
+            -- rect into the same list full-width bars use, so long-press
+            -- finds them too. Pass the owner (not the table itself) so a
+            -- fast-path repaint of a cached widget always targets whatever
+            -- table is current for *this* frame, not a stale snapshot from
+            -- whenever the widget was originally built.
+            cfg.hold_rects_owner = self
             -- Bar data (keyed by expanded line index, same order as line_configs)
             local expanded_idx = #line_configs + 1
             if bar_data[key] and bar_data[key][expanded_idx] then
@@ -2104,6 +2198,7 @@ function Bookends:deletePluginSettings()
         self._pending_autosave = nil
     end
     self.settings = nil
+    self.today_marker_settings = nil
 
     local DataStorage = require("datastorage")
     local ffiUtil = require("ffi/util")
@@ -2111,6 +2206,8 @@ function Bookends:deletePluginSettings()
 
     os.remove(settings_dir .. "/bookends.lua")
     os.remove(settings_dir .. "/bookends.lua.old")
+    os.remove(settings_dir .. "/bookends_today_marker.lua")
+    os.remove(settings_dir .. "/bookends_today_marker.lua.old")
     pcall(ffiUtil.purgeDir, settings_dir .. "/bookends_cache")
     pcall(ffiUtil.purgeDir, settings_dir .. "/bookends_presets")
 
@@ -2133,13 +2230,14 @@ local TIMER_TOKENS = {
     "time", "time_12h", "time_24h",
     "date", "date_long", "date_numeric", "weekday", "weekday_short",
     "session_time", "book_time_left", "chap_time_left",
+    "book_time_left_h", "book_time_left_m", "chap_time_left_h", "chap_time_left_m",
     "book_time_left_eta", "chap_time_left_eta",
     "speed", "book_read_time",
     "batt", "batt_icon",
 }
 
 function Bookends:startRefreshTimer()
-    if self.refresh_timer_active then return end
+    if self.refresh_timer_active or self.disable_auto_refresh then return end
     self.refresh_timer_active = true
     self.refresh_timer_func = function()
         if not self.refresh_timer_active then return end
