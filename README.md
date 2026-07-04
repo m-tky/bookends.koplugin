@@ -114,6 +114,8 @@ Tokens are placeholders that expand to live values. Type `%` followed by a name,
 | `%chap_pages_left` | Pages left in chapter | *5* |
 | `%pages_left` | Pages left in book | *176* |
 
+> **Chapter progress at a TOC depth.** Like `%chap_title_N`, the chapter progress tokens take a depth suffix `N` (1-9): `%chap_pct_N`, `%chap_pct_left_N`, `%chap_read_N`, `%chap_pages_N`, `%chap_pages_left_N`. Without a suffix they track the deepest chapter covering the page; with `%chap_read_1` etc. they measure against the top-level chapter instead. Useful for books with a very fine TOC (a heading every few paragraphs), where pairing `%chap_title_1` with a plain `%chap_read` would show the top-level title next to a tiny sub-chapter's length. `N` deeper than the book's TOC collapses to the deepest level. Typed manually — not in the token picker.
+
 #### Time / Date
 
 | Token | Description | Example |
@@ -128,7 +130,7 @@ Tokens are placeholders that expand to live values. Type `%` followed by a name,
 | `%weekday_short` | Weekday short | *Fri* |
 | `%datetime{spec}` | Custom date/time via strftime spec | `%datetime{%d %B}` → *23 April* |
 
-> Custom date and time formats use `%datetime{spec}`, which accepts any [strftime spec](https://strftime.net/). Example: `%datetime{%d %B}` → "23 April". For the common cases, use the fixed tokens like `%date` and `%time`. The same brace syntax also works on `%chap_time_left_eta`, `%book_time_left_eta`, and `%book_finish_date`.
+> Custom date and time formats use `%datetime{spec}`, which accepts any [strftime spec](https://strftime.net/). Example: `%datetime{%d %B}` → "23 April". For the common cases, use the fixed tokens like `%date` and `%time`. The same brace syntax also works on `%chap_time_left_eta`, `%book_time_left_eta`, `%book_finish_date`, and the depth variant `%chap_time_left_N_eta`.
 
 #### Reading
 
@@ -139,6 +141,8 @@ Tokens are placeholders that expand to live values. Type `%` followed by a name,
 | `%chap_time_left_eta` | Clock time you'd reach end of chapter | *14:47* |
 | `%book_time_left_eta` | Clock time you'd reach end of book | *18:20* |
 | `%book_finish_date` | Projected calendar date you'll finish the book | *9 Jun* |
+
+> **Time left at a TOC depth.** `%chap_time_left_N` and `%chap_time_left_N_eta{spec}` scope the remaining-time estimate to the level-`N` chapter, the same way the progress tokens above do. Both need the statistics plugin and render empty without it.
 | `%book_read_time` | Total reading time for book | *2h 30m* |
 | `%session_time` | Session reading time (skip-aware) | *0h 23m* |
 | `%session_pages` | Session pages read (skip-aware) | *14* |

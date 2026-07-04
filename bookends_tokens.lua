@@ -794,6 +794,66 @@ function Tokens.getChapterTitlesByDepth(ui, pageno)
     return out
 end
 
+--- Half-open page range [start, stop) of the level-`depth` chapter covering
+-- `pageno`. The level-`depth` region is delimited by any TOC entry with
+-- depth <= `depth` (a shallower heading also opens a new level-`depth` region),
+-- so depth=1 yields the coarsest boundaries and depth >= the book's max depth
+-- collapses to the deepest (flat) chapter. `stop` is exclusive — the first page
+-- past the chapter, or pagecount+1 for the final chapter.
+-- @return { start = <page>, stop = <page> }, or nil when TOC data is missing or
+--         `pageno` precedes the first qualifying entry.
+function Tokens.getChapterRangeByDepth(ui, pageno, depth)
+    if not ui or not ui.toc or not pageno or not depth then return nil end
+    local full_toc = ui.toc.toc
+    if not full_toc or #full_toc == 0 then return nil end
+    local start_page, stop_page
+    for _i, entry in ipairs(full_toc) do
+        if entry.page and entry.depth and entry.depth <= depth then
+            if entry.page <= pageno then
+                start_page = entry.page
+            else
+                stop_page = entry.page
+                break
+            end
+        end
+    end
+    if not start_page then return nil end
+    if not stop_page then
+        local total = ui.document and ui.document.getPageCount
+            and ui.document:getPageCount()
+        stop_page = (total or pageno) + 1
+    end
+    return { start = start_page, stop = stop_page }
+end
+
+--- Chapter progress at a given TOC depth, derived from getChapterRangeByDepth.
+-- Formulas mirror the flat chapter tokens (see expand()): the current page is
+-- counted in `read`, so read + pages_left == pages.
+-- @return { read, pages, pages_left, pct, pct_left } (numbers), or nil when no
+--         range is available.
+function Tokens.getChapterProgressByDepth(ui, pageno, depth)
+    local range = Tokens.getChapterRangeByDepth(ui, pageno, depth)
+    if not range then return nil end
+    local pages = range.stop - range.start
+    if pages < 1 then return nil end
+    local read = pageno - range.start + 1
+    local pages_left = math.max(0, range.stop - 1 - pageno)
+    local pct
+    if pages > 1 then
+        pct = math.floor((pageno - range.start) / (pages - 1) * 100)
+    else
+        pct = 100
+    end
+    pct = math.max(0, math.min(100, pct))
+    return {
+        read       = read,
+        pages      = pages,
+        pages_left = pages_left,
+        pct        = pct,
+        pct_left   = math.max(0, math.min(100, 100 - pct)),
+    }
+end
+
 --- Parse a comparison value, handling HH:MM time format as minutes since midnight.
 local function parseNumericValue(val)
     local h, m = val:match("^(%d+):(%d+)$")
@@ -1716,6 +1776,26 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         r = r:gsub("%%chap_title_(%d)", function(depth)
             return "[ch." .. depth .. "]"
         end)
+        -- Depth-variant chapter progress/time (issue #85): reuse the base
+        -- token's placeholder label. eta (with a strftime brace) runs first so
+        -- the plain pass doesn't swallow "%chap_time_left_1" out of "…_1_eta{…}".
+        r = r:gsub("%%chap_time_left_(%d)_eta(%b{})", function(_depth, brace)
+            return formatEtaEpoch(os.time() + 30 * 60, brace:sub(2, -2))
+        end)
+        for _, base in ipairs({
+            "chap_pages_left", "chap_pct_left", "chap_pages", "chap_pct",
+            "chap_read", "chap_time_left",
+        }) do
+            local label = preview[base]
+            r = r:gsub("%%" .. base .. "_(%d)(%b{})", function(_depth, brace)
+                local n = brace:sub(2, -2):match("^(%d+)$")
+                if n then return "{" .. label:sub(2, -2) .. "<=" .. n .. "}" end
+                return label
+            end)
+            r = r:gsub("%%" .. base .. "_(%d)", function(_depth)
+                return label
+            end)
+        end
         -- Legacy %C1/2/3 already rewritten to %chap_title_1/2/3 by the
         -- alias pass at the top of expand().
         r = r:gsub("%%([%a_][%w_]*){(%d+)}", function(token, n)
@@ -1855,10 +1935,18 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local chapter_title_num = ""   -- leading number parsed from title when strip-safe
     local chapter_title_name = ""  -- title with leading number removed when strip-safe; raw title otherwise
     local chapter_titles_by_depth = {}  -- { [1] = "Part II", [2] = "Chapter 1", ... }
-    if needs("chap_pct", "chap_pct_left", "chap_read", "chap_pages", "chap_pages_left",
+    -- Depth-variant chapter tokens (%chap_read_1, %chap_pct_2, …; issue #85).
+    -- Detected here so the flat block below still runs — the depth tokens fall
+    -- back to the flat values when no TOC range is available (chapterless book).
+    local has_depth_chap = format_str:find("%%chap_read_%d")
+        or format_str:find("%%chap_pages_%d")
+        or format_str:find("%%chap_pages_left_%d")
+        or format_str:find("%%chap_pct_%d")
+        or format_str:find("%%chap_pct_left_%d")
+    if (needs("chap_pct", "chap_pct_left", "chap_read", "chap_pages", "chap_pages_left",
              "chap_read_lastdigit", "chap_pages_lastdigit", "chap_pages_left_lastdigit",
              "chap_title", "chap_title_1", "chap_title_2", "chap_title_3", "chap_num", "chap_count",
-             "chap_title_num", "chap_title_name") and pageno and ui.toc then
+             "chap_title_num", "chap_title_name") or has_depth_chap) and pageno and ui.toc then
         -- Raw page calculation for %P (percentage)
         local chapter_start = ui.toc:getPreviousChapter(pageno)
         if ui.toc:isChapterStart(pageno) then
@@ -2801,6 +2889,88 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             end
         end
         return val
+    end)
+
+    -- Depth-variant chapter progress (%chap_read_1, %chap_pct_2, …; issue #85).
+    -- Values come from the plugin's own TOC walk (getChapterProgressByDepth) so
+    -- they can be scoped to any TOC depth, unlike the flat tokens which only see
+    -- the deepest chapter. Falls back to the flat values when no depth range is
+    -- available (chapterless book / page before the first entry), so
+    -- %chap_read_<maxdepth> tracks %chap_read.
+    local depth_chap_cache = {}
+    local function depthChap(depth_str)
+        local d = tonumber(depth_str)
+        local cached = depth_chap_cache[d]
+        if cached ~= nil then return cached or nil end
+        local prog = Tokens.getChapterProgressByDepth(ui, pageno, d)
+        depth_chap_cache[d] = prog or false
+        return prog
+    end
+    local function emitDepth(base, depth_str, val)
+        has_token = true
+        if val ~= "" and val ~= "0" then all_empty = false end
+        local key = "%" .. base .. "_" .. depth_str
+        if token_limits[key] then
+            token_occurrence[key] = (token_occurrence[key] or 0) + 1
+            local px = token_limits[key][token_occurrence[key]]
+            if px then
+                return "\x01" .. tostring(px) .. "\x02" .. val .. "\x03"
+            end
+        end
+        return val
+    end
+    -- "_left" variants run first so their trailing digit isn't misparsed
+    -- (the digit anchor already prevents cross-matching, but keep it explicit).
+    result = result:gsub("%%chap_pages_left_(%d)", function(depth_str)
+        local p = depthChap(depth_str)
+        return emitDepth("chap_pages_left", depth_str,
+            p and tostring(p.pages_left) or tostring(chapter_pages_left))
+    end)
+    result = result:gsub("%%chap_pct_left_(%d)", function(depth_str)
+        local p = depthChap(depth_str)
+        return emitDepth("chap_pct_left", depth_str,
+            p and (tostring(p.pct_left) .. "%") or tostring(chapter_pct_left))
+    end)
+    result = result:gsub("%%chap_pages_(%d)", function(depth_str)
+        local p = depthChap(depth_str)
+        return emitDepth("chap_pages", depth_str,
+            p and tostring(p.pages) or tostring(chapter_total_pages))
+    end)
+    result = result:gsub("%%chap_pct_(%d)", function(depth_str)
+        local p = depthChap(depth_str)
+        return emitDepth("chap_pct", depth_str,
+            p and (tostring(p.pct) .. "%") or tostring(chapter_pct))
+    end)
+    result = result:gsub("%%chap_read_(%d)", function(depth_str)
+        local p = depthChap(depth_str)
+        return emitDepth("chap_read", depth_str,
+            p and tostring(p.read) or tostring(chapter_pages_done))
+    end)
+    -- Depth-variant chapter time-left. Minutes via the statistics plugin;
+    -- eta = now + pages_left_N × avg_time. The eta pass runs first so the plain
+    -- pass doesn't consume "%chap_time_left_1" out of "%chap_time_left_1_eta{…}".
+    -- Both render empty (auto-hide) when statistics are unavailable or no depth
+    -- range applies — depth time is inherently a with-TOC feature.
+    result = result:gsub("%%chap_time_left_(%d)_eta(%b{})", function(depth_str, brace)
+        has_token = true
+        local p = depthChap(depth_str)
+        local avg = ui.statistics and ui.statistics.avg_time
+        if p and avg and avg > 0 then
+            local epoch = os.time() + math.floor(p.pages_left * avg + 0.5)
+            local val = formatEtaEpoch(epoch, brace:sub(2, -2))
+            if val ~= "" then all_empty = false end
+            return val
+        end
+        return ""
+    end)
+    result = result:gsub("%%chap_time_left_(%d)", function(depth_str)
+        local p = depthChap(depth_str)
+        local val = ""
+        if p and ui.statistics and ui.statistics.getTimeForPages then
+            local r = ui.statistics:getTimeForPages(math.max(0, p.pages_left))
+            if r and r ~= "N/A" then val = r end
+        end
+        return emitDepth("chap_time_left", depth_str, val)
     end)
 
     -- Handle (s) pluralisation: "1 highlight(s)" -> "1 highlight", "3 highlight(s)" -> "3 highlights"

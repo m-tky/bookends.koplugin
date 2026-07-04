@@ -1842,5 +1842,253 @@ test("inline bar: today_frac clamps to the chapter edge when the anchor page is 
     eq(line_bar.chapter.today_frac, 1, "chapter-scale clamps an out-of-chapter anchor to the edge")
 end)
 
+-- ============================================================================
+-- getChapterRangeByDepth: half-open [start, stop) page range of the level-N
+-- chapter covering a page. Level-N region is delimited by any entry with
+-- depth <= N (issue #85).
+-- ============================================================================
+-- Two-level TOC: Part I (p1) { Ch1 (p1), Ch2 (p20) }, Part II (p40) { Ch3 (p40),
+-- Ch4 (p60) }; 80-page book.
+local function stubUiNestedToc()
+    return {
+        document = { getPageCount = function() return 80 end },
+        toc = {
+            toc = {
+                { title = "Part I",  depth = 1, page = 1  },
+                { title = "Ch 1",    depth = 2, page = 1  },
+                { title = "Ch 2",    depth = 2, page = 20 },
+                { title = "Part II", depth = 1, page = 40 },
+                { title = "Ch 3",    depth = 2, page = 40 },
+                { title = "Ch 4",    depth = 2, page = 60 },
+            },
+            getTocTitleByPage = function(_, _) return "" end,
+        },
+    }
+end
+
+test("range: N=1 spans the whole top-level part", function()
+    local r = Tokens.getChapterRangeByDepth(stubUiNestedToc(), 25, 1)
+    eq(r.start, 1, "Part I starts at page 1")
+    eq(r.stop, 40, "Part I ends where Part II begins")
+end)
+
+test("range: N=2 gives the finer sub-chapter", function()
+    local r = Tokens.getChapterRangeByDepth(stubUiNestedToc(), 25, 2)
+    eq(r.start, 20, "Ch 2 starts at page 20")
+    eq(r.stop, 40, "next depth<=2 boundary is Part II at 40")
+end)
+
+test("range: N beyond book's max depth collapses to the deepest level", function()
+    local deep = Tokens.getChapterRangeByDepth(stubUiNestedToc(), 25, 9)
+    local d2   = Tokens.getChapterRangeByDepth(stubUiNestedToc(), 25, 2)
+    eq(deep.start, d2.start, "start matches deepest available")
+    eq(deep.stop, d2.stop, "stop matches deepest available")
+end)
+
+test("range: last chapter stop is pagecount+1", function()
+    local r = Tokens.getChapterRangeByDepth(stubUiNestedToc(), 70, 1)
+    eq(r.start, 40, "Part II starts at 40")
+    eq(r.stop, 81, "no further top-level entry -> pagecount+1")
+end)
+
+test("range: nil when TOC is absent", function()
+    local ui = { document = { getPageCount = function() return 80 end }, toc = nil }
+    eq(Tokens.getChapterRangeByDepth(ui, 25, 1), nil)
+end)
+
+test("range: nil when TOC is empty", function()
+    local ui = {
+        document = { getPageCount = function() return 80 end },
+        toc = { toc = {}, getTocTitleByPage = function() return "" end },
+    }
+    eq(Tokens.getChapterRangeByDepth(ui, 25, 1), nil)
+end)
+
+-- ============================================================================
+-- getChapterProgressByDepth: read/pages/pages_left/pct/pct_left derived from
+-- the depth range, matching the flat-token formulas (issue #85).
+-- ============================================================================
+test("progress: values derive from the level-1 range", function()
+    -- pageno 25 in Part I [1, 40): pages=39, read=25, left=14.
+    local p = Tokens.getChapterProgressByDepth(stubUiNestedToc(), 25, 1)
+    eq(p.read, 25, "pageno - start + 1")
+    eq(p.pages, 39, "stop - start")
+    eq(p.pages_left, 14, "stop - 1 - pageno")
+    eq(p.pct, 63, "floor((25-1)/(39-1)*100)")
+    eq(p.pct_left, 37, "100 - pct")
+end)
+
+test("progress: read + pages_left == pages (current page counted in read)", function()
+    for _, pg in ipairs({1, 25, 39}) do
+        local p = Tokens.getChapterProgressByDepth(stubUiNestedToc(), pg, 1)
+        eq(p.read + p.pages_left, p.pages, "consistency at page " .. pg)
+    end
+end)
+
+test("progress: single-page chapter reads 100%", function()
+    local ui = {
+        document = { getPageCount = function() return 5 end },
+        toc = {
+            toc = {
+                { title = "A", depth = 1, page = 1 },
+                { title = "B", depth = 1, page = 2 },
+            },
+            getTocTitleByPage = function() return "" end,
+        },
+    }
+    local p = Tokens.getChapterProgressByDepth(ui, 1, 1)
+    eq(p.pages, 1, "one-page chapter")
+    eq(p.pct, 100, "single-page chapter is 100%")
+    eq(p.pct_left, 0)
+end)
+
+test("progress: nil when no range is available", function()
+    local ui = { document = { getPageCount = function() return 80 end }, toc = nil }
+    eq(Tokens.getChapterProgressByDepth(ui, 25, 1), nil)
+end)
+
+-- ============================================================================
+-- %chap_read_N / %chap_pages_N / %chap_pages_left_N / %chap_pct_N /
+-- %chap_pct_left_N expand through the full pipeline (issue #85).
+-- ============================================================================
+-- Nested-TOC ui for expansion: same shape as stubUiNestedToc but with the
+-- fields the expand() chapter path touches, and a configurable page.
+local function stubUiNestedExpand(page)
+    return {
+        view = { state = { page = page } },
+        document = {
+            file = "/book.epub",
+            getPageCount = function() return 80 end,
+            hasHiddenFlows = function() return false end,
+            getProps = function() return {} end,
+        },
+        doc_props = {},
+        toc = {
+            toc = {
+                { title = "Part I",  depth = 1, page = 1  },
+                { title = "Ch 1",    depth = 2, page = 1  },
+                { title = "Ch 2",    depth = 2, page = 20 },
+                { title = "Part II", depth = 1, page = 40 },
+                { title = "Ch 3",    depth = 2, page = 40 },
+                { title = "Ch 4",    depth = 2, page = 60 },
+            },
+            getTocTitleByPage = function(_, _) return "" end,
+            getTocTicks = function() return {} end,
+            getMaxDepth = function() return 2 end,
+            getPreviousChapter = function(_, _) return nil end,
+            getNextChapter = function(_, _) return nil end,
+            isChapterStart = function(_, _) return false end,
+            getChapterPagesDone = function(_, _) return nil end,
+            getChapterPageCount = function(_, _) return nil end,
+            getChapterPagesLeft = function(_, _) return nil end,
+        },
+        annotation = nil,
+        statistics = nil,
+    }
+end
+
+test("expand: %chap_read_1 / %chap_pages_1 use the top-level part", function()
+    local r = Tokens.expand("%chap_read_1/%chap_pages_1", stubUiNestedExpand(25), 0, 0)
+    eq(r, "25/39", "level-1 read/pages at page 25 of Part I [1,40)")
+end)
+
+test("expand: %chap_read_2 / %chap_pages_2 use the sub-chapter", function()
+    local r = Tokens.expand("%chap_read_2/%chap_pages_2", stubUiNestedExpand(25), 0, 0)
+    eq(r, "6/20", "Ch 2 [20,40): read = 25-20+1 = 6, pages = 20")
+end)
+
+test("expand: %chap_pct_1 and %chap_pct_left_1 carry the percent sign", function()
+    local r = Tokens.expand("%chap_pct_1 %chap_pct_left_1", stubUiNestedExpand(25), 0, 0)
+    eq(r, "63% 37%")
+end)
+
+test("expand: %chap_pages_left_1 is the top-level remainder", function()
+    local r = Tokens.expand("%chap_pages_left_1", stubUiNestedExpand(25), 0, 0)
+    eq(r, "14")
+end)
+
+test("expand: depth beyond max collapses to the deepest chapter", function()
+    local deep = Tokens.expand("%chap_read_9/%chap_pages_9", stubUiNestedExpand(25), 0, 0)
+    local d2   = Tokens.expand("%chap_read_2/%chap_pages_2", stubUiNestedExpand(25), 0, 0)
+    eq(deep, d2, "%chap_read_9 == %chap_read_2 in a 2-level book")
+end)
+
+test("expand: %chap_read_1{N} width cap wraps with markers", function()
+    local r = Tokens.expand("%chap_read_1{200}", stubUiNestedExpand(25), 0, 0)
+    eq(r, "\x01200\x0225\x03", "pixel-limit markers applied like the flat tokens")
+end)
+
+-- ============================================================================
+-- %chap_time_left_N and %chap_time_left_N_eta{strftime} (issue #85).
+-- ============================================================================
+-- Nested TOC + a statistics stub (avg_time 30s/page; getTimeForPages = minutes).
+local function stubUiNestedStats(page)
+    local ui = stubUiNestedExpand(page)
+    ui.statistics = {
+        avg_time = 30,
+        getTimeForPages = function(_, pages)
+            if pages == 0 then return "00:00" end
+            return string.format("%dm", math.floor(pages * 30 / 60))
+        end,
+    }
+    return ui
+end
+
+test("expand: %chap_time_left_N scopes remaining time to the depth's chapter", function()
+    -- Page 10: Part I [1,40) has 29 pages left -> 14m; Ch 1 [1,20) has 9 -> 4m.
+    local r1 = Tokens.expand("%chap_time_left_1", stubUiNestedStats(10), 0, 0)
+    local r2 = Tokens.expand("%chap_time_left_2", stubUiNestedStats(10), 0, 0)
+    eq(r1, "14m", "level-1: floor(29*30/60)")
+    eq(r2, "4m", "level-2: floor(9*30/60)")
+end)
+
+test("expand: %chap_time_left_N is empty without the statistics plugin", function()
+    local r = Tokens.expand("%chap_time_left_1", stubUiNestedExpand(10), 0, 0)
+    eq(r, "", "no statistics -> auto-hide, like the flat token")
+end)
+
+test("expand: %chap_time_left_N_eta{strftime} renders a clock time", function()
+    local r = Tokens.expand("%chap_time_left_1_eta{%H:%M}", stubUiNestedStats(10), 0, 0)
+    assert(r:match("^%d%d:%d%d$"), "expected HH:MM, got " .. string.format("%q", r))
+end)
+
+test("expand: %chap_time_left_N_eta is empty without statistics", function()
+    local r = Tokens.expand("%chap_time_left_1_eta{%H:%M}", stubUiNestedExpand(10), 0, 0)
+    eq(r, "", "no avg_time -> auto-hide")
+end)
+
+-- ============================================================================
+-- Preview mode: _N variants reuse their base token's placeholder label (#85).
+-- ============================================================================
+test("preview: %chap_read_1 shows the base [ch.read] label", function()
+    local r = Tokens.expandPreview("%chap_read_1", { view = {} }, nil, nil, 2, nil)
+    eq(r, "[ch.read]")
+end)
+
+test("preview: %chap_pct_2 and %chap_pct_left_2 map to base labels", function()
+    local r = Tokens.expandPreview("%chap_pct_2/%chap_pct_left_2", { view = {} }, nil, nil, 2, nil)
+    eq(r, "[ch%]/[ch%left]")
+end)
+
+test("preview: %chap_pages_left_1 maps to base label (not %chap_pages_1)", function()
+    local r = Tokens.expandPreview("%chap_pages_left_1", { view = {} }, nil, nil, 2, nil)
+    eq(r, "[ch.left]")
+end)
+
+test("preview: %chap_read_1{300} width variant carries the pixel value", function()
+    local r = Tokens.expandPreview("%chap_read_1{300}", { view = {} }, nil, nil, 2, nil)
+    assert(r:find("300", 1, true), "expected '300' in preview: " .. r)
+end)
+
+test("preview: %chap_time_left_1_eta{%H:%M} renders a clock time", function()
+    local r = Tokens.expandPreview("%chap_time_left_1_eta{%H:%M}", { view = {} }, nil, nil, 2, nil)
+    assert(r:match("%d%d:%d%d"), "expected HH:MM in preview: " .. r)
+end)
+
+test("preview: %chap_time_left_2 maps to base label", function()
+    local r = Tokens.expandPreview("%chap_time_left_2", { view = {} }, nil, nil, 2, nil)
+    eq(r, "[ch.time]")
+end)
+
 io.write(string.format("\n%d passed, %d failed\n", pass, fail))
 os.exit(fail == 0 and 0 or 1)
