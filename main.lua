@@ -21,6 +21,7 @@ do
 end
 
 local Blitbuffer = require("ffi/blitbuffer")
+local BD = require("ui/bidi")
 local Colour = require("bookends_colour")
 local Migrations = require("bookends_migrations")
 local Geom = require("ui/geometry")
@@ -1528,6 +1529,25 @@ end
 --- Populates self._hold_rects so long-press gestures can find the bars.
 --- Returns (text_color, symbol_color) — colour values the
 --- text-rendering phase also needs.
+--- Return the automatic fill direction for a progress bar with no explicit
+--- direction setting. Mirrors KOReader's ReaderView RTL-reading-order logic.
+function Bookends:getDefaultProgressBarDirection(vertical)
+    if vertical then return "ttb" end
+
+    -- vertical-rl books read across columns from right to left.
+    local doc_is_vert_rl = self.ui.document.isVerticalText
+        and self.ui.document:isVerticalText()
+
+    -- ReaderAutoDirection records EPUB spine and ComicInfo.xml RTL metadata
+    -- in inverse_reading_order. Compare against the UI's mirrored baseline:
+    -- in an RTL UI, false is the RTL reading-order value.
+    local inverse_reading_order = self.ui.view
+        and self.ui.view.inverse_reading_order or false
+    local is_rtl_reading = inverse_reading_order ~= BD.mirroredUILayout()
+
+    return (doc_is_vert_rl or is_rtl_reading) and "rtl" or "ltr"
+end
+
 function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
     -- Tick cache is invalidated explicitly by the events that actually
     -- change tick fractions (onPageUpdate / onPosUpdate / footer-visibility
@@ -1544,14 +1564,11 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
                 local pageno_local = Tokens.getCurrentPageNumber(self.ui) or 0
                 local pct, ticks = self:_computeBarProgress(bar_cfg, pageno_local)
 
-                -- tategumi fork: when the document uses vertical-rl writing-mode,
-                -- horizontal progress bars naturally fill right→left to match the
-                -- reading direction. Falls back to the upstream default when the
-                -- isVerticalText() method is not present (vanilla KOReader).
-                local doc_is_vert_rl = self.ui.document.isVerticalText
-                    and self.ui.document:isVerticalText()
-                local h_default = doc_is_vert_rl and "rtl" or "ltr"
-                local direction = bar_cfg.direction or (vertical and "ttb" or h_default)
+                -- With no per-bar override, follow KOReader's effective reading
+                -- direction. This covers vertical-rl and metadata-detected RTL
+                -- comic archives (EPUB/CBZ/CBR/CBT) alike.
+                local direction = bar_cfg.direction
+                    or self:getDefaultProgressBarDirection(vertical)
                 local paint_vertical = direction == "ttb" or direction == "btt"
                 local paint_reverse = direction == "rtl" or direction == "btt"
                 -- Per-bar colours stand alone after the

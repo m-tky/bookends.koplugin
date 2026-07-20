@@ -35,6 +35,10 @@ package.loaded["ui/widget/container/widgetcontainer"] = {
 local Device = { screen_saver_mode = false }
 package.loaded["device"] = Device
 package.loaded["bookends_i18n"] = { gettext = function(s) return s end }
+local ui_mirrored = false
+package.loaded["ui/bidi"] = {
+    mirroredUILayout = function() return ui_mirrored end,
+}
 
 -- Everything else main.lua (and its local modules) require, transitively:
 -- intercept require and hand back a permissive stub, so no real KOReader or
@@ -126,6 +130,28 @@ test("suspend clears any pending resume repaint", function()
     eq(s._resume_repaint_pending, true, "pending after screensaver resume")
     Bookends.onSuspend(s)
     eq(s._resume_repaint_pending, nil, "suspend clears pending flag")
+end)
+
+test("automatic horizontal bar direction follows effective RTL reading order", function()
+    local s = setmetatable({
+        ui = {
+            document = {},
+            view = { inverse_reading_order = true },
+        },
+    }, { __index = Bookends })
+
+    ui_mirrored = false
+    eq(s:getDefaultProgressBarDirection(false), "rtl", "RTL reading order reverses horizontal bars")
+    eq(s:getDefaultProgressBarDirection(true), "ttb", "vertical bars retain their vertical default")
+
+    s.ui.view.inverse_reading_order = false
+    eq(s:getDefaultProgressBarDirection(false), "ltr", "LTR reading order keeps the LTR default")
+
+    -- KOReader represents RTL reading in a mirrored UI with false, so the
+    -- comparison must be against the UI baseline rather than truthiness.
+    ui_mirrored = true
+    eq(s:getDefaultProgressBarDirection(false), "rtl", "mirrored UI baseline is respected")
+    ui_mirrored = false
 end)
 
 print(pass .. " pass / " .. fail .. " fail")
