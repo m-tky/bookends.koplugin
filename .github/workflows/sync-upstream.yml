@@ -29,7 +29,19 @@ jobs:
       - name: Fetch upstream
         run: |
           git remote add upstream https://github.com/AndyHazz/bookends.koplugin.git
-          git fetch upstream master
+          # GitHub-hosted runners occasionally stall while negotiating an HTTP/2
+          # upload-pack request.  Use HTTP/1.1 and retry a bounded fetch so a
+          # transient upstream network failure does not block every sync.
+          for attempt in 1 2 3; do
+            if timeout 120 git -c http.version=HTTP/1.1 fetch --no-tags upstream master; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 10))
+            fi
+          done
+          echo "Failed to fetch upstream/master after 3 attempts." >&2
+          exit 1
 
       - name: Merge from upstream bookends.koplugin
         run: |
