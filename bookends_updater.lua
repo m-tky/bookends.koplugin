@@ -116,9 +116,94 @@ function Updater.offerReleasesPage(message)
     end
 end
 
+-- Unpack a downloaded .zip into `dest`, stripping the archive's single
+-- top-level directory (release and GitHub branch zips wrap everything in
+-- bookends.koplugin/ or bookends.koplugin-<branch>/).
+--
+-- Extract via the core ffi/archiver (libarchive), the API KOReader itself uses
+-- for its dictionary downloader and archive viewer. This used to call
+-- Device:unpackArchive, which was only ever a thin wrapper around this same
+-- Reader; KOReader dropped the wrapper mid-2026 and the call started failing
+-- with "attempt to call method 'unpackArchive' (a nil value)", taking the whole
+-- reader down mid-update. Confirmed gone in v2026.07.2. Calling ffi/archiver
+-- directly works everywhere the wrapper did, since the wrapper depended on it,
+-- and keeps working now it's gone.
+--
+-- libarchive's write-to-disk auto-creates parent directories, so extracting
+-- each entry to its stripped path is sufficient. A missing extractor degrades
+-- to a clean error string -- the caller then offers the releases page -- rather
+-- than crashing, which is the failure mode that made this so unpleasant: the
+-- update path is also the recovery path, so a crash here leaves users unable
+-- to update to the fix.
+--
+-- Ported from bookshelf, which hit this first (its 78ec21c). The updater
+-- originally went bookends -> bookshelf, so the fix had to come back the other
+-- way.
+local function unpackStripRoot(zip_path, dest)
+    local ok_req, Archiver = pcall(require, "ffi/archiver")
+    if not (ok_req and Archiver and Archiver.Reader) then
+        return false, "archive extractor unavailable"
+    end
+    local arc = Archiver.Reader:new()
+    if not arc:open(zip_path) then
+        local e = arc.err
+        arc:close()
+        return false, e or "could not open archive"
+    end
+    local extract_err
+    for entry in arc:iterate() do
+        local rel = entry.path and entry.path:match("^[^/]+/(.+)$")
+        if rel and rel ~= "" then
+            if not arc:extractToPath(entry.path, dest .. "/" .. rel) then
+                extract_err = arc.err or "extract failed"
+                break
+            end
+        end
+    end
+    arc:close()
+    if extract_err then return false, extract_err end
+    return true
+end
+
+-- Test hook: the strip-root logic is pure once ffi/archiver is stubbed, and
+-- install() is too entangled with the network to exercise it any other way
+-- off-device.
+Updater._unpackStripRoot = unpackStripRoot
+
 --- Return the available update version and zip URL, or nil if none/not checked.
 function Updater.getAvailableUpdate()
     return _cached_version, _cached_zip_url
+end
+
+--- Shared Wi-Fi gate for the user-initiated network paths (#77, #101).
+--
+-- Gate on isConnected, NOT isOnline. Despite the name, NetworkMgr:isOnline()
+-- is canResolveHostnames() - a DNS lookup of Microsoft's dns.msftncsi.com
+-- (manager.lua:348). Plenty of working connections fail it: a Pi-hole or
+-- AdGuard blocking Microsoft telemetry domains, a captive portal, networks
+-- where that host is unreachable, or simply a resolver that hasn't come back up
+-- in the seconds after a wake. On any of those, gating on isOnline asks the
+-- user to "turn on Wi-Fi" that is already on and connected (#101) - and
+-- runWhenOnline then makes it worse, because in exactly that
+-- connected-but-unresolvable case it shows the prompt and *forfeits* the
+-- callback (manager.lua:698), so the action never runs even if they tap
+-- "Turn on". runWhenConnected has no such branch: connected means run,
+-- otherwise prompt per the user's prefs and run once the radio is up.
+--
+-- The re-entry is guarded by a second isConnected check rather than trusting
+-- the callback: beforeWifiAction fires it once the connection attempt finishes,
+-- which is not the same as having succeeded, and re-entering the gate while
+-- still disconnected would prompt in a loop.
+--
+-- @param retry function: re-invokes the caller once a connection exists
+-- @return boolean: true if the caller should return and wait, false to proceed
+function Updater.gateOnConnection(retry)
+    local NetworkMgr = require("ui/network/manager")
+    if NetworkMgr:isConnected() then return false end
+    NetworkMgr:runWhenConnected(function()
+        if NetworkMgr:isConnected() then retry() end
+    end)
+    return true
 end
 
 --- Fire a silent background update check if the cache is stale (>1h or never checked).
@@ -175,13 +260,10 @@ function Updater.check(on_success)
 
     local installed_version = Updater.getInstalledVersion()
 
-    -- runWhenOnline (parity with bookshelf #77): if Wi-Fi is off, bring it up
-    -- (prompting per the user's KOReader prefs) and re-run once online; if the
-    -- user cancels, nothing happens. Stronger than isWifiOn — also handles
-    -- "radio on but connection dead".
-    local NetworkMgr = require("ui/network/manager")
-    if not NetworkMgr:isOnline() then
-        NetworkMgr:runWhenOnline(function() Updater.check(on_success) end)
+    -- Wi-Fi gate (parity with bookshelf #77): if Wi-Fi is off, bring it up
+    -- (prompting per the user's KOReader prefs) and re-run once connected; if
+    -- the user cancels, nothing happens. See Updater.gateOnConnection.
+    if Updater.gateOnConnection(function() Updater.check(on_success) end) then
         return
     end
 
@@ -300,12 +382,10 @@ end
 function Updater.install(zip_url, old_version, new_version, on_success, error_label)
 
     -- Single Wi-Fi gate for every install path (release, branch, latest-stable):
-    -- bring Wi-Fi up if off and re-run once online; cancel = no-op (bookshelf #77).
-    local NetworkMgr = require("ui/network/manager")
-    if not NetworkMgr:isOnline() then
-        NetworkMgr:runWhenOnline(function()
-            Updater.install(zip_url, old_version, new_version, on_success, error_label)
-        end)
+    -- bring Wi-Fi up if off and re-run once connected; cancel = no-op (#77).
+    if Updater.gateOnConnection(function()
+        Updater.install(zip_url, old_version, new_version, on_success, error_label)
+    end) then
         return
     end
 
@@ -382,7 +462,7 @@ function Updater.install(zip_url, old_version, new_version, on_success, error_la
 
         -- Extract to plugin directory (strip root folder from ZIP)
         local plugin_path = DataStorage:getDataDir() .. "/plugins/bookends.koplugin"
-        local ok, err = Device:unpackArchive(zip_path, plugin_path, true)
+        local ok, err = unpackStripRoot(zip_path, plugin_path)
         pcall(os.remove, zip_path)
 
         if not ok then
@@ -419,7 +499,7 @@ end
 -- @param branch string: branch name (e.g. "feature/v5.2-test")
 -- @param on_success function or nil: fired after successful unpack
 function Updater.installBranch(branch, on_success)
-    -- Wi-Fi is handled by Updater.install's runWhenOnline gate.
+    -- Wi-Fi is handled by Updater.install's connection gate.
     local installed_version = Updater.getInstalledVersion()
     local zip_url = Updater.composeBranchUrl(branch)
     local error_label = _("Could not install branch:") .. " " .. branch
@@ -432,11 +512,9 @@ end
 -- pull the release zip and re-stamp last_install_source = "release".
 -- @param on_success function or nil: fired after successful unpack
 function Updater.installLatestStable(on_success)
-    -- runWhenOnline gate (bookshelf #77); this path does its own release fetch
-    -- before delegating to Updater.install.
-    local NetworkMgr = require("ui/network/manager")
-    if not NetworkMgr:isOnline() then
-        NetworkMgr:runWhenOnline(function() Updater.installLatestStable(on_success) end)
+    -- Wi-Fi gate (bookshelf #77); this path does its own release fetch before
+    -- delegating to Updater.install.
+    if Updater.gateOnConnection(function() Updater.installLatestStable(on_success) end) then
         return
     end
 
