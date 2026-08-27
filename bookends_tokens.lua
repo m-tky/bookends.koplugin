@@ -26,6 +26,162 @@ local function getCurrentPageNumber(ui)
 end
 Tokens.getCurrentPageNumber = getCurrentPageNumber
 
+-- Bar-marker anchors (#99/#100) ------------------------------------------------
+--
+-- A page index only means something for as long as the current pagination
+-- holds. In a reflowable (CRE) document the pagination is a product of the
+-- render settings, so bumping the font size - or the margins, line spacing,
+-- embedded-styles toggle, anything that fires DocumentRerendered - silently
+-- repoints a stored page number at different text. Markers anchored that way
+-- drift away from where the reader actually was, which is #100, and can end up
+-- pointing further into the book than the reader has reached, which is #99.
+--
+-- KOReader has the same problem with annotations and solves it by treating the
+-- xpointer as the anchor and the page as a derived value it recomputes on
+-- re-render (readerannotation.lua:updatePageNumbers). Do the same: capture an
+-- xpointer next to the page, and resolve back through it every time.
+--
+-- Paged documents (PDF, CBZ, images) have no xpointer and don't need one -
+-- their page indices are intrinsic to the file - so there the anchor is just
+-- the page, and any stray xp on such a document is ignored rather than trusted.
+
+--- Capture a re-render-proof anchor for `pageno`.
+-- @param ui reader ui (ui.rolling marks a reflowable document)
+-- @param pageno number: raw page number to anchor at
+-- @return table { page = pageno, xp = xpointer or nil }, or nil without a page
+function Tokens.captureMarkerAnchor(ui, pageno)
+    if not pageno then return nil end
+    local doc = ui and ui.document
+    if ui and ui.rolling and doc and doc.getXPointer then
+        local ok, xp = pcall(doc.getXPointer, doc)
+        if ok and xp and xp ~= "" then
+            return { page = pageno, xp = xp }
+        end
+    end
+    return { page = pageno }
+end
+
+--- Resolve an anchor back to a raw page number in the CURRENT pagination.
+-- Accepts a bare number so pre-#100 call sites and hand-edited settings keep
+-- working, and falls back to the stored page whenever the xpointer can't be
+-- used (paged document, xpointer no longer in the document, older entry with
+-- no xp recorded at all).
+-- @param ui reader ui
+-- @param anchor table { page, xp } / number / nil
+-- @return number or nil
+function Tokens.resolveMarkerAnchor(ui, anchor)
+    if not anchor then return nil end
+    if type(anchor) == "number" then return anchor end
+    local doc = ui and ui.document
+    if anchor.xp and ui and ui.rolling and doc and doc.getPageFromXPointer then
+        local ok, page = pcall(doc.getPageFromXPointer, doc, anchor.xp)
+        if ok and type(page) == "number" and page > 0 then return page end
+    end
+    return anchor.page
+end
+
+-- Position within the containing folder (#89) ---------------------------------
+--
+-- Reading manga as one CBZ per chapter, the page/chapter tokens can only ever
+-- describe the chapter you're in - "File 5/10" is the only thing that answers
+-- "how far through this folder am I".
+--
+-- The ordering has to be the file manager's, or the number is meaningless. So
+-- rather than reimplement sorting, reuse KOReader's own collate descriptors
+-- (BookList.collates, reached through FileChooser): getCollate resolves the
+-- user's choice, init_sort_func builds the comparator, and item_func - present
+-- only on the collates whose comparison needs more than name/attr, e.g. `type`
+-- comparing item.suffix - fills in the extra fields. getSortingFunction is
+-- explicitly safe to call on the class rather than a widget instance: it checks
+-- `self ~= FileChooser` before touching the instance sort cache.
+--
+-- Deliberately NOT reused: FileChooser:getListItem, which also resolves
+-- opened/bold state and the mandatory column through BookList for every entry.
+-- That's hundreds of sidecar lookups in a big manga folder for display data no
+-- token needs. Same reason show_file is not used - it applies whatever transient
+-- status filter the file manager view happens to have set, which has no business
+-- changing a count in the overlay.
+--
+-- One scan per folder, memoised below; expansion only asks when %file_num or
+-- %file_count is actually in the format string, so a preset without them never
+-- touches the disk.
+
+local _folder_cache = nil  -- { dir = <path>, files = { <path>, ... } }
+
+--- Drop the memoised folder listing so the next read rescans. Called on
+--- document open/close: a folder gains and loses files between books, and
+--- nothing else would notice.
+function Tokens.flushFolderCache()
+    _folder_cache = nil
+end
+
+local function buildFolderListing(ui, dir)
+    local ok_fc, FileChooser = pcall(require, "ui/widget/filechooser")
+    local ok_lfs, lfs = pcall(require, "libs/libkoreader-lfs")
+    local ok_dr, DocumentRegistry = pcall(require, "document/documentregistry")
+    if not (ok_fc and ok_lfs and ok_dr) then return nil end
+
+    -- lfs.dir raises on an unreadable directory, exactly as it does for
+    -- FileChooser:getPathList - same pcall treatment.
+    local ok_iter, iter, dir_obj = pcall(lfs.dir, dir)
+    if not ok_iter then return nil end
+
+    local collate = FileChooser:getCollate()
+    if not (collate and collate.init_sort_func) then return nil end
+
+    local items = {}
+    for f in iter, dir_obj do
+        -- Mirror getPathList's exclusions: dotfiles unless the user shows them,
+        -- and macOS resource forks always.
+        if (FileChooser.show_hidden or f:sub(1, 1) ~= ".") and f:sub(1, 2) ~= "._" then
+            local fullpath = dir .. "/" .. f
+            local attr = lfs.attributes(fullpath)
+            if attr and attr.mode == "file" and DocumentRegistry:hasProvider(fullpath) then
+                local item = { text = f, path = fullpath, attr = attr }
+                if collate.item_func then collate.item_func(item, ui) end
+                items[#items + 1] = item
+            end
+        end
+    end
+
+    local ok_sort = pcall(function()
+        table.sort(items, FileChooser:getSortingFunction(
+            collate, G_reader_settings:isTrue("reverse_collate")))
+    end)
+    -- A comparator that errors (bad metadata on one entry, say) would otherwise
+    -- take the whole paint down. An unsorted count is still a truthful count.
+    local _ = ok_sort
+
+    local files = {}
+    for i = 1, #items do files[i] = items[i].path end
+    return files
+end
+
+--- Position of the open document among the document files in its folder (#89).
+-- @param ui reader ui
+-- @return number or nil: 1-based position, nil if it isn't in the listing
+-- @return number or nil: total document files in the folder
+function Tokens.folderPosition(ui)
+    local file = ui and ui.document and ui.document.file
+    if not file then return nil, nil end
+    local dir = file:match("^(.*)/[^/]*$")
+    if not dir or dir == "" then return nil, nil end
+
+    if not (_folder_cache and _folder_cache.dir == dir) then
+        local files = buildFolderListing(ui, dir)
+        if not files then return nil, nil end
+        _folder_cache = { dir = dir, files = files }
+    end
+
+    local files = _folder_cache.files
+    for i = 1, #files do
+        if files[i] == file then return i, #files end
+    end
+    -- Not in the listing (filtered out, or deleted from under us): the folder
+    -- total is still meaningful even though the position isn't.
+    return nil, #files
+end
+
 --- Map a marker page onto a bar's fraction scale (#77), matching how the bar's
 --- own fill fraction is computed. Used by full-width bars; inline bars compute
 --- the equivalent inline where book_pct/ch_pct are derived.
@@ -90,6 +246,35 @@ end
 -- digit (nil, empty string, or non-numeric label like roman numerals).
 function Tokens.lastDigit(value)
     return tostring(value or ""):match("(%d)$") or ""
+end
+
+--- Uppercase file extension of `doc`'s file (e.g. "CBZ" for foo.cbz), or ""
+--- if there's no file / no extension. Shared by conditional-token state
+--- (state.format) and format-based preset auto-rules (#87).
+function Tokens.getFileExtension(doc)
+    local file = doc and doc.file
+    if not file then return "" end
+    return (file:match("%.([^.]+)$") or ""):upper()
+end
+
+--- Decide what the format-based preset auto-rule should do (#87). Pure - no
+--- I/O; the caller is responsible for pruning rules that point at a
+--- since-deleted preset file before calling this.
+-- @param ext uppercase file extension (Tokens.getFileExtension), "" if none
+-- @param rules table: extension -> "HIDDEN" | preset filename
+-- @param current_active string or nil: the currently-active preset filename
+-- @param manual_default string or nil: the user's manual default preset filename
+-- @return { hidden = bool, apply = string_or_nil }
+function Tokens.decideFormatPresetAction(ext, rules, current_active, manual_default)
+    local outcome = (ext and ext ~= "") and rules[ext] or nil
+    if outcome == "HIDDEN" then
+        return { hidden = true, apply = nil }
+    end
+    local target = outcome or manual_default
+    if target and target ~= current_active then
+        return { hidden = false, apply = target }
+    end
+    return { hidden = false, apply = nil }
 end
 
 --- Strip the community-convention page-count suffix Calibre users append
@@ -1311,6 +1496,15 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
             -- Time-left in book, in minutes (numeric so [if:book_time_left>30] works).
             if ui.statistics and ui.statistics.avg_time and ui.statistics.avg_time > 0 then
                 state.book_time_left = math.floor(state.pages_left * ui.statistics.avg_time / 60)
+                -- Split hours/minutes, matching the %book_time_left_h / _m
+                -- tokens (#104). Without these, the natural way to hide an
+                -- empty hour segment - [if:book_time_left_h>0] - is an unknown
+                -- key and quietly evaluates false, so the hours never render
+                -- and nothing says why. Derived from the minutes field rather
+                -- than recomputed, so the conditional and [if:book_time_left>=60]
+                -- can never disagree.
+                state.book_time_left_h = math.floor(state.book_time_left / 60)
+                state.book_time_left_m = state.book_time_left % 60
             end
         end
 
@@ -1363,6 +1557,10 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
             if state.chap_pages_left and ui.statistics and ui.statistics.avg_time
                 and ui.statistics.avg_time > 0 then
                 state.chap_time_left = math.floor(state.chap_pages_left * ui.statistics.avg_time / 60)
+                -- Split hours/minutes to match the %chap_time_left_h / _m
+                -- tokens — see the book_time_left_h note above (#104).
+                state.chap_time_left_h = math.floor(state.chap_time_left / 60)
+                state.chap_time_left_m = state.chap_time_left % 60
             end
         end
 
@@ -1381,7 +1579,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     -- Document format and filename (extension stripped, matches %filename token)
     local doc = ui.document
     if doc and doc.file then
-        state.format = (doc.file:match("%.([^.]+)$") or ""):upper()
+        state.format = Tokens.getFileExtension(doc)
         local name = doc.file:match("([^/]+)$") or ""
         state.filename = (name:gsub("%.[^.]+$", ""))
     end
@@ -2552,6 +2750,18 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
     end
 
+    -- Position of this file among the document files in its folder (#89), for
+    -- per-chapter CBZ manga and the like. Gated on the tokens actually being
+    -- used: a preset without them never triggers the directory scan. Both stay
+    -- "" when the folder can't be read or the file isn't in the listing, so the
+    -- line auto-hides rather than showing a broken "0/0".
+    local file_num, file_count = "", ""
+    if needs("file_num", "file_count") then
+        local fnum, fcount = Tokens.folderPosition(ui)
+        file_num = fnum and tostring(fnum) or ""
+        file_count = fcount and tostring(fcount) or ""
+    end
+
     -- Highlights and notes count
     local highlights_count = ""
     local notes_count = ""
@@ -2715,16 +2925,26 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     if needs("mem") then
         local meminfo = io.open("/proc/meminfo", "r")
         if meminfo then
-            local total, available
+            local total, memfree, buffers, cached, available
             for line in meminfo:lines() do
                 if line:match("^MemTotal:") then
                     total = tonumber(line:match("(%d+)"))
                 elseif line:match("^MemAvailable:") then
                     available = tonumber(line:match("(%d+)"))
+                elseif line:match("^MemFree:") then
+                    memfree = tonumber(line:match("(%d+)"))
+                elseif line:match("^Buffers:") then
+                    buffers = tonumber(line:match("(%d+)"))
+                elseif line:match("^Cached:") then
+                    cached = tonumber(line:match("(%d+)"))
                 end
                 if total and available then break end
             end
             meminfo:close()
+            -- Fallback for kernels without MemAvailable (e.g. Kindle KPW3 2.6.x)
+            if total and not available and memfree then
+                available = memfree + (buffers or 0) + (cached or 0)
+            end
             if total and available and total > 0 then
                 mem_usage = math.floor((total - available) / total * 100) .. "%"
             end
@@ -2867,6 +3087,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         chap_title_num  = tostring(chapter_title_num or ""),
         chap_title_name = tostring(chapter_title_name or ""),
         filename    = file_name,
+        file_num    = file_num,
+        file_count  = file_count,
         lang        = book_language,
         format      = doc_format,
         highlights  = highlights_count,
