@@ -336,6 +336,96 @@ end
 local BAR_PLACEHOLDER = "\xEF\xBF\xBC"
 OverlayWidget.BAR_PLACEHOLDER = BAR_PLACEHOLDER
 
+-- U+FFF9 INTERLINEAR ANNOTATION ANCHOR — placeholder for %spacer, the elastic
+-- gap that pushes everything after it to the far end of the line. A separate
+-- codepoint from the bar's so a line carrying both can still be told apart,
+-- and both are non-printing so a leak is visible as nothing rather than as a
+-- stray glyph.
+local SPACER_PLACEHOLDER = "\xEF\xBF\xB9"
+OverlayWidget.SPACER_PLACEHOLDER = SPACER_PLACEHOLDER
+
+--- A blank, non-painting widget of a given width. %spacer is a gap, not an
+--- object: it exists only to consume the leftover width so the text after it
+--- lands hard against the far edge. Same role BarWidget plays for %bar, minus
+--- the painting.
+local GapWidget = {}
+GapWidget.__index = GapWidget
+
+function GapWidget:new(o)
+    o = o or {}
+    setmetatable(o, self)
+    o.width = o.width or 0
+    o.height = o.height or 0
+    return o
+end
+
+function GapWidget:getSize() return { w = self.width, h = self.height } end
+function GapWidget:paintTo() end   -- deliberately nothing
+function GapWidget:free() end
+
+--- Build a HorizontalRowWidget for a line containing %spacer.
+-- Same split-and-measure shape as buildBarLine below: the text either side is
+-- measured, and the gap takes whatever width is left so the trailing text sits
+-- flush with the far edge. Unlike the bar there is no config to consult and
+-- nothing to paint, so this stays short.
+-- @return widget, width, height
+local function buildSpacerLine(text, cfg, available_w, max_width)
+    local effective_w = max_width or available_w
+    local before, after = text:match("^(.-)" .. SPACER_PLACEHOLDER .. "(.*)$")
+    if not before then
+        before, after = text, ""
+    end
+
+    local segments = {}
+    local text_total_w = 0
+    local max_h = 0
+
+    local function addTextSegment(t)
+        if t == "" then return end
+        local display = cfg.uppercase and Utf8Proc.uppercase_dumb(t) or t
+        local tw = TextWidget:new(textWidgetOpts({
+            text = display,
+            face = cfg.face,
+            bold = cfg.bold,
+        }, resolveTextColor(cfg.text_color)))
+        local size = tw:getSize()
+        table.insert(segments, { widget = tw, w = size.w, h = size.h })
+        text_total_w = text_total_w + size.w
+        if size.h > max_h then max_h = size.h end
+    end
+
+    addTextSegment(before)
+    local gap_slot = #segments + 1
+    addTextSegment(after)
+
+    -- Keep the row the height of a text line even when the line is all gap,
+    -- so an empty side does not collapse the row and shift its neighbours.
+    if max_h == 0 and cfg.face then
+        local ref = TextWidget:new(textWidgetOpts({
+            text = " ", face = cfg.face, bold = cfg.bold }))
+        max_h = ref:getSize().h
+        ref:free()
+    end
+
+    local gap_w = math.max(0, effective_w - text_total_w)
+    if gap_w < 1 then
+        -- Text already fills the line: render it with no gap rather than
+        -- returning nothing, so the content still shows.
+        if #segments == 0 then return nil, 0, 0 end
+        local row = HorizontalRowWidget:new{
+            segments = segments, width = text_total_w, height = max_h }
+        return row, text_total_w, max_h
+    end
+
+    table.insert(segments, gap_slot,
+        { widget = GapWidget:new{ width = gap_w, height = max_h },
+          w = gap_w, h = max_h })
+    local total_w = text_total_w + gap_w
+    local row = HorizontalRowWidget:new{
+        segments = segments, width = total_w, height = max_h }
+    return row, total_w, max_h
+end
+
 --- Build a HorizontalRowWidget for a line that contains a bar token.
 -- Text is split on the BAR_PLACEHOLDER to preserve before/after segments.
 -- @param text string: text with BAR_PLACEHOLDER where the bar goes
@@ -505,6 +595,10 @@ function OverlayWidget.buildTextWidget(line_texts, line_configs, h_anchor, max_w
         if cfg.bar and lines[1]:find(BAR_PLACEHOLDER, 1, true) then
             return buildBarLine(lines[1], cfg, available_w or Screen:getWidth(), max_width)
         end
+        -- %spacer needs no cfg: it is a gap, not a configured object.
+        if lines[1]:find(SPACER_PLACEHOLDER, 1, true) then
+            return buildSpacerLine(lines[1], cfg, available_w or Screen:getWidth(), max_width)
+        end
         -- Plain text — fast path
         local display_text = cfg.uppercase and Utf8Proc.uppercase_dumb(lines[1]) or lines[1]
         local text_fgcolor = resolveTextColor(cfg.text_color)
@@ -544,6 +638,8 @@ function OverlayWidget.buildTextWidget(line_texts, line_configs, h_anchor, max_w
             -- produces multiple visual rows; only one of them holds the
             -- placeholder, the rest must render as plain text.
             widget, w, h = buildBarLine(line, cfg, available_w or Screen:getWidth(), max_width)
+        elseif line:find(SPACER_PLACEHOLDER, 1, true) then
+            widget, w, h = buildSpacerLine(line, cfg, available_w or Screen:getWidth(), max_width)
         else
             local display_text = cfg.uppercase and Utf8Proc.uppercase_dumb(line) or line
             local text_fgcolor = resolveTextColor(cfg.text_color)
@@ -588,15 +684,44 @@ end
 -- line's text expands to additional visual rows that all share that config —
 -- mirroring the buildTextWidget contract so bar-flag config doesn't leak to
 -- wrap-rows of preceding lines.
+--- Does this position contain anything that has no natural width?
+---
+--- %bar and %spacer are both ELASTIC: buildTextWidget sizes them from the
+--- available width, so built unconstrained they are as wide as the screen.
+--- That makes the widget's own width useless for any question of the form
+--- "how much room does this position need" - the answer comes back as the
+--- whole screen no matter what the position actually contains. Callers use
+--- this to decide whether to trust the widget width or measure the text.
+---
+--- The bar case cost a release-blocking bug on its own; the spacer case cost
+--- a worse one, because an unmeasured centre spacer reported 1248px of
+--- content and calculateRowLimits truncated both its neighbours to zero, so
+--- the left and right positions vanished from the row entirely.
+function OverlayWidget.hasElasticWidth(line_texts)
+    for _i, text in ipairs(line_texts or {}) do
+        if text:find(BAR_PLACEHOLDER, 1, true)
+        or text:find(SPACER_PLACEHOLDER, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
 function OverlayWidget.measureTextWidth(line_texts, line_configs)
     local max_w = 0
     local default_cfg = { face = Font:getFace("cfont"), bold = false }
     for ci, cfg_text in ipairs(line_texts) do
         local cfg = line_configs[ci] or line_configs[#line_configs] or default_cfg
         for row in cfg_text:gmatch("([^\n]+)") do
-            local measure_text = row
+            -- The spacer is an elastic gap with no intrinsic width, on ANY
+            -- line: buildTextWidget distributes the slack itself. Stripping it
+            -- only for bar lines left the placeholder in the measurement
+            -- everywhere else, where TextWidget sized it as a notdef glyph and
+            -- inflated the overlap width, truncating the opposite position on
+            -- that row for no reason.
+            local measure_text = row:gsub(SPACER_PLACEHOLDER, "")
             if cfg.bar then
-                measure_text = row:gsub(BAR_PLACEHOLDER, "")
+                measure_text = measure_text:gsub(BAR_PLACEHOLDER, "")
             end
             -- Strip BBCode tags so they don't inflate the overlap-prevention
             -- width and falsely trigger the truncation path for bar lines.
@@ -767,6 +892,10 @@ function OverlayWidget.parseStyledSegments(text, base_bold, base_italic, base_up
             flushPending()
             table.insert(segments, { bar = true })
             pos = pos + 3
+        elseif text:sub(pos, pos + 2) == SPACER_PLACEHOLDER then
+            flushPending()
+            table.insert(segments, { spacer = true })
+            pos = pos + 3
         -- Check for closing tag [/b], [/i], [/u]
         elseif text:match("^%[/[biu]%]", pos) then
             local tag = text:sub(pos + 2, pos + 2)  -- the letter after /
@@ -935,11 +1064,15 @@ function OverlayWidget.buildStyledLine(segments, cfg, available_w, max_width)
     local text_total_w = 0
     local max_h = 0
     local bar_slot = nil  -- index where bar widget should be inserted
+    local spacer_slot = nil  -- index where the elastic gap goes
 
     for _, seg in ipairs(segments) do
         if seg.bar then
             -- Remember bar position, insert later after measuring text
             bar_slot = #widgets + 1
+        elseif seg.spacer then
+            -- Same deal for the elastic gap.
+            spacer_slot = #widgets + 1
         elseif seg.icon then
             local IconWidget = require("ui/widget/iconwidget")
             -- Square, sized to the line's font size so it sits inline on the
@@ -1053,6 +1186,19 @@ function OverlayWidget.buildStyledLine(segments, cfg, available_w, max_width)
         if ref_h > max_h then max_h = ref_h end
     end
 
+    -- Handle the elastic gap if present. Placed before the bar block so a
+    -- styled line carrying both still gives the remaining width to the bar,
+    -- matching the token pass which drops %spacer when %bar is present.
+    if spacer_slot and not (bar_slot and cfg.bar) then
+        local gap_w = math.max(0, effective_w - text_total_w)
+        if gap_w >= 1 then
+            table.insert(widgets, spacer_slot,
+                { widget = GapWidget:new{ width = gap_w, height = max_h },
+                  w = gap_w, h = max_h })
+            total_w = total_w + gap_w
+        end
+    end
+
     -- Handle bar segment if present
     if bar_slot and cfg.bar then
         local bar_info = cfg.bar
@@ -1119,6 +1265,41 @@ end
 --   collapse the opposite margin (issue #43). Omitted → fall back to the
 --   symmetric 2*h_offset reservation.
 -- Returns { left=max_w|nil, center=max_w|nil, right=max_w|nil }.
+--- The widest a line can be before it overflows bookends' own margins (#108).
+---
+--- calculateRowLimits only caps a line that COLLIDES with a neighbour, so a
+--- line alone on its row was never measured against the screen at all and a
+--- long chapter title ran off the edge. This is the fallback cap for that
+--- case, and it depends on the anchor:
+---
+---   left    x = ml + off            -> room = screen - ml - off - mr
+---   right   x = screen - w - mr - off -> room = screen - mr - off - ml
+---   center  x = (screen - w)/2 + off -> symmetric about the middle, so
+---           both margins bind at once and the tighter one wins:
+---           x >= ml       gives w <= screen - 2*(ml - off)
+---           x + w <= s-mr gives w <= screen - 2*(mr + off)
+---
+--- Doing this inline with the position's OWN margin doubled was only right for
+--- a centred line on symmetric margins: getMargin hands back margin_right for
+--- tc/tr/bc/br, so the near margin was counted twice and the far one not at
+--- all, and a left-anchored line lost twice its h_offset instead of once.
+--- @return number  a non-negative width
+function OverlayWidget.marginRoom(h_anchor, screen_w, margin_left, margin_right, h_offset)
+    screen_w     = tonumber(screen_w) or 0
+    margin_left  = tonumber(margin_left) or 0
+    margin_right = tonumber(margin_right) or 0
+    h_offset     = tonumber(h_offset) or 0
+    local room
+    if h_anchor == "center" then
+        room = screen_w - 2 * math.max(margin_left - h_offset, margin_right + h_offset)
+    elseif h_anchor == "right" then
+        room = screen_w - margin_right - h_offset - margin_left
+    else
+        room = screen_w - margin_left - h_offset - margin_right
+    end
+    return math.max(0, room)
+end
+
 function OverlayWidget.calculateRowLimits(left_w, center_w, right_w, screen_w, gap, h_offset, priority, left_offset, right_offset)
     local limits = { left = nil, center = nil, right = nil }
 
