@@ -116,9 +116,94 @@ function Updater.offerReleasesPage(message)
     end
 end
 
+-- Unpack a downloaded .zip into `dest`, stripping the archive's single
+-- top-level directory (release and GitHub branch zips wrap everything in
+-- bookends.koplugin/ or bookends.koplugin-<branch>/).
+--
+-- Extract via the core ffi/archiver (libarchive), the API KOReader itself uses
+-- for its dictionary downloader and archive viewer. This used to call
+-- Device:unpackArchive, which was only ever a thin wrapper around this same
+-- Reader; KOReader dropped the wrapper mid-2026 and the call started failing
+-- with "attempt to call method 'unpackArchive' (a nil value)", taking the whole
+-- reader down mid-update. Confirmed gone in v2026.07.2. Calling ffi/archiver
+-- directly works everywhere the wrapper did, since the wrapper depended on it,
+-- and keeps working now it's gone.
+--
+-- libarchive's write-to-disk auto-creates parent directories, so extracting
+-- each entry to its stripped path is sufficient. A missing extractor degrades
+-- to a clean error string -- the caller then offers the releases page -- rather
+-- than crashing, which is the failure mode that made this so unpleasant: the
+-- update path is also the recovery path, so a crash here leaves users unable
+-- to update to the fix.
+--
+-- Ported from bookshelf, which hit this first (its 78ec21c). The updater
+-- originally went bookends -> bookshelf, so the fix had to come back the other
+-- way.
+local function unpackStripRoot(zip_path, dest)
+    local ok_req, Archiver = pcall(require, "ffi/archiver")
+    if not (ok_req and Archiver and Archiver.Reader) then
+        return false, "archive extractor unavailable"
+    end
+    local arc = Archiver.Reader:new()
+    if not arc:open(zip_path) then
+        local e = arc.err
+        arc:close()
+        return false, e or "could not open archive"
+    end
+    local extract_err
+    for entry in arc:iterate() do
+        local rel = entry.path and entry.path:match("^[^/]+/(.+)$")
+        if rel and rel ~= "" then
+            if not arc:extractToPath(entry.path, dest .. "/" .. rel) then
+                extract_err = arc.err or "extract failed"
+                break
+            end
+        end
+    end
+    arc:close()
+    if extract_err then return false, extract_err end
+    return true
+end
+
+-- Test hook: the strip-root logic is pure once ffi/archiver is stubbed, and
+-- install() is too entangled with the network to exercise it any other way
+-- off-device.
+Updater._unpackStripRoot = unpackStripRoot
+
 --- Return the available update version and zip URL, or nil if none/not checked.
 function Updater.getAvailableUpdate()
     return _cached_version, _cached_zip_url
+end
+
+--- Shared Wi-Fi gate for the user-initiated network paths (#77, #101).
+--
+-- Gate on isConnected, NOT isOnline. Despite the name, NetworkMgr:isOnline()
+-- is canResolveHostnames() - a DNS lookup of Microsoft's dns.msftncsi.com
+-- (manager.lua:348). Plenty of working connections fail it: a Pi-hole or
+-- AdGuard blocking Microsoft telemetry domains, a captive portal, networks
+-- where that host is unreachable, or simply a resolver that hasn't come back up
+-- in the seconds after a wake. On any of those, gating on isOnline asks the
+-- user to "turn on Wi-Fi" that is already on and connected (#101) - and
+-- runWhenOnline then makes it worse, because in exactly that
+-- connected-but-unresolvable case it shows the prompt and *forfeits* the
+-- callback (manager.lua:698), so the action never runs even if they tap
+-- "Turn on". runWhenConnected has no such branch: connected means run,
+-- otherwise prompt per the user's prefs and run once the radio is up.
+--
+-- The re-entry is guarded by a second isConnected check rather than trusting
+-- the callback: beforeWifiAction fires it once the connection attempt finishes,
+-- which is not the same as having succeeded, and re-entering the gate while
+-- still disconnected would prompt in a loop.
+--
+-- @param retry function: re-invokes the caller once a connection exists
+-- @return boolean: true if the caller should return and wait, false to proceed
+function Updater.gateOnConnection(retry)
+    local NetworkMgr = require("ui/network/manager")
+    if NetworkMgr:isConnected() then return false end
+    NetworkMgr:runWhenConnected(function()
+        if NetworkMgr:isConnected() then retry() end
+    end)
+    return true
 end
 
 --- Fire a silent background update check if the cache is stale (>1h or never checked).
@@ -175,13 +260,10 @@ function Updater.check(on_success)
 
     local installed_version = Updater.getInstalledVersion()
 
-    -- runWhenOnline (parity with bookshelf #77): if Wi-Fi is off, bring it up
-    -- (prompting per the user's KOReader prefs) and re-run once online; if the
-    -- user cancels, nothing happens. Stronger than isWifiOn — also handles
-    -- "radio on but connection dead".
-    local NetworkMgr = require("ui/network/manager")
-    if not NetworkMgr:isOnline() then
-        NetworkMgr:runWhenOnline(function() Updater.check(on_success) end)
+    -- Wi-Fi gate (parity with bookshelf #77): if Wi-Fi is off, bring it up
+    -- (prompting per the user's KOReader prefs) and re-run once connected; if
+    -- the user cancels, nothing happens. See Updater.gateOnConnection.
+    if Updater.gateOnConnection(function() Updater.check(on_success) end) then
         return
     end
 
@@ -300,12 +382,10 @@ end
 function Updater.install(zip_url, old_version, new_version, on_success, error_label)
 
     -- Single Wi-Fi gate for every install path (release, branch, latest-stable):
-    -- bring Wi-Fi up if off and re-run once online; cancel = no-op (bookshelf #77).
-    local NetworkMgr = require("ui/network/manager")
-    if not NetworkMgr:isOnline() then
-        NetworkMgr:runWhenOnline(function()
-            Updater.install(zip_url, old_version, new_version, on_success, error_label)
-        end)
+    -- bring Wi-Fi up if off and re-run once connected; cancel = no-op (#77).
+    if Updater.gateOnConnection(function()
+        Updater.install(zip_url, old_version, new_version, on_success, error_label)
+    end) then
         return
     end
 
@@ -325,8 +405,14 @@ function Updater.install(zip_url, old_version, new_version, on_success, error_la
         end
         local zip_path = cache_dir .. "/bookends.koplugin.zip"
 
-        -- Try LuaSocket first, fall back to curl
-        local downloaded = false
+        -- Try LuaSocket first, fall back to curl.
+        --
+        -- `reason` carries WHY a download failed, so the message can say
+        -- something better than "Download failed." Practices here follow
+        -- storefront.koplugin's installer, which handles this well: it is
+        -- another plugin that downloads plugin zips onto e-readers, so it has
+        -- met the same failure modes.
+        local downloaded, reason = false, nil
         local ok_require, http, ltn12, socket, socketutil =
             pcall(function()
                 return require("socket/http"),
@@ -335,26 +421,88 @@ function Updater.install(zip_url, old_version, new_version, on_success, error_la
                        require("socketutil")
             end)
         if ok_require then
-            local file = io.open(zip_path, "wb")
+            -- Download to a temporary name and rename on success, so an
+            -- interrupted transfer can never leave a half-written zip sitting
+            -- where the unpack step will find it and report a corrupt archive.
+            local tmp_path = zip_path .. ".tmp"
+            pcall(os.remove, tmp_path)
+            local file = io.open(tmp_path, "wb")
             if file then
-                local ok_dl, code = pcall(function()
-                    socketutil:set_timeout(socketutil.FILE_BLOCK_TIMEOUT, socketutil.FILE_TOTAL_TIMEOUT)
-                    local c = socket.skip(1, http.request({
+                local ok_dl, code, headers, status = pcall(function()
+                    -- FILE_TOTAL_TIMEOUT is an ABSOLUTE 60s ceiling on the
+                    -- whole transfer, so it fails a download that is merely
+                    -- SLOW rather than stalled. Bookshelf hit this hardest
+                    -- (its zip is 6x larger), but the ceiling is wrong for
+                    -- both. 300s instead: bookshelf's 3MB needs ~10 KB/s and
+                    -- bookends' 485KB needs ~1.6 KB/s, which no working
+                    -- connection falls under.
+                    --
+                    -- NOT -1 (uncapped), tempting as that is. http.request
+                    -- blocks, and this runs on the UI loop with no Trapper
+                    -- and no cancel, so an unbounded transfer freezes
+                    -- KOReader until the user kills it. A ceiling that
+                    -- reports a failure beats a hang.
+                    --
+                    -- FILE_BLOCK_TIMEOUT is the idle timeout and catches a
+                    -- dead connection in 15s, but it RESETS on every chunk,
+                    -- so it alone cannot bound a connection that dribbles.
+                    socketutil:set_timeout(socketutil.FILE_BLOCK_TIMEOUT, 300)
+                    -- socketutil's sink rather than ltn12's: it enforces the
+                    -- total timeout above, surfacing a dribbling transfer as
+                    -- SINK_TIMEOUT_CODE. The socket timeout only covers the
+                    -- wait BEFORE data arrives; once chunks are flowing this
+                    -- sink is the only thing still counting. Note it decides
+                    -- at CONSTRUCTION time and degrades to a plain
+                    -- ltn12.sink.file when total_timeout is negative, so it
+                    -- has to be built after set_timeout, as it is here.
+                    local sink = socketutil.file_sink and socketutil.file_sink(file)
+                                 or ltn12.sink.file(file)
+                    local c, h, st = socket.skip(1, http.request({
                         url = zip_url,
                         method = "GET",
                         headers = {
                             ["User-Agent"] = "KOReader-Bookends/" .. old_version,
+                            ["Accept"] = "application/zip, application/octet-stream, */*",
                         },
-                        sink = ltn12.sink.file(file),
+                        sink = sink,
                         redirect = true,
                     }))
                     socketutil:reset_timeout()
-                    return c
+                    return c, h, st
                 end)
+                pcall(function() file:close() end)
                 if not ok_dl then
                     pcall(function() socketutil:reset_timeout() end)
+                    reason = _("the connection failed")
+                elseif code == socketutil.TIMEOUT_CODE
+                        or code == socketutil.SINK_TIMEOUT_CODE then
+                    reason = _("the connection timed out")
+                elseif code == socketutil.SSL_HANDSHAKE_CODE then
+                    reason = _("the secure connection failed")
+                elseif not headers then
+                    -- No response at all, as opposed to an HTTP error code.
+                    reason = _("there was no response")
+                elseif tonumber(code) ~= 200 then
+                    reason = status or ("HTTP " .. tostring(code))
+                else
+                    downloaded = true
                 end
-                downloaded = ok_dl and code == 200
+                if downloaded then
+                    pcall(os.remove, zip_path)
+                    if not os.rename(tmp_path, zip_path) then
+                        -- Rename can fail across filesystems; copy instead.
+                        local ok_copy = pcall(function()
+                            local i, o = io.open(tmp_path, "rb"), io.open(zip_path, "wb")
+                            if not (i and o) then error("copy failed") end
+                            o:write(i:read("*all")); i:close(); o:close()
+                        end)
+                        downloaded = ok_copy
+                        if not ok_copy then reason = _("the file could not be saved") end
+                    end
+                end
+                pcall(os.remove, tmp_path)
+            else
+                reason = _("the file could not be saved")
             end
         end
         -- Fallback: curl (available on Android, desktop). The -f flag makes
@@ -369,20 +517,37 @@ function Updater.install(zip_url, old_version, new_version, on_success, error_la
         end
         if not downloaded then
             pcall(os.remove, zip_path)
+            -- Say WHY where we know. "Download failed." on its own gives a
+            -- reporter nothing to tell us, and these fail for very different
+            -- reasons: a slow connection, a captive portal, a 404 on a
+            -- mistyped dev branch. The reason is appended rather than
+            -- replacing the label so the existing wording still leads.
+            -- The reasons are sentence FRAGMENTS, so they continue the label
+            -- rather than following it: "Download failed. (the connection
+            -- timed out)" puts a lowercase clause after a full stop. Dropping
+            -- a trailing stop keeps both msgids intact - reworking the label
+            -- into "Download failed:" would orphan every existing translation
+            -- of it. A locale whose stop is not "." simply keeps it, which is
+            -- no worse than before.
+            local function withReason(label)
+                if not reason then return label end
+                return (tostring(label):gsub("%.%s*$", ""))
+                       .. " (" .. tostring(reason) .. ")"
+            end
             if error_label then
                 UIManager:show(InfoMessage:new{
-                    text = error_label,
+                    text = withReason(error_label),
                     timeout = 3,
                 })
             else
-                Updater.offerReleasesPage(_("Download failed."))
+                Updater.offerReleasesPage(withReason(_("Download failed.")))
             end
             return
         end
 
         -- Extract to plugin directory (strip root folder from ZIP)
         local plugin_path = DataStorage:getDataDir() .. "/plugins/bookends.koplugin"
-        local ok, err = Device:unpackArchive(zip_path, plugin_path, true)
+        local ok, err = unpackStripRoot(zip_path, plugin_path)
         pcall(os.remove, zip_path)
 
         if not ok then
@@ -419,7 +584,7 @@ end
 -- @param branch string: branch name (e.g. "feature/v5.2-test")
 -- @param on_success function or nil: fired after successful unpack
 function Updater.installBranch(branch, on_success)
-    -- Wi-Fi is handled by Updater.install's runWhenOnline gate.
+    -- Wi-Fi is handled by Updater.install's connection gate.
     local installed_version = Updater.getInstalledVersion()
     local zip_url = Updater.composeBranchUrl(branch)
     local error_label = _("Could not install branch:") .. " " .. branch
@@ -432,11 +597,9 @@ end
 -- pull the release zip and re-stamp last_install_source = "release".
 -- @param on_success function or nil: fired after successful unpack
 function Updater.installLatestStable(on_success)
-    -- runWhenOnline gate (bookshelf #77); this path does its own release fetch
-    -- before delegating to Updater.install.
-    local NetworkMgr = require("ui/network/manager")
-    if not NetworkMgr:isOnline() then
-        NetworkMgr:runWhenOnline(function() Updater.installLatestStable(on_success) end)
+    -- Wi-Fi gate (bookshelf #77); this path does its own release fetch before
+    -- delegating to Updater.install.
+    if Updater.gateOnConnection(function() Updater.installLatestStable(on_success) end) then
         return
     end
 
