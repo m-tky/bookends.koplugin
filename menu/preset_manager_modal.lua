@@ -178,6 +178,17 @@ local function sortedLocalPresets(bookends, mode)
     return presets
 end
 
+--- Build the format-rule picker's item list: a synthetic "Hidden" option
+--- followed by the given local preset entries (order preserved). Pure - the
+--- input array is not mutated. See the format-rule preset picker spec (#87).
+function PresetManagerModal.formatRulePickerItems(entries)
+    local out = { { is_hidden_option = true } }
+    for _i = 1, #entries do
+        out[#out + 1] = entries[_i]
+    end
+    return out
+end
+
 --- Local tab page number containing the active preset in the given sort
 --- order, or 1 if no active preset or the active preset is filtered out
 --- (e.g. unstarred while Starred filter is on). Used on modal open and
@@ -463,6 +474,99 @@ local function renderPresetCard(self, item, slot_dimen)
     return card_widget
 end
 
+--- Render one card for the format-rule picker. Local presets get a radio that
+--- selects them as the rule target; the synthetic Hidden row gets its own radio
+--- and virtual-tile styling. Tapping a card body previews (preset or hidden);
+--- tapping the radio chooses. See the format-rule preset picker spec (#87).
+local function renderFormatRulePickerCard(self, item, slot_dimen)
+    local card_height = Screen:scaleBySize(64)
+    local row_height = card_height
+    local font_size = 18
+    local baseline = math.floor(row_height * 0.65)
+    local left_pad = Size.padding.large
+    local rules = self.bookends.settings:readSetting("format_preset_rules") or {}
+    local vg_tmp = VerticalGroup:new{ align = "left" }
+
+    if item.is_hidden_option then
+        PresetManagerModal._addRow(self, vg_tmp, slot_dimen.w, row_height, font_size, baseline, left_pad, {
+            display       = _("Hidden (no overlay)"),
+            is_virtual    = true,
+            radio_key     = "HIDDEN",
+            radio_selected = (rules[self.ext] == "HIDDEN"),
+            on_preview    = function() self.previewHidden() end,
+        })
+    else
+        local has_colour = item.has_colour
+        if has_colour == nil then
+            has_colour = PresetManager.hasColour(item.preset) or false
+        end
+        PresetManagerModal._addRow(self, vg_tmp, slot_dimen.w, row_height, font_size, baseline, left_pad, {
+            display        = item.name,
+            description    = item.preset and item.preset.description,
+            author         = item.preset and item.preset.author,
+            has_colour     = has_colour,
+            radio_key      = item.filename,
+            radio_selected = (rules[self.ext] == item.filename),
+            on_preview     = function() self.previewLocal(item) end,
+        })
+    end
+
+    return vg_tmp[1]
+end
+
+-- Format-rule picker item list: local presets (optionally search-filtered),
+-- with the synthetic Hidden row prepended. Cached per render cycle; the picker
+-- busts the cache in its rebuild() closure (self._items_cache = nil).
+local function pickerItems(self)
+    if self._items_cache then return self._items_cache end
+    local entries = sortedLocalPresets(self.bookends, "latest")
+    if self.current_search and #self.current_search >= 2 then
+        local LibraryModal = require("menu.library_modal")
+        local filtered = {}
+        for _i = 1, #entries do
+            local item = entries[_i]
+            local author = (item.preset and item.preset.author) or ""
+            local haystack = (item.name or "") .. " " .. author
+            if LibraryModal._matchesQuery(haystack, self.current_search) then
+                filtered[#filtered + 1] = item
+            end
+        end
+        entries = filtered
+    end
+    self._items_cache = PresetManagerModal.formatRulePickerItems(entries)
+    return self._items_cache
+end
+
+--- LibraryModal config for the format-rule picker. Local presets only, Hidden
+--- row prepended, radio-select, live preview, Done footer.
+local function buildFormatRulePickerConfig(self)
+    return {
+        title = _("Preset for this file type"),
+        search_placeholder = function() return _("Search my presets by name or author…") end,
+        on_search_submit = function(query)
+            self.current_search = query
+            self.page = 1
+            self.rebuild()
+        end,
+        rows_per_page = function()
+            return Screen:getWidth() > Screen:getHeight() and 4 or 5
+        end,
+        item_count = function() return #pickerItems(self) end,
+        item_at = function(idx) return pickerItems(self)[idx] end,
+        row_renderer = function(item, dimen)
+            return renderFormatRulePickerCard(self, item, dimen)
+        end,
+        footer_actions = {
+            {
+                key = "done",
+                label = _("Done"),
+                primary = true,
+                on_tap = function() self.close(true) end,
+            },
+        },
+    }
+end
+
 --- Build the LibraryModal config table for the preset manager.
 --- Called once from show(); self must already have all state fields set.
 local function buildPresetLibraryConfig(self)
@@ -664,11 +768,14 @@ function PresetManagerModal.show(bookends)
     self.refreshGallery = function()
         if self.gallery_loading then return end
         -- Bring Wi-Fi up if it's off (prompt per the user's KOReader prefs) and
-        -- load once online; cancel = no-op. Loading state is set inside the
+        -- load once connected; cancel = no-op. Loading state is set inside the
         -- callback so a cancelled prompt leaves the gallery untouched
-        -- (parity with bookshelf's runWhenOnline, issue #77).
+        -- (parity with bookshelf, issue #77). runWhenConnected, not
+        -- runWhenOnline: the latter gates on a DNS lookup of Microsoft's
+        -- dns.msftncsi.com and asks to turn on Wi-Fi that is already on when
+        -- that host can't be resolved (#101, see Updater.gateOnConnection).
         local NetworkMgr = require("ui/network/manager")
-        NetworkMgr:runWhenOnline(function()
+        NetworkMgr:runWhenConnected(function()
         local Gallery = require("preset_gallery")
         self.gallery_loading = true
         self.gallery_error = nil
@@ -788,6 +895,142 @@ function PresetManagerModal.show(bookends)
     UIManager:setDirty("all", "flashui")
 end
 
+--- Open the format-rule preset picker for file extension `ext` (uppercase).
+--- Local presets only; a radio chooses the rule target (written immediately to
+--- format_preset_rules[ext]); tapping a card previews live; Done restores the
+--- pre-open overlay. on_done() fires once the modal closes. See spec (#87).
+function PresetManagerModal.showFormatRulePicker(bookends, ext, on_done)
+    local self = {
+        bookends = bookends,
+        ext = ext,
+        on_done = on_done,
+        tab = "local",
+        page = 1,
+        previewing = nil,
+        modal_widget = nil,
+        current_search = nil,
+    }
+
+    -- Snapshot the live overlay so Done can restore it exactly. The rule only
+    -- takes effect on the NEXT document open, so previewing here must never
+    -- leave a changed overlay behind. _format_hidden is captured too because
+    -- the picker may toggle it while previewing the Hidden option.
+    self.original_preset = bookends:buildPreset()
+    self.original_active_filename = bookends:getActivePresetFilename()
+    self.original_format_hidden = bookends._format_hidden
+
+    -- Hide the reader menu (TouchMenu) that opened this picker while it's up.
+    -- The picker previews each preset on the page BEHIND it; with the menu
+    -- still shown it covers the page, so the user can't see what they're
+    -- choosing. UIManager:close only removes the container from the window
+    -- stack — the TouchMenu widget and its drilldown position survive — so we
+    -- can re-show the very same widget on close and land the user back exactly
+    -- where they were (the format-rules submenu). Mirrors the rest of the app,
+    -- where applying/choosing a preset happens over the page, not the menu.
+    local reader_menu = bookends.ui and bookends.ui.menu
+    self._hidden_menu_container = reader_menu and reader_menu.menu_container or nil
+    if self._hidden_menu_container then
+        UIManager:close(self._hidden_menu_container)
+    end
+
+    self.rebuild = function()
+        self._items_cache = nil
+        UIManager:nextTick(function()
+            if self.modal_widget and self.modal_widget.refresh then
+                self.modal_widget:refresh()
+            end
+        end)
+    end
+
+    local function dismissModalKeyboard()
+        if self.modal_widget and self.modal_widget._dismissKeyboard then
+            self.modal_widget:_dismissKeyboard()
+        end
+    end
+
+    -- Preview a local preset. Clears the hidden gate first so previewing a
+    -- visible preset after previewing Hidden actually shows it.
+    self.previewLocal = function(entry)
+        dismissModalKeyboard()
+        self.bookends._format_hidden = false
+        PresetManagerModal._previewLocal(self, entry)
+    end
+
+    -- Preview the hidden state: overlay vanishes. Mirrors _previewLocal's
+    -- _previewing bookkeeping (so the debounced autosave can't leak state) but
+    -- toggles the render gate instead of loading a preset.
+    self.previewHidden = function()
+        dismissModalKeyboard()
+        pcall(self.bookends.autosaveActivePreset, self.bookends)
+        self.bookends._previewing = true
+        self.bookends._format_hidden = true
+        self.previewing = { kind = "hidden" }
+        self.bookends:markDirty()
+        self.rebuild()
+    end
+
+    -- Choose `key` (a preset filename or "HIDDEN") as the rule target. Persists
+    -- immediately, then previews the choice. The picker stays open.
+    self.chooseRuleTarget = function(key)
+        local rules = self.bookends.settings:readSetting("format_preset_rules") or {}
+        rules[ext] = key
+        self.bookends.settings:saveSetting("format_preset_rules", rules)
+        if key == "HIDDEN" then
+            self.previewHidden()
+        else
+            local entry
+            for _i, p in ipairs(sortedLocalPresets(self.bookends, "latest")) do
+                if p.filename == key then entry = p; break end
+            end
+            if entry then self.previewLocal(entry) end
+        end
+    end
+
+    -- Close + restore. Reuses _close for preset/active-filename restore, then
+    -- puts the hidden gate back to its pre-open value. Fires on_done last.
+    self.close = function(restore)
+        PresetManagerModal._close(self, restore)
+        if restore then
+            self.bookends._format_hidden = self.original_format_hidden
+            self.bookends:markDirty()
+        end
+        if self.on_done then self.on_done() end
+    end
+
+    local LibraryModal = require("menu.library_modal")
+    local lm = LibraryModal:new{ config = buildFormatRulePickerConfig(self) }
+    self.modal_widget = lm
+    -- Route the hardware Back key through the picker's own close(true) so a
+    -- Back dismissal restores the previewed overlay and fires on_done, same as
+    -- the Done footer. LibraryModal's stock onClose just closes the widget
+    -- (skipping the config footer), which would leave a previewed preset/hidden
+    -- state applied until the next document open. Instance-level override only:
+    -- this is a fresh LibraryModal per picker, so the everyday manager (which
+    -- shares LibraryModal's class onClose) is unaffected. Tap-outside dismissal
+    -- still takes the stock path; that state self-corrects on next document open.
+    lm.onClose = function()
+        self.close(true)
+        return true
+    end
+    -- Re-show the reader menu we hid on open, at the same position. Hook
+    -- onCloseWidget (not just self.close) so EVERY dismissal path restores it:
+    -- the Done footer and hardware Back both route through self.close →
+    -- UIManager:close(lm), and a tap-outside dismissal takes LibraryModal's
+    -- stock path — all of them fire onCloseWidget exactly once. Guarded on the
+    -- saved reference so it can't double-show.
+    local lm_onCloseWidget = lm.onCloseWidget
+    lm.onCloseWidget = function(widget, ...)
+        if self._hidden_menu_container then
+            UIManager:show(self._hidden_menu_container)
+            UIManager:setDirty(self._hidden_menu_container, "flashui")
+            self._hidden_menu_container = nil
+        end
+        if lm_onCloseWidget then return lm_onCloseWidget(widget, ...) end
+    end
+    UIManager:show(lm)
+    UIManager:setDirty("all", "flashui")
+end
+
 function PresetManagerModal._close(self, restore)
     if restore and self.previewing then
         -- Must clear _previewing before loadPreset so the saveSetting calls
@@ -837,7 +1080,7 @@ function PresetManagerModal._applyCurrent(self)
         return
     end
     if self.previewing.kind == "local" then
-        self.bookends:setActivePresetFilename(self.previewing.filename)
+        self.bookends:setManualActivePreset(self.previewing.filename)
     elseif self.previewing.kind == "gallery" then
         -- Install: save to bookends_presets/ and make active.
         local entry = self.previewing.entry
@@ -863,7 +1106,7 @@ function PresetManagerModal._applyCurrent(self)
             return  -- flow continues after user choice
         end
         local filename = self.bookends:writePresetFile(entry.name, data)
-        self.bookends:setActivePresetFilename(filename)
+        self.bookends:setManualActivePreset(filename)
         pcall(require("preset_gallery").recordInstall, entry.slug, "KOReader-Bookends")
     end
     self.bookends._previewing = false
@@ -1054,7 +1297,38 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
     -- installed locally (not tappable). Anything else gets an empty slot so
     -- cards stay left-aligned consistently.
     local accent_ic
-    if opts.star_key then
+    if opts.radio_key then
+        -- Radio control for the format-rule picker: filled when this row is the
+        -- chosen rule target, empty otherwise. Tap chooses this target. Mirrors
+        -- the star branch's focus-bordered, d-pad-focusable accent cell.
+        local radio_widget = TextWidget:new{
+            text = opts.radio_selected and "\xE2\x97\x89" or "\xE2\x97\xAF",  -- ◉ / ◯
+            face = Font:getFace("infofont", 22),
+            bold = true,
+            fgcolor = Blitbuffer.COLOR_BLACK,
+        }
+        local fb = LibraryModal.FOCUS_BORDER
+        local radio_frame = FrameContainer:new{
+            bordersize = fb,
+            color = Blitbuffer.COLOR_WHITE,
+            background = Blitbuffer.COLOR_WHITE,
+            padding = 0,
+            margin = 0,
+            radius = Size.radius.default,
+            CenterContainer:new{
+                dimen = Geom:new{ w = star_width - 2 * fb, h = card_height - 2 * fb },
+                radio_widget,
+            },
+        }
+        accent_ic = InputContainer:new{
+            dimen = Geom:new{ w = star_width, h = card_height },
+            radio_frame,
+        }
+        accent_ic.ges_events = { TapSelect = { GestureRange:new{ ges = "tap", range = accent_ic.dimen } } }
+        local key = opts.radio_key
+        accent_ic.onTapSelect = function() self.chooseRuleTarget(key); return true end
+        LibraryModal._attachFocus(accent_ic, radio_frame)
+    elseif opts.star_key then
         local star_widget = TextWidget:new{
             text = starred and "\xE2\x98\x85" or "\xE2\x98\x86",
             face = Font:getFace("infofont", 22),
@@ -1111,7 +1385,7 @@ function PresetManagerModal._addRow(self, vg, width, row_height, font_size, base
     -- — the card body (preview) and the star toggle (favourite) — so d-pad
     -- Left/Right reaches the star. Gallery/installed/virtual rows have only the
     -- card body. Drop this and the row vanishes from d-pad navigation.
-    if opts.star_key then
+    if opts.star_key or opts.radio_key then
         row_hgroup._focus_row = { card, accent_ic }
     else
         row_hgroup._focus_target = card
@@ -1138,7 +1412,7 @@ function PresetManagerModal._saveCurrentAsPreset(self)
                     local preset = self.bookends:buildPreset()
                     preset.name = name
                     local filename = self.bookends:writePresetFile(name, preset)
-                    self.bookends:setActivePresetFilename(filename)
+                    self.bookends:setManualActivePreset(filename)
                     local cycle = self.bookends.settings:readSetting("preset_cycle") or {}
                     table.insert(cycle, filename)
                     self.bookends.settings:saveSetting("preset_cycle", cycle)
@@ -1188,10 +1462,11 @@ function PresetManagerModal._createBlankPreset(self)
     local name = PresetNaming.nextUntitledName(presets, _("Untitled"))
     local preset = buildBlankPreset(name)
     local filename = self.bookends:writePresetFile(name, preset)
-    -- applyPresetFile loads the blank into memory before setting it active,
-    -- so the debounced autosave can't clobber the on-disk file with the
-    -- previously-active preset's data.
-    self.bookends:applyPresetFile(filename)
+    -- applyManualPresetFile loads the blank into memory before setting it
+    -- active (so the debounced autosave can't clobber the on-disk file with
+    -- the previously-active preset's data) and remembers it as the manual
+    -- default (#87), same as any other explicit preset choice.
+    self.bookends:applyManualPresetFile(filename)
     -- Close the modal and drop the user straight into the Bookends menu, so
     -- they see "Preset (Untitled)" + the empty position items ready to edit.
     -- nextTick lets the modal's close flush before the TouchMenu shows.
@@ -1554,9 +1829,11 @@ local function submitToGalleryImpl(self, entry)
                     end
                 end
                 -- Bring Wi-Fi up if it's off (prompt per the user's prefs) and
-                -- submit once online; cancel = no-op (parity with bookshelf #77).
+                -- submit once connected; cancel = no-op (bookshelf #77).
+                -- runWhenConnected rather than runWhenOnline - see the refresh
+                -- path above and Updater.gateOnConnection (#101).
                 local NetworkMgr = require("ui/network/manager")
-                NetworkMgr:runWhenOnline(function()
+                NetworkMgr:runWhenConnected(function()
                 Notification:notify(_("Submitting to gallery…"))
                 local Gallery = require("preset_gallery")
                 local submission = {
@@ -1711,7 +1988,7 @@ function PresetManagerModal._promptInstallCollision(self, existing, data, entry)
                 UIManager:close(dlg)
                 self.bookends:deletePresetFile(existing.filename)
                 local filename = self.bookends:writePresetFile(entry.name, data)
-                self.bookends:setActivePresetFilename(filename)
+                self.bookends:setManualActivePreset(filename)
                 pcall(require("preset_gallery").recordInstall, entry.slug, "KOReader-Bookends")
                 self.bookends._previewing = false
                 self.previewing = nil
@@ -1735,7 +2012,7 @@ function PresetManagerModal._promptInstallCollision(self, existing, data, entry)
                             if new_name and new_name ~= "" then
                                 data.name = new_name
                                 local filename = self.bookends:writePresetFile(new_name, data)
-                                self.bookends:setActivePresetFilename(filename)
+                                self.bookends:setManualActivePreset(filename)
                                 pcall(require("preset_gallery").recordInstall, entry.slug, "KOReader-Bookends")
                             end
                             self.bookends._previewing = false
