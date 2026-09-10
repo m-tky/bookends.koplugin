@@ -2,6 +2,26 @@ local Device = require("device")
 local datetime = require("datetime")
 local LocalDate = require("bookends_localdate")
 local BAR_PLACEHOLDER = require("bookends_overlay_widget").BAR_PLACEHOLDER
+local SPACER_PLACEHOLDER = require("bookends_overlay_widget").SPACER_PLACEHOLDER
+local Semantics = require("token_semantics")
+local CalibreMeta = require("calibre_metadata")
+-- gettext, bound to T rather than the conventional `_`: this file uses `_` as
+-- a throwaway elsewhere, and one careless rebinding would silently turn every
+-- translated string back into its msgid.
+--
+-- Resolved LAZILY and defensively, because bookends_i18n pulls in KOReader's
+-- logger at load: a top-level require here makes this whole module unloadable
+-- under a bare `lua`, which is exactly how six of the pure-Lua suites run. The
+-- untranslated fallback only ever shows if i18n is genuinely unavailable.
+local _gettext
+local function T(str)
+    if _gettext == nil then
+        local ok, i18n = pcall(require, "bookends_i18n")
+        _gettext = (ok and i18n and i18n.gettext) or false
+    end
+    if not _gettext then return str end
+    return _gettext(str)
+end
 
 local Tokens = {}
 
@@ -25,6 +45,176 @@ local function getCurrentPageNumber(ui)
     return ui and ui.view and ui.view.state and ui.view.state.page
 end
 Tokens.getCurrentPageNumber = getCurrentPageNumber
+
+-- Bar-marker anchors (#99/#100) ------------------------------------------------
+--
+-- A page index only means something for as long as the current pagination
+-- holds. In a reflowable (CRE) document the pagination is a product of the
+-- render settings, so bumping the font size - or the margins, line spacing,
+-- embedded-styles toggle, anything that fires DocumentRerendered - silently
+-- repoints a stored page number at different text. Markers anchored that way
+-- drift away from where the reader actually was, which is #100, and can end up
+-- pointing further into the book than the reader has reached, which is #99.
+--
+-- KOReader has the same problem with annotations and solves it by treating the
+-- xpointer as the anchor and the page as a derived value it recomputes on
+-- re-render (readerannotation.lua:updatePageNumbers). Do the same: capture an
+-- xpointer next to the page, and resolve back through it every time.
+--
+-- Paged documents (PDF, CBZ, images) have no xpointer and don't need one -
+-- their page indices are intrinsic to the file - so there the anchor is just
+-- the page, and any stray xp on such a document is ignored rather than trusted.
+
+--- Capture a re-render-proof anchor for `pageno`.
+-- @param ui reader ui (ui.rolling marks a reflowable document)
+-- @param pageno number: raw page number to anchor at
+-- @return table { page = pageno, xp = xpointer or nil }, or nil without a page
+function Tokens.captureMarkerAnchor(ui, pageno)
+    if not pageno then return nil end
+    local doc = ui and ui.document
+    if ui and ui.rolling and doc and doc.getXPointer then
+        local ok, xp = pcall(doc.getXPointer, doc)
+        if ok and xp and xp ~= "" then
+            return { page = pageno, xp = xp }
+        end
+    end
+    return { page = pageno }
+end
+
+--- Resolve an anchor back to a raw page number in the CURRENT pagination.
+-- Accepts a bare number so pre-#100 call sites and hand-edited settings keep
+-- working, and falls back to the stored page whenever the xpointer can't be
+-- used (paged document, xpointer no longer in the document, older entry with
+-- no xp recorded at all).
+-- @param ui reader ui
+-- @param anchor table { page, xp } / number / nil
+-- @return number or nil
+function Tokens.resolveMarkerAnchor(ui, anchor)
+    if not anchor then return nil end
+    if type(anchor) == "number" then return anchor end
+    local doc = ui and ui.document
+    if anchor.xp and ui and ui.rolling and doc and doc.getPageFromXPointer then
+        local ok, page = pcall(doc.getPageFromXPointer, doc, anchor.xp)
+        if ok and type(page) == "number" and page > 0 then return page end
+    end
+    return anchor.page
+end
+
+-- Position within the containing folder (#89) ---------------------------------
+--
+-- Reading manga as one CBZ per chapter, the page/chapter tokens can only ever
+-- describe the chapter you're in - "File 5/10" is the only thing that answers
+-- "how far through this folder am I".
+--
+-- The ordering has to be the file manager's, or the number is meaningless. So
+-- rather than reimplement sorting, reuse KOReader's own collate descriptors
+-- (BookList.collates, reached through FileChooser): getCollate resolves the
+-- user's choice, init_sort_func builds the comparator, and item_func - present
+-- only on the collates whose comparison needs more than name/attr, e.g. `type`
+-- comparing item.suffix - fills in the extra fields. getSortingFunction is
+-- explicitly safe to call on the class rather than a widget instance: it checks
+-- `self ~= FileChooser` before touching the instance sort cache.
+--
+-- Deliberately NOT reused: FileChooser:getListItem, which also resolves
+-- opened/bold state and the mandatory column through BookList for every entry.
+-- That's hundreds of sidecar lookups in a big manga folder for display data no
+-- token needs. Same reason show_file is not used - it applies whatever transient
+-- status filter the file manager view happens to have set, which has no business
+-- changing a count in the overlay.
+--
+-- One scan per folder, memoised below; expansion only asks when %file_num or
+-- %file_count is actually in the format string, so a preset without them never
+-- touches the disk.
+
+local _folder_cache = nil  -- { dir = <path>, files = { <path>, ... } }
+
+--- Drop the memoised folder listing so the next read rescans. Called on
+--- document open/close: a folder gains and loses files between books, and
+--- nothing else would notice.
+--- Calibre custom-column fields for the open document, or nil.
+--- A seam rather than a direct call so tests can stub the reader.
+--- No settings gate, and no needs() check either: the brace dispatch only
+--- calls this when it has actually matched %calibre{...} in the format string,
+--- so the token's presence IS the trigger. Cost is proportional to use by
+--- construction rather than by a guard someone could forget. Nothing else in bookends
+--- consumes calibre data - %title and %author still come from the open
+--- document - so the blast radius is one token. See calibre_metadata.lua.
+function Tokens._calibreFieldsFor(ui)
+    local filepath = ui and ui.document and ui.document.file
+    if not filepath then return nil end
+    return CalibreMeta.fieldsFor(filepath, true)
+end
+
+function Tokens.flushFolderCache()
+    _folder_cache = nil
+end
+
+local function buildFolderListing(ui, dir)
+    local ok_fc, FileChooser = pcall(require, "ui/widget/filechooser")
+    local ok_lfs, lfs = pcall(require, "libs/libkoreader-lfs")
+    local ok_dr, DocumentRegistry = pcall(require, "document/documentregistry")
+    if not (ok_fc and ok_lfs and ok_dr) then return nil end
+
+    -- lfs.dir raises on an unreadable directory, exactly as it does for
+    -- FileChooser:getPathList - same pcall treatment.
+    local ok_iter, iter, dir_obj = pcall(lfs.dir, dir)
+    if not ok_iter then return nil end
+
+    local collate = FileChooser:getCollate()
+    if not (collate and collate.init_sort_func) then return nil end
+
+    local items = {}
+    for f in iter, dir_obj do
+        -- Mirror getPathList's exclusions: dotfiles unless the user shows them,
+        -- and macOS resource forks always.
+        if (FileChooser.show_hidden or f:sub(1, 1) ~= ".") and f:sub(1, 2) ~= "._" then
+            local fullpath = dir .. "/" .. f
+            local attr = lfs.attributes(fullpath)
+            if attr and attr.mode == "file" and DocumentRegistry:hasProvider(fullpath) then
+                local item = { text = f, path = fullpath, attr = attr }
+                if collate.item_func then collate.item_func(item, ui) end
+                items[#items + 1] = item
+            end
+        end
+    end
+
+    local ok_sort = pcall(function()
+        table.sort(items, FileChooser:getSortingFunction(
+            collate, G_reader_settings:isTrue("reverse_collate")))
+    end)
+    -- A comparator that errors (bad metadata on one entry, say) would otherwise
+    -- take the whole paint down. An unsorted count is still a truthful count.
+    local _ok_sort = ok_sort  -- named, so gettext can never be shadowed here
+
+    local files = {}
+    for i = 1, #items do files[i] = items[i].path end
+    return files
+end
+
+--- Position of the open document among the document files in its folder (#89).
+-- @param ui reader ui
+-- @return number or nil: 1-based position, nil if it isn't in the listing
+-- @return number or nil: total document files in the folder
+function Tokens.folderPosition(ui)
+    local file = ui and ui.document and ui.document.file
+    if not file then return nil, nil end
+    local dir = file:match("^(.*)/[^/]*$")
+    if not dir or dir == "" then return nil, nil end
+
+    if not (_folder_cache and _folder_cache.dir == dir) then
+        local files = buildFolderListing(ui, dir)
+        if not files then return nil, nil end
+        _folder_cache = { dir = dir, files = files }
+    end
+
+    local files = _folder_cache.files
+    for i = 1, #files do
+        if files[i] == file then return i, #files end
+    end
+    -- Not in the listing (filtered out, or deleted from under us): the folder
+    -- total is still meaningful even though the position isn't.
+    return nil, #files
+end
 
 --- Map a marker page onto a bar's fraction scale (#77), matching how the bar's
 --- own fill fraction is computed. Used by full-width bars; inline bars compute
@@ -88,8 +278,51 @@ end
 -- Accepts numbers, numeric strings, or labels that end in a digit
 -- (e.g. "page 547" -> "7"). Returns "" if the value has no trailing
 -- digit (nil, empty string, or non-numeric label like roman numerals).
+--
+-- A NUMBER is reduced to its integer part first. Leaning on tostring() made
+-- the answer depend on the interpreter: LuaJIT (5.1, what KOReader ships)
+-- renders 3.0 as "3", while 5.3+ renders "3.0" and this handed back "0" - the
+-- digit AFTER the point, which is never the units digit these tokens exist to
+-- expose. A fraction was worse on both: 3.7 answered "7".
+--
+-- "%.0f" rather than "%d": the latter raises on a non-integral float under
+-- 5.3+, and this one leaves nan/inf as words with no trailing digit, so they
+-- fall through to "" like any other non-numeric label. A STRING is still taken
+-- exactly as written, so a pagemap label keeps its own last character.
 function Tokens.lastDigit(value)
+    if type(value) == "number" then
+        value = string.format("%.0f", math.floor(math.abs(value)))
+    end
     return tostring(value or ""):match("(%d)$") or ""
+end
+
+--- Uppercase file extension of `doc`'s file (e.g. "CBZ" for foo.cbz), or ""
+--- if there's no file / no extension. Shared by conditional-token state
+--- (state.format) and format-based preset auto-rules (#87).
+function Tokens.getFileExtension(doc)
+    local file = doc and doc.file
+    if not file then return "" end
+    return (file:match("%.([^.]+)$") or ""):upper()
+end
+
+--- Decide what the format-based preset auto-rule should do (#87). Pure - no
+--- I/O; the caller is responsible for pruning rules that point at a
+--- since-deleted preset file before calling this.
+-- @param ext uppercase file extension (Tokens.getFileExtension), "" if none
+-- @param rules table: extension -> "HIDDEN" | preset filename
+-- @param current_active string or nil: the currently-active preset filename
+-- @param manual_default string or nil: the user's manual default preset filename
+-- @return { hidden = bool, apply = string_or_nil }
+function Tokens.decideFormatPresetAction(ext, rules, current_active, manual_default)
+    local outcome = (ext and ext ~= "") and rules[ext] or nil
+    if outcome == "HIDDEN" then
+        return { hidden = true, apply = nil }
+    end
+    local target = outcome or manual_default
+    if target and target ~= current_active then
+        return { hidden = false, apply = target }
+    end
+    return { hidden = false, apply = nil }
 end
 
 --- Strip the community-convention page-count suffix Calibre users append
@@ -203,6 +436,16 @@ end
 -- keys already on the new vocabulary (batt, title, author, book_pct, speed,
 -- session, session_pages, wifi, connected, charging, light, invert, time,
 -- day, page, format, series) are unchanged and not aliased.
+-- Display words for the four canonical statuses. Deferred calls rather than
+-- eager strings so the active locale is read at render time, and a table rather
+-- than logic inside token_semantics so that module needs no gettext.
+local STATUS_LABELS = {
+    unread   = function() return T("Unread")   end,
+    reading  = function() return T("Reading")  end,
+    on_hold  = function() return T("On hold")  end,
+    finished = function() return T("Finished") end,
+}
+
 local STATE_ALIAS = {
     chapters        = "chap_count",    -- v4.1 name
     chapter         = "chap_num",      -- v4.1 name (chapter number)
@@ -974,7 +1217,18 @@ local function evaluateCondition(cond_str, state)
     -- Key pattern allows underscores ([%w_]+) to support names like book_pct.
     -- Operator pattern matches =, !=, <, >, <=, >=.
     -- Two-char operators are tried first so the longer match wins.
-    local key, op, value = cond_str:match("^([%w_]+)(>=)(.+)$")
+    -- Braced keys FIRST: [if:calibre{mood}="cosy"]. `[%w_]+` alone stops at
+    -- `calibre` and then finds `{` where it wants an operator, so without these
+    -- the whole condition falls through to the truthy path below, fails there
+    -- too, and silently swallows the branch. %b{} is a valid pattern item and
+    -- does not match plain keys, so every existing conditional is unaffected.
+    -- Conditionals are processed before the brace dispatch in Tokens.expand,
+    -- which is why resolving them here is the only option.
+    local key, op, value = cond_str:match("^([%w_]+%b{})(>=)(.+)$")
+    if not key then key, op, value = cond_str:match("^([%w_]+%b{})(<=)(.+)$") end
+    if not key then key, op, value = cond_str:match("^([%w_]+%b{})(!=)(.+)$") end
+    if not key then key, op, value = cond_str:match("^([%w_]+%b{})([=<>])(.+)$") end
+    if not key then key, op, value = cond_str:match("^([%w_]+)(>=)(.+)$") end
     if not key then key, op, value = cond_str:match("^([%w_]+)(<=)(.+)$") end
     if not key then key, op, value = cond_str:match("^([%w_]+)(!=)(.+)$") end
     if not key then key, op, value = cond_str:match("^([%w_]+)([=<>])(.+)$") end
@@ -1030,7 +1284,9 @@ local function evaluateCondition(cond_str, state)
         return false
     end
     -- No operator: truthy check
-    local key_only = cond_str:match("^([%w_]+)$")
+    -- Braced form first, same reasoning as the operator patterns above.
+    local key_only = cond_str:match("^([%w_]+%b{})$")
+                  or cond_str:match("^([%w_]+)$")
     if key_only then
         -- Try the key as-is first; fall back to aliased key if not found.
         local v = state[key_only]
@@ -1194,9 +1450,42 @@ end
 --- Build a state table of raw values for conditional evaluation.
 --- If paint_ctx is provided and already has a cached state, returns it
 --- (shared across all expand() calls within one paint cycle).
+--- Add the calibre columns named by THIS template to a condition state.
+---
+--- Scanning the format string keeps an unnamed column free, matching how
+--- needs() gates the rest of the expensive state. Keyed exactly as written,
+--- braces included, so evaluateCondition can look up "calibre{mood}" verbatim
+--- - the value is normalised for the field lookup, the key is not.
+---
+--- Separate from the state build because it is the one part that is per-CALLER
+--- rather than per-paint. The state table is built once and shared across every
+--- line in a paint, so leaving this inside the build meant only the first
+--- conditional-bearing line ever got its columns resolved: a second line naming
+--- a different column evaluated false and took its [else] branch.
+local function addCalibreConditionKeys(state, ui, format_str)
+    if not (state and format_str and format_str:find("calibre{", 1, true)) then
+        return
+    end
+    local fields = Tokens._calibreFieldsFor(ui)
+    for raw in format_str:gmatch("calibre(%b{})") do
+        local key_written = "calibre" .. raw
+        -- Already resolved by an earlier line in this paint; the lookup is the
+        -- same either way, so skip the work rather than redo it.
+        if state[key_written] == nil then
+            local inner = raw:sub(2, -2)
+            local key = tostring(inner):gsub("^%s*#?", ""):gsub("%s*$", ""):lower()
+            state[key_written] = (fields and fields[key]) or ""
+        end
+    end
+end
+
 function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, paint_ctx, stats_cache, format_str)
     if paint_ctx and paint_ctx._condition_state then
-        return paint_ctx._condition_state
+        local cached = paint_ctx._condition_state
+        -- The shared table is built once per paint, but the calibre columns
+        -- are gated on the calling template, so each caller contributes its own.
+        addCalibreConditionKeys(cached, ui, format_str)
+        return cached
     end
 
     -- Optional format-string gating: when paint_ctx contains the union of all
@@ -1272,6 +1561,16 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     -- ToggleNightMode handlers in devicelistener.lua).
     state.night = G_reader_settings:isTrue("night_mode") and "on" or "off"
 
+    -- [if:full_width] (#348). Bookshelf sets this on the state for its
+    -- FULL-WIDTH status line and leaves it empty in the narrow cover-view
+    -- column, so a template can surface extra content only where there is room
+    -- (its issue #178). Every bookends line spans the screen, so the honest
+    -- answer here is always "yes" - and giving that answer matters: a template
+    -- copied across with [if:full_width] in it would otherwise silently drop
+    -- the guarded content, which reads as the token being broken. Overridable
+    -- via opts so the mirrored region can state it explicitly.
+    state.full_width = "yes"
+
     -- Page-based state
     local pageno = getCurrentPageNumber(ui)
     local doc = ui.document
@@ -1311,6 +1610,15 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
             -- Time-left in book, in minutes (numeric so [if:book_time_left>30] works).
             if ui.statistics and ui.statistics.avg_time and ui.statistics.avg_time > 0 then
                 state.book_time_left = math.floor(state.pages_left * ui.statistics.avg_time / 60)
+                -- Split hours/minutes, matching the %book_time_left_h / _m
+                -- tokens (#104). Without these, the natural way to hide an
+                -- empty hour segment - [if:book_time_left_h>0] - is an unknown
+                -- key and quietly evaluates false, so the hours never render
+                -- and nothing says why. Derived from the minutes field rather
+                -- than recomputed, so the conditional and [if:book_time_left>=60]
+                -- can never disagree.
+                state.book_time_left_h = math.floor(state.book_time_left / 60)
+                state.book_time_left_m = state.book_time_left % 60
             end
         end
 
@@ -1363,6 +1671,10 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
             if state.chap_pages_left and ui.statistics and ui.statistics.avg_time
                 and ui.statistics.avg_time > 0 then
                 state.chap_time_left = math.floor(state.chap_pages_left * ui.statistics.avg_time / 60)
+                -- Split hours/minutes to match the %chap_time_left_h / _m
+                -- tokens — see the book_time_left_h note above (#104).
+                state.chap_time_left_h = math.floor(state.chap_time_left / 60)
+                state.chap_time_left_m = state.chap_time_left % 60
             end
         end
 
@@ -1381,7 +1693,7 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     -- Document format and filename (extension stripped, matches %filename token)
     local doc = ui.document
     if doc and doc.file then
-        state.format = (doc.file:match("%.([^.]+)$") or ""):upper()
+        state.format = Tokens.getFileExtension(doc)
         local name = doc.file:match("([^/]+)$") or ""
         state.filename = (name:gsub("%.[^.]+$", ""))
     end
@@ -1569,6 +1881,8 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
     if paint_ctx then
         paint_ctx._condition_state = state
     end
+    addCalibreConditionKeys(state, ui, format_str)
+
     return state
 end
 
@@ -1698,7 +2012,10 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     -- buildConditionState will reuse paint_ctx._condition_state if present,
     -- so multiple lines with [if:...] in the same paint share one build.
     if not preview_mode and format_str:find("%[if:") then
-        local state = Tokens.buildConditionState(ui, session_elapsed, session_pages_read, paint_ctx, stats_cache)
+        -- format_str is passed so buildConditionState can gate the columns it
+        -- resolves for [if:calibre{...}] to the ones this template names.
+        local state = Tokens.buildConditionState(ui, session_elapsed,
+            session_pages_read, paint_ctx, stats_cache, format_str)
         format_str = processConditionals(format_str, state)
         -- After stripping false branches, check if anything remains to expand
         if not format_str:find("%%") then
@@ -1740,6 +2057,10 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     -- name; consumed when building the substitution table. Used by the two
     -- %*_time_left_eta tokens and %book_finish_date.
     local date_formats = {}
+    -- Calibre custom-column map for this expand pass. false means "looked and
+    -- there is nothing", which is distinct from nil ("not looked yet") - a
+    -- status line naming three columns should probe once, not three times.
+    local calibre_fields = nil
 
     format_str = format_str:gsub("%%([%a_][%w_]*)(%b{})", function(name, brace)
         local content = brace:sub(2, -2)  -- strip { and }
@@ -1765,6 +2086,20 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         if name == "datetime" then
             -- Strftime escape hatch.
             return formatLocalizedDate(content)
+        end
+        if name == "calibre" then
+            -- Resolved inline like %datetime rather than rewritten to a
+            -- bareword: the field name lives in the brace, so there is no
+            -- bareword form to rewrite to. Fetched lazily and cached for the
+            -- pass. Field names match case-insensitively with or without
+            -- calibre's leading '#', so a column "#mood" answers to
+            -- %calibre{mood} and %calibre{#Mood} alike.
+            if calibre_fields == nil then
+                calibre_fields = Tokens._calibreFieldsFor(ui) or false
+            end
+            if not calibre_fields then return "" end
+            local key = tostring(content):gsub("^%s*#?", ""):gsub("%s*$", ""):lower()
+            return calibre_fields[key] or ""
         end
         -- %chap_time_left_eta{<strftime>} / %book_time_left_eta{<strftime>} /
         -- %book_finish_date{<strftime>}. Stash format and rewrite to bareword
@@ -1840,6 +2175,35 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             mem = "[mem]", ram = "[rss]",
             disk = "[disk]",
             bar = "\xE2\x96\xB0\xE2\x96\xB0\xE2\x96\xB1\xE2\x96\xB1",  -- ▰▰▱▱
+            -- An elastic gap, not a name. There is nothing to split in a menu
+            -- row, so it previews as a space - the same thing bookshelf's
+            -- menuPreview does with it.
+            spacer = " ",
+            -- The rest of the catalogue. These had no entry at all, so they
+            -- fell through to the identity fallback and showed the reader the
+            -- raw "%token" in the line editor and the position-menu subtitles
+            -- - the #348 sweep documented a batch of tokens without extending
+            -- this map. Labelled after the token rather than with invented
+            -- wording, which is a maintainer's call, not a mechanical one.
+            wifi_icon = "[wifi]",
+            authors = "[authors]", authors_short = "[authors]",
+            author_2 = "[author.2]", author_count = "[author.count]",
+            description = "[description]",
+            status = "[status]", status_label = "[status]",
+            rating = "[rating]", rating_number = "[rating.n]",
+            favourite = "[favourite]",
+            quote = "[quote]", quote_source = "[quote.source]",
+            added = "[added]", opened = "[opened]",
+            size = "[size]",
+            file_num = "[file.num]", file_count = "[file.count]",
+            book_pct_read = "[read%]",
+            book_pages_read = "[bk.pages]",
+            pages_today = "[pages.today]", time_today = "[time.today]",
+            days_reading_book = "[days]", pages_per_day = "[per.day]",
+            avg_page_time = "[pg.time]",
+            book_time_left_h = "[time.h]", book_time_left_m = "[time.m]",
+            chap_time_left_h = "[ch.time.h]", chap_time_left_m = "[ch.time.m]",
+            sysused = "[sys]",
         }
         -- Strip %bar{N} and %X{N} for preview, showing limit in label
         -- %bar{N} must be replaced before %bar (longer pattern first)
@@ -1848,6 +2212,17 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end)
         r = r:gsub("%%bar", preview.bar)
         -- Handle %datetime{...} — in preview mode, actually expand it (not a placeholder)
+        -- %calibre{col} resolves for REAL in preview, like %datetime below:
+        -- the document is open while the line editor is up, so the actual
+        -- column value is available and far more useful than a placeholder.
+        -- Without this branch the literal characters "%calibre{col}" reach
+        -- the menu label, which is what a reader would read as broken.
+        r = r:gsub("%%calibre(%b{})", function(brace)
+            local fields = Tokens._calibreFieldsFor(ui)
+            if not fields then return "" end
+            local key = brace:sub(2, -2):gsub("^%s*#?", ""):gsub("%s*$", ""):lower()
+            return fields[key] or ""
+        end)
         r = r:gsub("%%datetime(%b{})", function(brace)
             return formatLocalizedDate(brace:sub(2, -2))
         end)
@@ -1906,6 +2281,14 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             end
             return "%" .. token .. "{" .. n .. "}"
         end)
+        -- The fallback stays an IDENTITY on purpose. It is reached by things
+        -- that are not tokens at all - a legacy "%A" under legacy_literal, a
+        -- bare "%datetime" with no brace - which must survive as typed. It is
+        -- also reached by the labels inserted above, two of which carry a
+        -- literal percent followed by letters ("[ch%left]"), so anything that
+        -- rewrites here corrupts them. A documented token that lands here is a
+        -- GAP IN THE MAP, and the fix is an entry, not a cleverer fallback;
+        -- tests/_test_no_literal_tokens.lua fails when one is missing.
         r = r:gsub("%%([%a_][%w_]*)", function(token)
             local label = preview[token]
             if label then return label end
@@ -1930,6 +2313,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     end
 
     local has_bar = format_str:find("%%bar") ~= nil
+    local has_spacer = format_str:find("%%spacer") ~= nil
 
     local pageno = getCurrentPageNumber(ui)
     local doc = ui.document
@@ -2515,8 +2899,12 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local series_name = ""
     local series_num = ""
     local book_language = ""
+    -- %author_count / %authors_short / %quote_source are listed here because
+    -- they are DERIVED from this block's title + authors_list; without them the
+    -- gate skips and they resolve empty for a template that names only them.
     if needs("title", "author", "authors",
              "author_1", "author_2", "author_3", "author_4", "author_5",
+             "author_count", "authors_short", "quote_source",
              "series", "series_name", "series_num", "lang") then
         local doc_props = ui.doc_props or {}
         local ok, props = pcall(doc.getProps, doc)
@@ -2552,20 +2940,35 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
     end
 
+    -- Position of this file among the document files in its folder (#89), for
+    -- per-chapter CBZ manga and the like. Gated on the tokens actually being
+    -- used: a preset without them never triggers the directory scan. Both stay
+    -- "" when the folder can't be read or the file isn't in the listing, so the
+    -- line auto-hides rather than showing a broken "0/0".
+    local file_num, file_count = "", ""
+    if needs("file_num", "file_count") then
+        local fnum, fcount = Tokens.folderPosition(ui)
+        file_num = fnum and tostring(fnum) or ""
+        file_count = fcount and tostring(fcount) or ""
+    end
+
     -- Highlights and notes count
     local highlights_count = ""
     local notes_count = ""
     local bookmarks_count = ""
     if needs("highlights", "notes", "bookmarks") and ui.annotation then
-        local h, n = ui.annotation:getNumberOfHighlightsAndNotes()
-        if needs("highlights") then highlights_count = tostring(h or 0) end
-        if needs("notes") then notes_count = tostring(n or 0) end
+        -- Counted through the vendored rule rather than KOReader's API, so the
+        -- library screen (which has only a sidecar to count) cannot disagree
+        -- with the reader (#348). The rule is copied FROM KOReader's
+        -- getNumberOfHighlightsAndNotes and checked against it line by line,
+        -- so the numbers here are unchanged.
+        local counts = Semantics.annotationCounts(ui.annotation.annotations)
+        if needs("highlights") then
+            highlights_count = tostring(counts.highlights)
+        end
+        if needs("notes") then notes_count = tostring(counts.notes) end
         if needs("bookmarks") then
-            local bm = 0
-            for _, item in ipairs(ui.annotation.annotations or {}) do
-                if not item.drawer then bm = bm + 1 end
-            end
-            bookmarks_count = tostring(bm)
+            bookmarks_count = tostring(counts.bookmarks)
         end
     end
 
@@ -2598,11 +3001,15 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local batt_symbol = ""
     if needs("batt", "batt_icon") then
         local powerd = Device:getPowerDevice()
-        local capacity = powerd:getCapacity()
-        if capacity then
-            batt_symbol = powerd:getBatterySymbol(powerd:isCharged(), powerd:isCharging(), capacity) or ""
-            batt_lvl = capacity .. "%"
-        end
+        local capacity = powerd and powerd:getCapacity()
+        batt_lvl = Semantics.batt(capacity)
+        batt_symbol = Semantics.battIcon(
+            powerd and function(charged, charging, cap)
+                return powerd:getBatterySymbol(charged, charging, cap)
+            end,
+            powerd and powerd:isCharged(),
+            powerd and powerd:isCharging(),
+            capacity)
     end
 
     -- Wi-Fi: always renders. The bundled symbol font ships only two wifi
@@ -2611,13 +3018,10 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     -- Use [if:wifi=on]%wifi[/if] to hide on disabled, or [if:connected=yes] for
     -- connected-only.
     local wifi_symbol = ""
-    if needs("wifi") then
+    if needs("wifi", "wifi_icon") then
         local NetworkMgr = require("ui/network/manager")
-        if NetworkMgr:isWifiOn() and NetworkMgr:isConnected() then
-            wifi_symbol = "\xEE\xB2\xA8" -- U+ECA8 wifi connected
-        else
-            wifi_symbol = "\xEE\xB2\xA9" -- U+ECA9 wifi-off (off or no link)
-        end
+        wifi_symbol = Semantics.wifi(NetworkMgr:isWifiOn(),
+                                     NetworkMgr:isConnected())
     end
 
     -- Frontlight on/off icon (dynamic). Lightbulb-on glyph (rays) when
@@ -2625,22 +3029,16 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local light_symbol = ""
     if needs("light_icon") then
         local powerd = Device:getPowerDevice()
-        if powerd and powerd:frontlightIntensity() > 0 then
-            light_symbol = "\xEE\xB7\xA6" -- U+EDE6 lightbulb-on
-        else
-            light_symbol = "\xEE\xA8\xB5" -- U+EA35 lightbulb-outline
-        end
+        light_symbol = Semantics.lightIcon(
+            powerd and powerd:frontlightIntensity())
     end
 
     -- Night mode icon (dynamic). Moon glyph when night mode is active,
     -- sun glyph otherwise. Driven by KOReader's "night_mode" setting.
     local night_symbol = ""
     if needs("nightmode") then
-        if G_reader_settings:isTrue("night_mode") then
-            night_symbol = "\xEE\xB2\x93" -- U+EC93 weather-night
-        else
-            night_symbol = "\xEE\xB2\x98" -- U+EC98 weather-sunny
-        end
+        night_symbol = Semantics.nightmode(
+            G_reader_settings:isTrue("night_mode"))
     end
 
     -- Frontlight intensity as a 0-100 percentage with "%" suffix, matching
@@ -2650,10 +3048,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local fl_intensity_pct = ""
     if needs("light_pct") then
         local pwd = Device:getPowerDevice()
-        if pwd and pwd.fl_max and pwd.fl_max > 0 then
-            fl_intensity_pct = math.floor(
-                pwd:frontlightIntensity() / pwd.fl_max * 100 + 0.5) .. "%"
-        end
+        fl_intensity_pct = Semantics.lightPct(
+            pwd and pwd:frontlightIntensity(), pwd and pwd.fl_max)
     end
 
     -- Frontlight warmth as a 0-100 percentage with "%" suffix.
@@ -2662,27 +3058,19 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local fl_warmth_pct = ""
     if needs("warmth_pct") then
         local pwd = Device:getPowerDevice()
-        if pwd and Device:hasNaturalLight() then
-            fl_warmth_pct = math.floor(pwd:frontlightWarmth() + 0.5) .. "%"
-        end
+        fl_warmth_pct = Semantics.warmthPct(
+            pwd and pwd.frontlightWarmth and pwd:frontlightWarmth(),
+            Device:hasNaturalLight())
     end
 
-    -- Warmth icon (dynamic). Three-step ramp: thermometer-low for cool
-    -- (<34%), thermometer for mid (34-66%), thermometer-high for warm
-    -- (≥67%). Empty when the device has no natural-light hardware.
+    -- Warmth icon (dynamic). Ramp thresholds and glyphs live in
+    -- token_semantics so bookshelf cannot ramp differently.
     local warmth_symbol = ""
     if needs("warmth_icon") then
         local pwd = Device:getPowerDevice()
-        if pwd and Device:hasNaturalLight() then
-            local pct = pwd:frontlightWarmth()
-            if pct < 34 then
-                warmth_symbol = "\xEE\x88\x8C" -- U+E20C thermometer-low
-            elseif pct < 67 then
-                warmth_symbol = "\xEE\x88\x8A" -- U+E20A thermometer
-            else
-                warmth_symbol = "\xEE\x88\x8B" -- U+E20B thermometer-high
-            end
-        end
+        warmth_symbol = Semantics.warmthIcon(
+            pwd and pwd.frontlightWarmth and pwd:frontlightWarmth(),
+            Device:hasNaturalLight())
     end
 
     -- Aggregate output from plugins that register with KOReader's footer
@@ -2702,11 +3090,15 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     if needs("light", "warmth") then
         local powerd = Device:getPowerDevice()
         if needs("light") then
-            local val = powerd:frontlightIntensity()
-            fl_intensity = val == 0 and "OFF" or tostring(val)
+            fl_intensity = Semantics.light(
+                powerd and powerd:frontlightIntensity())
         end
-        if needs("warmth") and Device:hasNaturalLight() then
-            fl_warmth = tostring(powerd:toNativeWarmth(powerd:frontlightWarmth()))
+        if needs("warmth") then
+            local native
+            if powerd and powerd.toNativeWarmth and powerd.frontlightWarmth then
+                native = powerd:toNativeWarmth(powerd:frontlightWarmth())
+            end
+            fl_warmth = Semantics.warmth(native, Device:hasNaturalLight())
         end
     end
 
@@ -2715,18 +3107,28 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     if needs("mem") then
         local meminfo = io.open("/proc/meminfo", "r")
         if meminfo then
-            local total, available
+            local total, memfree, buffers, cached, available
             for line in meminfo:lines() do
                 if line:match("^MemTotal:") then
                     total = tonumber(line:match("(%d+)"))
                 elseif line:match("^MemAvailable:") then
                     available = tonumber(line:match("(%d+)"))
+                elseif line:match("^MemFree:") then
+                    memfree = tonumber(line:match("(%d+)"))
+                elseif line:match("^Buffers:") then
+                    buffers = tonumber(line:match("(%d+)"))
+                elseif line:match("^Cached:") then
+                    cached = tonumber(line:match("(%d+)"))
                 end
                 if total and available then break end
             end
             meminfo:close()
+            -- Fallback for kernels without MemAvailable (e.g. Kindle KPW3 2.6.x)
+            if total and not available and memfree then
+                available = memfree + (buffers or 0) + (cached or 0)
+            end
             if total and available and total > 0 then
-                mem_usage = math.floor((total - available) / total * 100) .. "%"
+                mem_usage = Semantics.mem(total, available)
             end
         end
     end
@@ -2738,12 +3140,9 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         if statm then
             local line = statm:read("*l")
             statm:close()
-            if line then
-                local rss = line:match("%S+%s+(%d+)")
-                if rss then
-                    ram_mb = math.floor(tonumber(rss) * 4 / 1024) .. "M"
-                end
-            end
+            local rss = line and line:match("%S+%s+(%d+)")
+            -- statm reports PAGES; Semantics.ram takes kilobytes.
+            ram_mb = Semantics.ram(rss and tonumber(rss) * 4)
         end
     end
 
@@ -2754,9 +3153,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         if util.diskUsage then
             local drive = Device.home_dir or "/"
             local ok, usage = pcall(util.diskUsage, drive)
-            if ok and usage and type(usage.available) == "number" and usage.available > 0 then
-                disk_avail = string.format("%.1fG", usage.available / 1024 / 1024 / 1024)
-            end
+            if ok and usage then disk_avail = Semantics.disk(usage.available) end
         end
     end
 
@@ -2784,10 +3181,165 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
     end
 
-    -- Replace bar tokens with a placeholder so buildBarLine knows where to insert the bar.
+    -- ── Per-book metadata ported from bookshelf (#348) ────────────────────
+    -- Formatting goes through the vendored token_semantics so the same book
+    -- reads the same on the shelf and in the reader. Each source is reached
+    -- defensively: on a reader every one of these can be legitimately absent
+    -- (no DocSettings yet, no highlights, no read history), and the right
+    -- answer then is an empty string so the line auto-hides.
+    local status_str, status_label_str = "", ""
+    local rating_stars, rating_num = "", ""
+    if needs("status", "status_label", "rating", "rating_number") then
+        local summary
+        local ds = ui.doc_settings
+        if ds and ds.readSetting then
+            local ok, v = pcall(function() return ds:readSetting("summary") end)
+            if ok and type(v) == "table" then summary = v end
+        end
+        status_str = Semantics.status(summary and summary.status)
+        status_label_str = Semantics.statusLabel(status_str, STATUS_LABELS)
+        local r = summary and tonumber(summary.rating)
+        rating_stars = Semantics.stars(r)
+        rating_num = (r and r > 0) and tostring(math.floor(r)) or ""
+    end
+
+    local description_str = ""
+    if needs("description") then
+        local doc_props = ui.doc_props or {}
+        local ok, props = pcall(doc.getProps, doc)
+        if not ok then props = {} end
+        local raw = doc_props.description or props.description or ""
+        -- A <dc:description> is HTML. Untreated it renders literally - a
+        -- device screenshot showed "<p>The first ever collection of..." on the
+        -- status line. Bookshelf has always sanitised this; the port in
+        -- 85aa7c8 took the token and left the sanitiser behind, so it now
+        -- lives in the vendored module where only one copy can exist.
+        description_str = Semantics.cleanDescription(raw)
+        -- Then flatten: cleanDescription keeps paragraph breaks, which is
+        -- right for bookshelf's hero card and wrong for a status line, where
+        -- an embedded \n starts a new visual row and would silently push the
+        -- rest of the overlay around. One line, single-spaced.
+        description_str = description_str:gsub("%s+", " "):gsub("^ ", ""):gsub(" $", "")
+    end
+
+    local size_str, added_str, opened_str = "", "", ""
+    if needs("size", "added") then
+        local ok_lfs, lfs = pcall(require, "libs/libkoreader-lfs")
+        local file = doc and doc.file
+        if ok_lfs and lfs and lfs.attributes and file then
+            if needs("size") then
+                local ok, v = pcall(lfs.attributes, file, "size")
+                if ok then size_str = Semantics.fileSize(tonumber(v)) or "" end
+            end
+            if needs("added") then
+                -- Mirrors bookshelf's date_added, which is the file mtime.
+                local ok, v = pcall(lfs.attributes, file, "modification")
+                if ok then added_str = Semantics.isoDate(tonumber(v)) or "" end
+            end
+        end
+    end
+    if needs("opened") then
+        -- Mirrors bookshelf: ReadHistory, not the file mtime. A book absent
+        -- from the history has no date rather than a date in 1970.
+        local ok_rh, ReadHistory = pcall(require, "readhistory")
+        local file = doc and doc.file
+        if ok_rh and ReadHistory and file then
+            for _idx, item in ipairs(ReadHistory.hist or {}) do
+                if item.file == file then
+                    opened_str = Semantics.isoDate(tonumber(item.time)) or ""
+                    break
+                end
+            end
+        end
+    end
+
+    local favourite_str = ""
+    if needs("favourite", "favorite") then
+        local ok_rc, ReadCollection = pcall(require, "readcollection")
+        local file = doc and doc.file
+        if ok_rc and ReadCollection and file then
+            local fav = ReadCollection.coll and ReadCollection.coll.favorites
+            if fav and fav[file] ~= nil then
+                favourite_str = "\xE2\x98\x85"  -- U+2605, matching %rating's filled star
+            end
+        end
+    end
+
+    local author_count_str, authors_short_str = "", ""
+    if needs("author_count", "authors_short") then
+        if #authors_list > 0 then
+            author_count_str = tostring(#authors_list)
+            authors_short_str = Semantics.authorsShort(
+                authors_list, T(" and "), T(", et al."))
+        end
+    end
+
+    -- %quote / %quote_source: a highlight from THIS book. Deterministic (the
+    -- first highlight) rather than rotating: a status bar repaints constantly,
+    -- and a quote that changed on every repaint would be unreadable. Bookshelf
+    -- rotates its quote per selected book, which has no analogue here.
+    local quote_str, quote_source_str = "", ""
+    if needs("quote", "quote_source") then
+        local ann = ui.annotation
+        for _idx, item in ipairs((ann and ann.annotations) or {}) do
+            if type(item.text) == "string" and item.text ~= "" then
+                quote_str = "\xE2\x80\x9C" .. item.text .. "\xE2\x80\x9D"
+                local bits = {}
+                if title and title ~= "" then bits[#bits + 1] = tostring(title) end
+                if first_author and first_author ~= "" then
+                    bits[#bits + 1] = first_author
+                end
+                quote_source_str = table.concat(bits, ", ")
+                break
+            end
+        end
+    end
+
+    local sysused_str = ""
+    if needs("sysused") then
+        local meminfo = io.open("/proc/meminfo", "r")
+        if meminfo then
+            local total, available, memfree, buffers, cached
+            for line in meminfo:lines() do
+                if line:match("^MemTotal:") then total = tonumber(line:match("(%d+)"))
+                elseif line:match("^MemAvailable:") then available = tonumber(line:match("(%d+)"))
+                elseif line:match("^MemFree:") then memfree = tonumber(line:match("(%d+)"))
+                elseif line:match("^Buffers:") then buffers = tonumber(line:match("(%d+)"))
+                elseif line:match("^Cached:") then cached = tonumber(line:match("(%d+)")) end
+            end
+            meminfo:close()
+            -- Fallback for kernels without MemAvailable (e.g. Kindle KPW3 2.6.x).
+            -- MemFree alone badly overstates usage on a small device: the kernel
+            -- caches nearly all otherwise-free RAM for file I/O, but that cache is
+            -- reclaimable and available to us. Same shape as the %mem fallback
+            -- above, so the two parsers cannot drift apart again.
+            if total and not available and memfree then
+                available = memfree + (buffers or 0) + (cached or 0)
+            end
+            if total and available and total > 0 then
+                -- /proc/meminfo is in kB; Semantics.sysused takes bytes used.
+                sysused_str = Semantics.sysused((total - available) * 1024)
+            end
+        end
+    end
+
+    -- Replace the elastic tokens with placeholders so the renderer knows where
+    -- to put the widget. Both %bar and %spacer take "whatever width is left",
+    -- so a line can only honour ONE of them:
+    --   * %bar wins if present, being the older and more visible feature;
+    --   * otherwise the FIRST %spacer becomes the gap;
+    --   * every other occurrence is stripped, never left as literal text -
+    --     a reader who wrote two of them should see a sensible line, not the
+    --     word "spacer" sitting in the middle of it.
     local result_str = format_str
     if has_bar then
         result_str = result_str:gsub("%%bar", BAR_PLACEHOLDER)
+        if has_spacer then
+            result_str = result_str:gsub("%%spacer", "")
+        end
+    elseif has_spacer then
+        result_str = result_str:gsub("%%spacer", SPACER_PLACEHOLDER, 1)
+        result_str = result_str:gsub("%%spacer", "")
     end
 
     local replace = {
@@ -2856,6 +3408,22 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         author      = first_author,
         authors     = authors,
         author_1    = authors_list[1] or "",
+        -- Ported from bookshelf for #348.
+        author_count  = author_count_str,
+        authors_short = authors_short_str,
+        status        = status_str,
+        status_label  = status_label_str,
+        rating        = rating_stars,
+        rating_number = rating_num,
+        description   = description_str,
+        size          = size_str,
+        added         = added_str,
+        opened        = opened_str,
+        favourite     = favourite_str,
+        favorite      = favourite_str,   -- US spelling alias, as in bookshelf
+        quote         = quote_str,
+        quote_source  = quote_source_str,
+        sysused       = sysused_str,
         author_2    = authors_list[2] or "",
         author_3    = authors_list[3] or "",
         author_4    = authors_list[4] or "",
@@ -2867,6 +3435,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         chap_title_num  = tostring(chapter_title_num or ""),
         chap_title_name = tostring(chapter_title_name or ""),
         filename    = file_name,
+        file_num    = file_num,
+        file_count  = file_count,
         lang        = book_language,
         format      = doc_format,
         highlights  = highlights_count,
@@ -2880,6 +3450,9 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         batt      = tostring(batt_lvl),
         batt_icon = tostring(batt_symbol),
         wifi      = wifi_symbol,
+        -- Same glyph under bookshelf's name for it, so a template copied
+        -- across resolves instead of printing the literal token (#348).
+        wifi_icon   = wifi_symbol,
         plugin_content = plugin_content,
         light     = fl_intensity,
         light_icon = light_symbol,
