@@ -1,0 +1,165 @@
+-- %calibre{field} in bookends (#348). The reader itself is covered by
+-- bookshelf's _test_calibre_metadata; this suite covers the TOKEN: brace
+-- parsing, case and '#' insensitivity, the empty-field degrade, and the
+-- needs() gate that means a template without the token never touches disk.
+--
+-- Usage: lua tests/_test_calibre_token.lua
+
+package.loaded["device"] = {
+    getPowerDevice = function() return nil end,
+    isKindle = function() return false end,
+    hasNaturalLight = function() return false end,
+    home_dir = "/",
+}
+package.loaded["datetime"] = {
+    secondsToClockDuration = function() return "" end,
+}
+package.loaded["bookends_overlay_widget"] = { BAR_PLACEHOLDER = "\x00BAR\x00" }
+-- menu/tokens_catalogue.lua wraps its descriptions in gettext at load, and the
+-- real bookends_i18n pulls in KOReader's logger and gettext. Stubbed the way
+-- _test_token_favourites does it, so the catalogue holds source strings.
+package.loaded["bookends_i18n"] = { gettext = function(str) return str end }
+_G.G_reader_settings = setmetatable({}, {
+    __index = function() return function() return false end end,
+    readSetting = function() return "classic" end,
+    isTrue = function() return false end,
+})
+
+local Tokens = dofile("bookends_tokens.lua")
+
+local pass, fail = 0, 0
+local function test(name, fn)
+    local ok, err = pcall(fn)
+    if ok then pass = pass + 1
+    else fail = fail + 1; io.stderr:write("FAIL  " .. name .. "\n  " .. tostring(err) .. "\n") end
+end
+local function eq(actual, expected, msg)
+    if actual ~= expected then
+        error((msg or "")
+            .. " expected=" .. string.format("%q", tostring(expected))
+            .. " got=" .. string.format("%q", tostring(actual)), 2)
+    end
+end
+
+-- Stub the reader seam. Records whether it was consulted at all, which is how
+-- the gate is tested: a template with no %calibre must never reach here.
+local consulted = false
+local FIELDS = { mood = "cosy", wordcount = "104233", pubdate = "1979" }
+Tokens._calibreFieldsFor = function()
+    consulted = true
+    return FIELDS
+end
+
+-- A minimally complete reader UI. The conditional path in buildConditionState
+-- reaches for flow-aware page totals and the TOC, so a document stub with only
+-- a filepath is not enough once [if:...] is involved.
+local ui = {
+    document = {
+        file              = "/library/book.epub",
+        getCurrentPage    = function() return 100 end,
+        hasHiddenFlows    = function() return false end,
+        getPageCount      = function() return 500 end,
+        getTotalPagesLeft = function() return 400 end,
+    },
+    toc = {
+        toc = { { page = 1, title = "One", depth = 1 },
+                { page = 50, title = "Two", depth = 1 } },
+        getPreviousChapter  = function() return 50 end,
+        isChapterStart      = function() return false end,
+        getNextChapter      = function() return 200 end,
+        getChapterPagesLeft = function() return 100 end,
+        getChapterPagesDone = function() return 50 end,
+        getChapterPageCount = function() return 150 end,
+        getTocTitleByPage   = function() return "Two" end,
+        getMaxDepth         = function() return 1 end,
+    },
+    statistics = { avg_time = 30 },
+    view = { state = { page = 100 } },
+}
+
+local function expand(fmt)
+    consulted = false
+    return Tokens.expand(fmt, ui, 0, 0, false, 2, nil)
+end
+
+test("resolves a custom column", function()
+    eq(expand("%calibre{mood}"), "cosy")
+end)
+
+test("field lookup ignores case and a leading '#'", function()
+    eq(expand("%calibre{Mood}"), "cosy")
+    eq(expand("%calibre{#mood}"), "cosy")
+    eq(expand("%calibre{#MOOD}"), "cosy")
+end)
+
+test("an unknown field renders empty, not the literal token", function()
+    eq(expand("%calibre{nosuchcolumn}"), "")
+end)
+
+test("standard fields work the same way", function()
+    eq(expand("%calibre{pubdate}"), "1979")
+end)
+
+test("more than one field in a line each resolve", function()
+    eq(expand("%calibre{mood} / %calibre{wordcount}"), "cosy / 104233")
+end)
+
+test("no %calibre in the template means the reader is never consulted", function()
+    expand("%title")
+    assert(not consulted,
+           "the calibre file was probed for a template that does not name it; "
+           .. "needs() is the gate and it leaked")
+end)
+
+test("a shared paint_ctx still resolves each line's own calibre columns", function()
+    -- main.lua builds one paint_ctx and hands it to every expand() in the
+    -- paint, and buildConditionState short-circuits to the cached state table
+    -- on every call after the first. The calibre keys are gated on the CALLING
+    -- template's format string, so the short-circuit meant only the first
+    -- conditional-bearing line ever got its columns: a second line naming a
+    -- different column evaluated false, and its [else] branch won.
+    -- paint_ctx is the EIGHTH argument; the seventh is symbol_color.
+    local ctx = {}
+    eq(Tokens.expand("[if:calibre{mood}]A[/if]", ui, 0, 0, false, 2, nil, ctx), "A")
+    eq(Tokens.expand("[if:calibre{pubdate}]B[/if]", ui, 0, 0, false, 2, nil, ctx), "B")
+    eq(Tokens.expand('[if:calibre{pubdate}="1979"]C[else]D[/if]', ui, 0, 0, false, 2, nil, ctx), "C")
+    -- and the first line's column is still there afterwards
+    eq(Tokens.expand("[if:calibre{mood}]E[/if]", ui, 0, 0, false, 2, nil, ctx), "E")
+end)
+
+test("[if:calibre{field}] is truthy when the column has a value", function()
+    eq(expand("[if:calibre{mood}]cosy book[/if]"), "cosy book")
+end)
+
+test("[if:calibre{field}] is falsy when the column is absent", function()
+    eq(expand("[if:calibre{nosuchcolumn}]never[/if]"), "")
+end)
+
+test("[if:calibre{field}=value] compares the string", function()
+    eq(expand('[if:calibre{mood}="cosy"]yes[else]no[/if]'), "yes")
+    eq(expand('[if:calibre{mood}="bleak"]yes[else]no[/if]'), "no")
+end)
+
+test("a conditional does not stop %calibre resolving in the body", function()
+    eq(expand("[if:calibre{mood}]%calibre{mood}[/if]"), "cosy")
+end)
+
+test("preview mode does not leak the literal token into a menu label", function()
+    local shown = Tokens.expandPreview("%calibre{mood}", ui, 0, 0, 2, nil)
+    assert(not shown:find("%calibre", 1, true),
+           "preview leaked the literal token: " .. shown)
+end)
+
+test("the catalogue offers %calibre", function()
+    local cat = dofile("menu/tokens_catalogue.lua")
+    local found = false
+    for _i, entry in ipairs(cat.TOKENS or {}) do
+        if tostring(entry.token or ""):find("calibre", 1, true) then
+            found = true
+        end
+    end
+    assert(found, "%calibre is not in the token catalogue")
+end)
+
+print(pass .. " passed, " .. fail .. " failed")
+os.exit(fail == 0 and 0 or 1)
