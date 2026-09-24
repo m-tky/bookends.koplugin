@@ -757,11 +757,59 @@ local function splitAuthors(authors_raw)
     return list
 end
 
+--- Split a Keywords field into a genre list, or an empty list.
+--- The SPLITTING rule is bookshelf's `splitGenreTags`, kept in step
+--- deliberately so one list of keywords breaks into the same genres in both
+--- places: comma, semicolon,
+--- pipe and newline separate, and a SPACED slash separates a BISAC-style
+--- subject hierarchy ("Fiction / Fantasy"). A bare slash is part of the tag
+--- itself ("hurt/comfort", bookshelf's #240), so it must not split - hence
+--- normalising the spaced form to a newline up front rather than adding "/"
+--- to the separator class.
+--- The SOURCE deliberately differs: bookshelf resolves calibre tags first and
+--- falls back to the keywords, because it has a metadata record per book and
+--- no open document. Here the open document's keywords are the only source,
+--- so a calibre library whose tags were never written into the files shows
+--- genres on the shelf and none in the reader. That is the price of keeping
+--- %calibre{...} the one token that reads metadata.calibre.
+local function splitGenres(keywords)
+    local list = {}
+    if type(keywords) ~= "string" or keywords == "" then return list end
+    local norm = keywords:gsub("%s+/%s+", "\n")
+    for part in norm:gmatch("[^,;|\n]+") do
+        local trimmed = part:match("^%s*(.-)%s*$")
+        if trimmed ~= "" then list[#list + 1] = trimmed end
+    end
+    return list
+end
+
 -- Map KOReader UI language to a system locale for localized date strings.
 -- Preserves the regional code first (e.g. pt_BR), then tries generic
 -- fallbacks. Only affects directives formatLocalizedDate leaves to native
 -- os.date (weekday/month names go through LocalDate instead, see below).
 local _date_locale_cache = {} -- language code -> locale string or false
+--- The frontlight warmth as (device-native, KOReader 0-100), or nil, nil when
+--- the device cannot report it. One reader for every warmth site, because the
+--- value CAN be nil on hardware that says it has a natural light:
+--- KindlePowerD:frontlightWarmthHW reads the level over lipc and has no else
+--- branch, so with no lipc handle - a framework-stopped Kindle - it returns
+--- nil, powerd.fl_warmth stays nil for the session, and frontlightWarmth()
+--- hands back nil while hasNaturalLight() is still true. KOReader's own
+--- toNativeWarmth then divides by it unchecked and the paint dies.
+--- Intensity has no such hole: frontlightIntensityHW falls back to sysfs, so
+--- it is never nil, which is why only warmth ever crashed.
+local function readWarmth(powerd)
+    if not (powerd and powerd.frontlightWarmth) then return nil, nil end
+    local pct = powerd:frontlightWarmth()
+    if type(pct) ~= "number" then return nil, nil end
+    local native
+    if powerd.toNativeWarmth then
+        native = powerd:toNativeWarmth(pct)
+        if type(native) ~= "number" then native = nil end
+    end
+    return native, pct
+end
+
 local function getDateLocale()
     local ok, GetText = pcall(require, "gettext")
     if not ok or not GetText or not GetText.current_lang or GetText.current_lang == "C" then
@@ -1538,12 +1586,20 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
             state.light_pct = math.floor(
                 powerd:frontlightIntensity() / powerd.fl_max * 100 + 0.5)
         end
-        if Device:hasNaturalLight() and powerd.frontlightWarmth then
+        if Device:hasNaturalLight() then
             -- state.warmth keeps the device-native value (0-24 on Kindle)
             -- for users with conditionals tied to that scale; warmth_pct
             -- is the normalised 0-100 frontlightWarmth() return value.
-            state.warmth = powerd:toNativeWarmth(powerd:frontlightWarmth())
-            state.warmth_pct = math.floor(powerd:frontlightWarmth() + 0.5)
+            -- Both keys stay ABSENT when the device cannot report warmth, so
+            -- [if:warmth>10] reads false rather than taking the paint down.
+            -- Absent is also what a device with no natural light has always
+            -- given these keys, so the two degrade alike. Note the evaluator's
+            -- rule for a missing key (see evaluateCondition): every operator
+            -- reads false EXCEPT !=, which reads true, so [if:warmth!=0] shows
+            -- its branch on a device that cannot report warmth at all.
+            local native, pct = readWarmth(powerd)
+            if native then state.warmth = native end
+            if pct then state.warmth_pct = math.floor(pct + 0.5) end
         end
     end
 
@@ -1688,6 +1744,24 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
 
         -- Odd/even page
         state.page = (pageno % 2 == 1) and "odd" or "even"
+
+        -- The same parity for the page WITHIN the chapter (#117). An
+        -- alternating footer usually wants this one: `page` flips on the book
+        -- page, so it keeps its phase across a chapter break and a line that
+        -- should sit left on every chapter opening does not.
+        -- Keyed off chap_read, the in-chapter page number, so it follows
+        -- whatever chap_read resolved to: a real chapter position when the TOC
+        -- gives one, and the whole-book fallback (page_num) on a chapterless
+        -- document, matching how %chap_read itself behaves there. Unset only
+        -- when chap_read is, i.e. no TOC at all, so [if:chap_page=odd] reads
+        -- false rather than inventing a parity from nothing.
+        -- Caveat inherited from that fallback: the condition state falls back
+        -- to state.page_num while the %chap_read TOKEN falls back to page_idx,
+        -- which honours an EPUB's pagemap labels. On a chapterless pagemap
+        -- book the two can differ, and so can this parity.
+        if state.chap_read then
+            state.chap_page = (state.chap_read % 2 == 1) and "odd" or "even"
+        end
     end
 
     -- Document format and filename (extension stripped, matches %filename token)
@@ -1723,6 +1797,17 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
         end
         state.series = series
         state.lang = doc_props.language or props.language or ""
+        -- Strings, not a count: [if:genres] reads "this book has genres" the
+        -- way [if:series] reads "this book is in a series", which is the
+        -- gating bookshelf documents for the same token.
+        -- refs()-gated unlike its neighbours above: those read fields already
+        -- in hand, this one splits a string, and a template that never asks
+        -- about genres should not pay for it on every paint.
+        if refs("genre", "genres") then
+            local genre_list = splitGenres(doc_props.keywords or props.keywords)
+            state.genre  = genre_list[1] or ""
+            state.genres = table.concat(genre_list, ", ")
+        end
     end
 
     -- Chapter titles (reuses the helper already called for state.chap_num/chap_count)
@@ -1746,6 +1831,12 @@ function Tokens.buildConditionState(ui, session_elapsed, session_pages_read, pai
 
     -- Session (prefer ReaderStatistics' skip-aware values; fall back to
     -- our wall-clock measurement and max-page counter when stats is disabled).
+    -- Pages advanced this session (#121). Outside the block below on purpose:
+    -- that one reads the statistics database, and this key needs nothing but
+    -- the counter main.lua already keeps.
+    if refs("session_pages_advanced") then
+        state.session_pages_advanced = math.max(0, session_pages_read or 0)
+    end
     if refs("session", "session_pages", "session_time") then
         local stats_session = Tokens._readStatsBookSession(ui, stats_cache)
         if stats_session then
@@ -2153,11 +2244,13 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
             date_numeric = "[dd/mm/yy]",
             weekday = "[weekday]", weekday_short = "[wkday]",
             session_time = "[session]", session_pages = "[pages]",
+            session_pages_advanced = "[pages.adv]",
             title = "[title]", author = "[author]",
             series = "[series]", series_name = "[series.name]", series_num = "[series.#]",
             chap_title = "[chapter]",
             chap_title_num = "[ch.#]", chap_title_name = "[chapter]",
             filename = "[file]", lang = "[lang]",
+            genre = "[genre]", genres = "[genres]",
             format = "[format]",
             highlights = "[highlights]", notes = "[notes]",
             bookmarks = "[bookmarks]", annotations = "[annotations]",
@@ -2617,6 +2710,21 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
     end
 
+    -- %session_pages_advanced (#121): pages ADVANCED this session - furthest
+    -- page reached minus the page the session started on, on the pagemap
+    -- index when the book has stable page numbers. That is main.lua's
+    -- getSessionPages(), v3.5.0's %s, handed in as session_pages_read. It is
+    -- deliberately NOT the statistics count above: that one is skip-aware and
+    -- counts rendered pages, so a stable-page reader sees it climb several
+    -- times per printed page. Moving within a page counts nothing and going
+    -- back does not subtract. A jump (TOC, go to page) counts the whole
+    -- distance, since it is furthest-minus-start - the same as v3.5.0.
+    -- No statistics read, so it costs nothing on the Clara BW (#36).
+    local session_pages_advanced = "0"
+    if needs("session_pages_advanced") then
+        session_pages_advanced = tostring(math.max(0, session_pages_read or 0))
+    end
+
     -- Time left in chapter / document (via statistics plugin).
     -- chap_time_left falls back to whole-book pages-left when no chapter info,
     -- matching stock readerfooter's chapter_time_to_read fallback.
@@ -2899,13 +3007,16 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local series_name = ""
     local series_num = ""
     local book_language = ""
+    local first_genre = ""
+    local genres = ""
     -- %author_count / %authors_short / %quote_source are listed here because
     -- they are DERIVED from this block's title + authors_list; without them the
     -- gate skips and they resolve empty for a template that names only them.
     if needs("title", "author", "authors",
              "author_1", "author_2", "author_3", "author_4", "author_5",
              "author_count", "authors_short", "quote_source",
-             "series", "series_name", "series_num", "lang") then
+             "series", "series_name", "series_num", "lang",
+             "genre", "genres") then
         local doc_props = ui.doc_props or {}
         local ok, props = pcall(doc.getProps, doc)
         if not ok then props = {} end
@@ -2923,6 +3034,14 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         end
         if needs("lang") then
             book_language = doc_props.language or props.language or ""
+        end
+        if needs("genre", "genres") then
+            -- doc_props.keywords is KOReader's merged value, so an edit in
+            -- Show info wins over what the file embeds. Calibre tags are NOT
+            -- consulted: %calibre{...} is the one token that reads that file.
+            local genre_list = splitGenres(doc_props.keywords or props.keywords)
+            first_genre = genre_list[1] or ""
+            genres = table.concat(genre_list, ", ")
         end
     end
 
@@ -3058,9 +3177,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local fl_warmth_pct = ""
     if needs("warmth_pct") then
         local pwd = Device:getPowerDevice()
-        fl_warmth_pct = Semantics.warmthPct(
-            pwd and pwd.frontlightWarmth and pwd:frontlightWarmth(),
-            Device:hasNaturalLight())
+        local _native_warmth, pct = readWarmth(pwd)
+        fl_warmth_pct = Semantics.warmthPct(pct, Device:hasNaturalLight())
     end
 
     -- Warmth icon (dynamic). Ramp thresholds and glyphs live in
@@ -3068,9 +3186,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
     local warmth_symbol = ""
     if needs("warmth_icon") then
         local pwd = Device:getPowerDevice()
-        warmth_symbol = Semantics.warmthIcon(
-            pwd and pwd.frontlightWarmth and pwd:frontlightWarmth(),
-            Device:hasNaturalLight())
+        local _native_warmth, pct = readWarmth(pwd)
+        warmth_symbol = Semantics.warmthIcon(pct, Device:hasNaturalLight())
     end
 
     -- Aggregate output from plugins that register with KOReader's footer
@@ -3094,10 +3211,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
                 powerd and powerd:frontlightIntensity())
         end
         if needs("warmth") then
-            local native
-            if powerd and powerd.toNativeWarmth and powerd.frontlightWarmth then
-                native = powerd:toNativeWarmth(powerd:frontlightWarmth())
-            end
+            local native = readWarmth(powerd)
             fl_warmth = Semantics.warmth(native, Device:hasNaturalLight())
         end
     end
@@ -3388,6 +3502,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         weekday_short = date_weekday_short,
         session_time  = session_time,
         session_pages = tostring(session_pages),
+        session_pages_advanced = session_pages_advanced,
         pages_today      = pages_today_str,
         time_today       = time_today_str,
         pages_today_book = pages_today_book_str,
@@ -3438,6 +3553,8 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         file_num    = file_num,
         file_count  = file_count,
         lang        = book_language,
+        genre       = first_genre,
+        genres      = genres,
         format      = doc_format,
         highlights  = highlights_count,
         notes       = notes_count,
@@ -3488,7 +3605,7 @@ function Tokens.expand(format_str, ui, session_elapsed, session_pages_read, prev
         book_finish_date = true,
         time_12h = true, time_24h = true,
         time = true,
-        session_time = true, session_pages = true, speed = true,
+        session_time = true, session_pages = true, session_pages_advanced = true, speed = true,
         -- _lastdigit tokens (#55): "0" is a real value (last digit of 10,
         -- 20, …); without this gate it would auto-hide and the conditional
         -- grammar branching on the digit would break.
