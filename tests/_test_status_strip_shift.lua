@@ -34,6 +34,10 @@ _G.require = function(name)
     local stub = permissive(); package.loaded[name] = stub; return stub
 end
 _G.G_reader_settings = permissive()
+-- The real widget module, not the blanket stub: computeBarRect asks it where a
+-- bar positioned relative to the line text goes (OverlayWidget.bandBarY), and a
+-- permissive stub answers with a table instead of nil.
+package.loaded["bookends_overlay_widget"] = dofile("bookends_overlay_widget.lua")
 
 local Bookends = dofile("main.lua")
 local computeBarRect = Bookends._computeBarRect
@@ -133,6 +137,43 @@ test("vertical bars start below the strip and lose the height", function()
     eq(y1 - y0, STRIP, "vertical bar top")
     eq(h0 - h1, STRIP, "vertical bar height")
     eq(y1 + h1, y0 + h0, "vertical bar bottom edge unchanged")
+end)
+
+-- ── bars positioned relative to the line text (band_offset) ───────────────
+-- The same function the paint uses, with this paint's band extents. The pure
+-- rule is covered in _test_bar_band_position; these pin the wiring.
+
+local EXT = { top_y = 52, bottom_y = 1400, top_any_enabled = true, bottom_any_enabled = true }
+
+test("a relative top bar goes where the band says, not where margin_v says", function()
+    local _, y = computeBarRect({ v_anchor = "top", margin_v = 300, height = 5, band_offset = -9 },
+        0, 0, 1072, 1448, 0, EXT)
+    eq(y, 43)
+end)
+
+test("a relative top bar still moves down with bookshelf's strip", function()
+    local _, y = computeBarRect({ v_anchor = "top", margin_v = 300, height = 5, band_offset = -9 },
+        0, 0, 1072, 1448, 78, EXT)
+    eq(y, 121)
+end)
+
+test("a relative bottom bar follows the bottom band", function()
+    local _, y = computeBarRect({ v_anchor = "bottom", margin_v = 300, height = 5, band_offset = 0 },
+        0, 0, 1072, 1448, 0, EXT)
+    eq(y, 1395)
+end)
+
+test("without band_offset the extents change nothing", function()
+    local _, a = computeBarRect({ v_anchor = "top", margin_v = 30, height = 5 }, 0, 0, 1072, 1448, 0, EXT)
+    local _, b = computeBarRect({ v_anchor = "top", margin_v = 30, height = 5 }, 0, 0, 1072, 1448, 0, nil)
+    eq(a, 30); eq(b, 30)
+end)
+
+test("a relative bar with no text on its side falls back to margin_v", function()
+    local no_top = { top_y = 0, bottom_y = 1400, top_any_enabled = false, bottom_any_enabled = true }
+    local _, y = computeBarRect({ v_anchor = "top", margin_v = 30, height = 5, band_offset = -9 },
+        0, 0, 1072, 1448, 0, no_top)
+    eq(y, 30)
 end)
 
 print(string.format("%d passed, %d failed", pass, fail))

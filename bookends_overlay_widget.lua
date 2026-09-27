@@ -2669,4 +2669,45 @@ function OverlayWidget.computeEndFillExtents(positions_data, screen_h)
     }
 end
 
+--- Where a full-width bar sits when it is positioned relative to the line
+--- text ("Position relative to line text"), or nil to use margin_v.
+---
+--- Text and the fill band scale with the screen, but margin_v is raw pixels, so
+--- a bar placed just under a header on one screen size is inside the text or out
+--- on the page on another. band_offset is measured from the band's edge instead,
+--- the same way at both ends: 0 = directly outside the band, negative = into it,
+--- positive = out towards the page. nil (not set), a vertical bar, or a side with
+--- no text all return nil, and margin_v applies exactly as it always has - which
+--- is also what an older bookends, ignoring the field, does.
+---
+--- @param extents  computeEndFillExtents output for this paint, or nil
+--- @param top_inset rows reserved above the top band (bookshelf's strip)
+--- @return y of the bar's top edge, or nil
+function OverlayWidget.bandBarY(anchor, band_offset, thickness, extents, top_inset)
+    if band_offset == nil or not extents then return nil end
+    if anchor == "top" then
+        if not extents.top_any_enabled then return nil end
+        return (top_inset or 0) + extents.top_y + band_offset
+    elseif anchor == "bottom" then
+        if not extents.bottom_any_enabled then return nil end
+        return extents.bottom_y - band_offset - thickness
+    end
+    return nil
+end
+
+--- The band_offset that keeps a bar exactly where it is now (bar_y is its top
+--- edge), for switching the option on without the bar moving. nil when that
+--- side has no band to be relative to.
+function OverlayWidget.bandOffsetFor(anchor, bar_y, thickness, extents, top_inset)
+    if not extents then return nil end
+    if anchor == "top" then
+        if not extents.top_any_enabled then return nil end
+        return bar_y - (top_inset or 0) - extents.top_y
+    elseif anchor == "bottom" then
+        if not extents.bottom_any_enabled then return nil end
+        return extents.bottom_y - thickness - bar_y
+    end
+    return nil
+end
+
 return OverlayWidget

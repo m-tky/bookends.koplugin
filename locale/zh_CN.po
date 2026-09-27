@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bookends\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 14:31+0100\n"
+"POT-Creation-Date: 2026-09-27 20:48+0100\n"
 "PO-Revision-Date: 2026-07-15 09:59+0800\n"
 "Last-Translator: \n"
 "Language-Team: Chinese (Simplified)\n"
@@ -15,29 +15,29 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: Poedit 3.9\n"
 
-#: bookends_colour_palette.lua:400 bookends_dialog_helpers.lua:117
-#: bookends_line_editor.lua:792 bookends_line_editor.lua:1058 main.lua:2668
-#: main.lua:3367 menu/main_menu.lua:55 menu/main_menu.lua:95
+#: bookends_colour_palette.lua:400 bookends_dialog_helpers.lua:123
+#: bookends_line_editor.lua:792 bookends_line_editor.lua:1058 main.lua:2682
+#: main.lua:3381 menu/main_menu.lua:55 menu/main_menu.lua:95
 #: menu/main_menu.lua:133 menu/main_menu.lua:590
 #: menu/preset_manager_modal.lua:1405 menu/preset_manager_modal.lua:1527
 #: menu/preset_manager_modal.lua:1568 menu/preset_manager_modal.lua:1669
 #: menu/preset_manager_modal.lua:1713 menu/preset_manager_modal.lua:1815
 #: menu/preset_manager_modal.lua:1889 menu/preset_manager_modal.lua:1984
 #: menu/preset_manager_modal.lua:2008 menu/preset_manager_modal.lua:2032
-#: menu/progress_bar_menu.lua:64
+#: menu/progress_bar_menu.lua:100
 msgid "Cancel"
 msgstr "取消"
 
-#: bookends_colour_palette.lua:402 bookends_dialog_helpers.lua:125
-#: bookends_line_editor.lua:505 bookends_line_editor.lua:632 main.lua:2678
-#: main.lua:2910 menu/colours_menu.lua:73 menu/colours_menu.lua:277
-#: menu/progress_bar_menu.lua:270 menu/progress_bar_menu.lua:503
-#: menu/progress_bar_menu.lua:545
+#: bookends_colour_palette.lua:402 bookends_dialog_helpers.lua:131
+#: bookends_line_editor.lua:505 bookends_line_editor.lua:632 main.lua:2692
+#: main.lua:2924 menu/colours_menu.lua:73 menu/colours_menu.lua:277
+#: menu/progress_bar_menu.lua:308 menu/progress_bar_menu.lua:561
+#: menu/progress_bar_menu.lua:616
 msgid "Default"
 msgstr "默认"
 
-#: bookends_colour_palette.lua:404 bookends_dialog_helpers.lua:132
-#: main.lua:2707 menu/preset_manager_modal.lua:691
+#: bookends_colour_palette.lua:404 bookends_dialog_helpers.lua:138
+#: main.lua:2721 menu/preset_manager_modal.lua:691
 msgid "Apply"
 msgstr "应用"
 
@@ -58,7 +58,7 @@ msgid "Regular"
 msgstr "常规"
 
 #: bookends_line_editor.lua:121 bookends_line_editor.lua:448
-#: menu/progress_bar_menu.lua:463
+#: menu/progress_bar_menu.lua:521
 msgid "Size"
 msgstr "大小"
 
@@ -95,77 +95,77 @@ msgid "Bar style…"
 msgstr "进度条样式…"
 
 #: bookends_line_editor.lua:216 bookends_line_editor.lua:567
-#: menu/progress_bar_menu.lua:143
+#: menu/progress_bar_menu.lua:179
 msgid "Bordered"
 msgstr "边框"
 
 #: bookends_line_editor.lua:216 bookends_line_editor.lua:246
-#: menu/progress_bar_menu.lua:143 menu/progress_bar_menu.lua:144
-#: menu/progress_bar_menu.lua:418
+#: menu/progress_bar_menu.lua:179 menu/progress_bar_menu.lua:180
+#: menu/progress_bar_menu.lua:476
 msgid "Solid"
 msgstr "实心"
 
-#: bookends_line_editor.lua:216 menu/progress_bar_menu.lua:143
+#: bookends_line_editor.lua:216 menu/progress_bar_menu.lua:179
 msgid "Rounded"
 msgstr "圆角"
 
-#: bookends_line_editor.lua:217 menu/progress_bar_menu.lua:143
+#: bookends_line_editor.lua:217 menu/progress_bar_menu.lua:179
 msgid "Metro"
 msgstr "现代"
 
-#: bookends_line_editor.lua:217 menu/progress_bar_menu.lua:143
+#: bookends_line_editor.lua:217 menu/progress_bar_menu.lua:179
 msgid "Wave"
 msgstr "波浪"
 
-#: bookends_line_editor.lua:217 menu/progress_bar_menu.lua:143
+#: bookends_line_editor.lua:217 menu/progress_bar_menu.lua:179
 msgid "Radial"
 msgstr "环形"
 
-#: bookends_line_editor.lua:218 menu/progress_bar_menu.lua:143
+#: bookends_line_editor.lua:218 menu/progress_bar_menu.lua:179
 msgid "Radial hollow"
 msgstr "空心环形"
 
-#: bookends_line_editor.lua:218 menu/progress_bar_menu.lua:143
+#: bookends_line_editor.lua:218 menu/progress_bar_menu.lua:179
 msgid "Pacman"
 msgstr "极简"
 
-#: bookends_line_editor.lua:222 menu/progress_bar_menu.lua:124
+#: bookends_line_editor.lua:222 menu/progress_bar_menu.lua:160
 msgid "Chapter ticks: off"
 msgstr "章节刻度：关闭"
 
-#: bookends_line_editor.lua:223 menu/progress_bar_menu.lua:126
+#: bookends_line_editor.lua:223 menu/progress_bar_menu.lua:162
 msgid "Chapter ticks: top level"
 msgstr "章节刻度：顶层"
 
-#: bookends_line_editor.lua:224 menu/progress_bar_menu.lua:127
+#: bookends_line_editor.lua:224 menu/progress_bar_menu.lua:163
 msgid "Chapter ticks: top 2 levels"
 msgstr "章节刻度：前两级"
 
-#: bookends_line_editor.lua:225 menu/progress_bar_menu.lua:125
+#: bookends_line_editor.lua:225 menu/progress_bar_menu.lua:161
 msgid "Chapter ticks: all levels"
 msgstr "章节刻度：所有层级"
 
-#: bookends_line_editor.lua:238 menu/progress_bar_menu.lua:416
+#: bookends_line_editor.lua:238 menu/progress_bar_menu.lua:474
 msgid "Off"
 msgstr "关闭"
 
-#: bookends_line_editor.lua:239 menu/progress_bar_menu.lua:416
+#: bookends_line_editor.lua:239 menu/progress_bar_menu.lua:474
 msgid "Start of session"
 msgstr "本次会话起点"
 
-#: bookends_line_editor.lua:240 menu/progress_bar_menu.lua:416
+#: bookends_line_editor.lua:240 menu/progress_bar_menu.lua:474
 msgid "Book opened"
 msgstr "打开书籍处"
 
-#: bookends_line_editor.lua:241 menu/progress_bar_menu.lua:416
+#: bookends_line_editor.lua:241 menu/progress_bar_menu.lua:474
 msgid "Bookmarks"
 msgstr "书签"
 
-#: bookends_line_editor.lua:242 menu/progress_bar_menu.lua:416
+#: bookends_line_editor.lua:242 menu/progress_bar_menu.lua:474
 msgid "Today"
 msgstr "今天"
 
-#: bookends_line_editor.lua:246 menu/progress_bar_menu.lua:418
+#: bookends_line_editor.lua:246 menu/progress_bar_menu.lua:476
 msgid "Chevron"
 msgstr "箭头"
 
@@ -178,13 +178,13 @@ msgid "Enable custom colours"
 msgstr "启用自定义颜色"
 
 #: bookends_line_editor.lua:338 bookends_line_editor.lua:341
-#: menu/progress_bar_menu.lua:332 menu/progress_bar_menu.lua:337
+#: menu/progress_bar_menu.lua:390 menu/progress_bar_menu.lua:395
 msgid "Tick height"
 msgstr "刻度高度"
 
 #: bookends_line_editor.lua:353 bookends_line_editor.lua:356
-#: menu/progress_bar_menu.lua:358 menu/progress_bar_menu.lua:360
-#: menu/progress_bar_menu.lua:366
+#: menu/progress_bar_menu.lua:416 menu/progress_bar_menu.lua:418
+#: menu/progress_bar_menu.lua:424
 msgid "Tick width"
 msgstr "刻度宽度"
 
@@ -198,27 +198,27 @@ msgid "Bar colours"
 msgstr "进度条颜色"
 
 #: bookends_line_editor.lua:392 bookends_line_editor.lua:410
-#: menu/progress_bar_menu.lua:511
+#: menu/progress_bar_menu.lua:569
 msgid "Top marker"
 msgstr "顶部标记点"
 
 #: bookends_line_editor.lua:395 bookends_line_editor.lua:410
-#: menu/progress_bar_menu.lua:515
+#: menu/progress_bar_menu.lua:573
 msgid "Bottom marker"
 msgstr "底部标记点"
 
 #: bookends_line_editor.lua:402 bookends_line_editor.lua:650
-#: menu/progress_bar_menu.lua:402
+#: menu/progress_bar_menu.lua:460
 msgid "Markers"
 msgstr "标记点"
 
 #: bookends_line_editor.lua:418 bookends_line_editor.lua:543
-#: menu/progress_bar_menu.lua:111 menu/progress_bar_menu.lua:432
+#: menu/progress_bar_menu.lua:147 menu/progress_bar_menu.lua:490
 msgid "Type"
 msgstr "类型"
 
 #: bookends_line_editor.lua:435 bookends_line_editor.lua:567
-#: menu/progress_bar_menu.lua:144 menu/progress_bar_menu.lua:450
+#: menu/progress_bar_menu.lua:180 menu/progress_bar_menu.lua:508
 msgid "Style"
 msgstr "样式"
 
@@ -226,7 +226,7 @@ msgstr "样式"
 msgid "size"
 msgstr "大小"
 
-#: bookends_line_editor.lua:461 menu/progress_bar_menu.lua:474
+#: bookends_line_editor.lua:461 menu/progress_bar_menu.lua:532
 msgid "Offset"
 msgstr "偏移"
 
@@ -234,7 +234,7 @@ msgstr "偏移"
 msgid "offset"
 msgstr "偏移"
 
-#: bookends_line_editor.lua:475 menu/progress_bar_menu.lua:485
+#: bookends_line_editor.lua:475 menu/progress_bar_menu.lua:543
 msgid "Colour"
 msgstr "颜色"
 
@@ -242,29 +242,29 @@ msgstr "颜色"
 msgid "colour"
 msgstr "颜色"
 
-#: bookends_line_editor.lua:505 menu/progress_bar_menu.lua:503
+#: bookends_line_editor.lua:505 menu/progress_bar_menu.lua:561
 msgid "tick colour"
 msgstr "刻度颜色"
 
-#: bookends_line_editor.lua:543 menu/progress_bar_menu.lua:111
+#: bookends_line_editor.lua:543 menu/progress_bar_menu.lua:147
 #: menu/tokens_catalogue.lua:21
 msgid "Book"
 msgstr "书籍"
 
-#: bookends_line_editor.lua:543 menu/progress_bar_menu.lua:111
+#: bookends_line_editor.lua:543 menu/progress_bar_menu.lua:147
 msgid "Chapter"
 msgstr "章节"
 
-#: bookends_line_editor.lua:579 menu/progress_bar_menu.lua:188
+#: bookends_line_editor.lua:579 menu/progress_bar_menu.lua:226
 msgid "Fill: right to left"
 msgstr "填充方向：从右到左"
 
-#: bookends_line_editor.lua:579 menu/progress_bar_menu.lua:187
+#: bookends_line_editor.lua:579 menu/progress_bar_menu.lua:225
 msgid "Fill: left to right"
 msgstr "填充方向：从左到右"
 
 #: bookends_line_editor.lua:595 bookends_line_editor.lua:597
-#: bookends_line_editor.lua:599 menu/progress_bar_menu.lua:226
+#: bookends_line_editor.lua:599 menu/progress_bar_menu.lua:264
 msgid "Thickness"
 msgstr "粗细"
 
@@ -272,16 +272,16 @@ msgstr "粗细"
 msgid "auto"
 msgstr "自动"
 
-#: bookends_line_editor.lua:607 menu/progress_bar_menu.lua:238
+#: bookends_line_editor.lua:607 menu/progress_bar_menu.lua:276
 msgid "Bar thickness"
 msgstr "进度条粗细"
 
-#: bookends_line_editor.lua:609 menu/progress_bar_menu.lua:243
+#: bookends_line_editor.lua:609 menu/progress_bar_menu.lua:281
 msgid "Read"
 msgstr "已读"
 
 #: bookends_line_editor.lua:610 bookends_tokens.lua:443
-#: menu/progress_bar_menu.lua:244
+#: menu/progress_bar_menu.lua:282
 msgid "Unread"
 msgstr "未读"
 
@@ -289,7 +289,7 @@ msgstr "未读"
 msgid "Custom colours"
 msgstr "自定义颜色"
 
-#: bookends_line_editor.lua:661 bookends_updater.lua:349 main.lua:3205
+#: bookends_line_editor.lua:661 bookends_updater.lua:349 main.lua:3219
 #: menu/icons_library.lua:453 menu/preset_manager_modal.lua:665
 #: menu/tokens_library.lua:463
 msgid "Close"
@@ -319,7 +319,7 @@ msgstr "图标"
 msgid "Tokens"
 msgstr "标记"
 
-#: bookends_line_editor.lua:826 main.lua:3369 menu/main_menu.lua:57
+#: bookends_line_editor.lua:826 main.lua:3383 menu/main_menu.lua:57
 #: menu/preset_manager_modal.lua:1409 menu/preset_manager_modal.lua:1569
 #: menu/preset_manager_modal.lua:1670
 msgid "Save"
@@ -329,11 +329,11 @@ msgstr "保存"
 msgid "Line"
 msgstr "行"
 
-#: bookends_line_editor.lua:978 menu/progress_bar_menu.lua:46
+#: bookends_line_editor.lua:978 menu/progress_bar_menu.lua:82
 msgid "Move up"
 msgstr "上移"
 
-#: bookends_line_editor.lua:988 menu/progress_bar_menu.lua:55
+#: bookends_line_editor.lua:988 menu/progress_bar_menu.lua:91
 msgid "Move down"
 msgstr "下移"
 
@@ -583,67 +583,67 @@ msgstr "斜体"
 msgid "Bold italic"
 msgstr "粗斜体"
 
-#: main.lua:2926
+#: main.lua:2940
 msgid "Select font"
 msgstr "选择字体"
 
-#: main.lua:2967
+#: main.lua:2981
 msgid "Font-family fonts"
 msgstr "字体族"
 
-#: main.lua:3032
+#: main.lua:3046
 msgid "Fonts"
 msgstr "字体"
 
-#: main.lua:3126 menu/library_modal.lua:937
+#: main.lua:3140 menu/library_modal.lua:937
 msgid "Page %1 of %2"
 msgstr "第 %1 / %2 页"
 
-#: main.lua:3215 main.lua:3389
+#: main.lua:3229 main.lua:3403
 msgid "Reset"
 msgstr "重置"
 
-#: main.lua:3224
+#: main.lua:3238
 msgid "Set font"
 msgstr "设置字体"
 
-#: main.lua:3363 menu/main_menu.lua:502 menu/main_menu.lua:504
+#: main.lua:3377 menu/main_menu.lua:502 menu/main_menu.lua:504
 msgid "Development branch"
 msgstr "开发分支"
 
-#: main.lua:3365
+#: main.lua:3379
 msgid "Branch name (leave empty for stable)"
 msgstr "分支名称（留空则使用稳定版）"
 
-#: main.lua:3388
+#: main.lua:3402
 msgid ""
 "This will clear the development branch setting and install the latest stable "
 "release of Bookends, then restart KOReader. Continue?"
 msgstr ""
 "此操作将清除开发分支设置，并安装最新的稳定版，然后将重启阅读器，是否继续？"
 
-#: main.lua:3407
+#: main.lua:3421
 msgid "Bookends update available: v"
 msgstr "插件有可用更新：v"
 
-#: main.lua:3415 menu/main_menu.lua:667 menu/progress_bar_menu.lua:277
-#: menu/progress_bar_menu.lua:529
+#: main.lua:3429 menu/main_menu.lua:667 menu/progress_bar_menu.lua:335
+#: menu/progress_bar_menu.lua:590
 msgid "Adjust margins"
 msgstr "调整边距"
 
-#: main.lua:3417 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
+#: main.lua:3431 menu/progress_bar_menu.lua:194 menu/progress_bar_menu.lua:595
 msgid "Top"
 msgstr "上"
 
-#: main.lua:3418 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
+#: main.lua:3432 menu/progress_bar_menu.lua:194 menu/progress_bar_menu.lua:596
 msgid "Bottom"
 msgstr "下"
 
-#: main.lua:3419 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
+#: main.lua:3433 menu/progress_bar_menu.lua:194 menu/progress_bar_menu.lua:595
 msgid "Left"
 msgstr "左"
 
-#: main.lua:3420 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
+#: main.lua:3434 menu/progress_bar_menu.lua:194 menu/progress_bar_menu.lua:596
 msgid "Right"
 msgstr "右"
 
@@ -668,7 +668,7 @@ msgstr "透明"
 
 #: menu/colours_menu.lua:90 menu/colours_menu.lua:104 menu/colours_menu.lua:284
 #: menu/colours_menu.lua:291 menu/colours_menu.lua:297
-#: menu/colours_menu.lua:304 menu/progress_bar_menu.lua:360
+#: menu/colours_menu.lua:304 menu/progress_bar_menu.lua:418
 msgid "default"
 msgstr "默认"
 
@@ -730,7 +730,7 @@ msgid "No background"
 msgstr "无背景"
 
 #: menu/colours_menu.lua:284 menu/colours_menu.lua:291
-#: menu/colours_menu.lua:352 menu/progress_bar_menu.lua:34
+#: menu/colours_menu.lua:352 menu/progress_bar_menu.lua:70
 msgid "book"
 msgstr "书籍"
 
@@ -1800,95 +1800,110 @@ msgstr "以新名称安装…"
 msgid "Install as"
 msgstr "安装为"
 
-#: menu/progress_bar_menu.lua:32
+#: menu/progress_bar_menu.lua:68
 msgid "Bar"
 msgstr "进度条"
 
-#: menu/progress_bar_menu.lua:34
+#: menu/progress_bar_menu.lua:70
 msgid "chapter"
 msgstr "章节"
 
-#: menu/progress_bar_menu.lua:35
+#: menu/progress_bar_menu.lua:71
 msgid "top"
 msgstr "顶部"
 
-#: menu/progress_bar_menu.lua:35
+#: menu/progress_bar_menu.lua:71
 msgid "bottom"
 msgstr "底部"
 
-#: menu/progress_bar_menu.lua:35
+#: menu/progress_bar_menu.lua:71
 msgid "left"
 msgstr "左侧"
 
-#: menu/progress_bar_menu.lua:35
+#: menu/progress_bar_menu.lua:71
 msgid "right"
 msgstr "右侧"
 
-#: menu/progress_bar_menu.lua:71
+#: menu/progress_bar_menu.lua:107
 msgid "Bar %1"
 msgstr "进度条 %1"
 
-#: menu/progress_bar_menu.lua:82
+#: menu/progress_bar_menu.lua:118
 msgid "Long press to change render order"
 msgstr "长按可调整渲染顺序"
 
-#: menu/progress_bar_menu.lua:86
+#: menu/progress_bar_menu.lua:122
 msgid "Inline progress bars can be added via the line editor"
 msgstr "可通过行编辑器添加内联进度条"
 
-#: menu/progress_bar_menu.lua:102
+#: menu/progress_bar_menu.lua:138
 msgid "Enable"
 msgstr "启用"
 
-#: menu/progress_bar_menu.lua:159
+#: menu/progress_bar_menu.lua:195
 msgid "Anchor"
 msgstr "锚点"
 
-#: menu/progress_bar_menu.lua:184
+#: menu/progress_bar_menu.lua:222
 msgid "Fill: clockwise"
 msgstr "填充方向：顺时针"
 
-#: menu/progress_bar_menu.lua:189
+#: menu/progress_bar_menu.lua:227
 msgid "Fill: top to bottom"
 msgstr "填充方向：从上到下"
 
-#: menu/progress_bar_menu.lua:190
+#: menu/progress_bar_menu.lua:228
 msgid "Fill: bottom to top"
 msgstr "填充方向：从下到上"
 
-#: menu/progress_bar_menu.lua:226 menu/progress_bar_menu.lua:238
+#: menu/progress_bar_menu.lua:264 menu/progress_bar_menu.lua:276
 msgid "Diameter"
 msgstr "直径"
 
-#: menu/progress_bar_menu.lua:291 menu/progress_bar_menu.lua:293
+#: menu/progress_bar_menu.lua:314
+msgid "Position relative to line text"
+msgstr "相对行文本定位"
+
+#: menu/progress_bar_menu.lua:315
+msgid ""
+"Keep the bar a set distance from the lines of text at the top or bottom, so "
+"it stays in place when the text is bigger or smaller, for example on a "
+"different screen. Adjust margins then sets that distance; negative values "
+"move the bar in towards the text."
+msgstr ""
+"让进度条与顶部或底部的文本行保持固定距离，这样当文字变大或变小时（例如在另一"
+"块屏幕上）它仍保持在原位。随后可在「调整边距」中设置这个距离；负值会使进度条"
+"向文本靠近。"
+
+#: menu/progress_bar_menu.lua:349 menu/progress_bar_menu.lua:351
 msgid "Custom colors and tick marks"
 msgstr "自定义颜色和刻度"
 
-#: menu/progress_bar_menu.lua:301
+#: menu/progress_bar_menu.lua:359
 msgid "Use custom colors"
 msgstr "使用自定义颜色"
 
-#: menu/progress_bar_menu.lua:386
+#: menu/progress_bar_menu.lua:444
 msgid "Reset custom to defaults"
 msgstr "重置自定义为默认值"
 
-#: menu/progress_bar_menu.lua:468
+#: menu/progress_bar_menu.lua:526
 msgid "Marker size"
 msgstr "标记点大小"
 
-#: menu/progress_bar_menu.lua:479
+#: menu/progress_bar_menu.lua:537
 msgid "Marker offset"
 msgstr "标记点偏移"
 
-#: menu/progress_bar_menu.lua:490 menu/progress_bar_menu.lua:499
+#: menu/progress_bar_menu.lua:548 menu/progress_bar_menu.lua:557
 msgid "Marker colour"
 msgstr "标记点颜色"
 
-#: menu/progress_bar_menu.lua:531
+#: menu/progress_bar_menu.lua:592
 msgid "Edge"
 msgstr "边缘"
 
-#: menu/progress_bar_menu.lua:531
+#: menu/progress_bar_menu.lua:592
 msgid "Vertical"
 msgstr "垂直"
 

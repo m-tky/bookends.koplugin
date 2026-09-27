@@ -7,6 +7,42 @@ local Screen = require("device").screen
 local Colour = require("bookends_colour")
 local _ = require("bookends_i18n").gettext
 local T = require("ffi/util").template
+local OverlayWidget = require("bookends_overlay_widget")
+
+-- ── Position relative to line text ─────────────────────────────────────────
+-- A full-width bar can be placed relative to the text band (band_offset)
+-- rather than raw from the screen edge (margin_v); see OverlayWidget.bandBarY.
+-- These convert between the two using the paint's own computeBarRect and the
+-- band edges it recorded, so the bar never jumps when the option changes.
+
+-- The bar's top edge and thickness as the paint would place it right now.
+local function currentBarY(self, bar_cfg)
+    local _x, y, _w, h = self._computeBarRect(bar_cfg, 0, 0, Screen:getWidth(), Screen:getHeight(),
+        self._bs_strip_h or 0, self._band_extents)
+    return y, h
+end
+
+-- Store in margin_v where the bar is now, measured the raw way. Done whenever
+-- band_offset changes, so an older bookends, which ignores band_offset, draws
+-- the bar in the same place on this screen.
+local function syncMarginV(self, bar_cfg)
+    local y, h = currentBarY(self, bar_cfg)
+    if (bar_cfg.v_anchor or "bottom") == "top" then
+        bar_cfg.margin_v = y - (self._bs_strip_h or 0)
+    else
+        bar_cfg.margin_v = Screen:getHeight() - h - y
+    end
+end
+
+-- Only a top or bottom bar, on a side that currently has text to follow.
+local function canPositionRelative(self, bar_cfg)
+    local anchor = bar_cfg.v_anchor or "bottom"
+    local e = self._band_extents
+    if not e then return false end
+    if anchor == "top" then return e.top_any_enabled and true or false end
+    if anchor == "bottom" then return e.bottom_any_enabled and true or false end
+    return false
+end
 
 return function(Bookends)
 
@@ -165,6 +201,8 @@ function Bookends:buildSingleBarMenu(bar_idx, bar_cfg)
                     { "top", "bottom", "left", "right" },
                     bar_cfg.v_anchor or "bottom")
                 bar_cfg.v_anchor = new_anchor
+                -- An offset from one band means nothing against the other.
+                bar_cfg.band_offset = nil
                 local new_vert = new_anchor == "left" or new_anchor == "right"
                 local cur_dir = bar_cfg.direction or "ltr"
                 local cur_is_vert = cur_dir == "ttb" or cur_dir == "btt"
@@ -273,9 +311,29 @@ function Bookends:buildSingleBarMenu(bar_idx, bar_cfg)
             end,
         },
         {
+            text = _("Position relative to line text"),
+            help_text = _("Keep the bar a set distance from the lines of text at the top or bottom, so it stays in place when the text is bigger or smaller, for example on a different screen. Adjust margins then sets that distance; negative values move the bar in towards the text."),
+            enabled_func = function()
+                return isEnabled() and (bar_cfg.band_offset ~= nil or canPositionRelative(self, bar_cfg))
+            end,
+            checked_func = function() return bar_cfg.band_offset ~= nil end,
+            keep_menu_open = true,
+            callback = function()
+                if bar_cfg.band_offset ~= nil then
+                    syncMarginV(self, bar_cfg)          -- margin_v = where it is now
+                    bar_cfg.band_offset = nil
+                elseif canPositionRelative(self, bar_cfg) then
+                    local y, h = currentBarY(self, bar_cfg)
+                    bar_cfg.band_offset = OverlayWidget.bandOffsetFor(bar_cfg.v_anchor or "bottom",
+                        y, h, self._band_extents, self._bs_strip_h or 0)
+                end
+                saveBar()
+            end,
+        },
+        {
             text_func = function()
                 return _("Adjust margins") .. " (" ..
-                    (bar_cfg.margin_v or 0) .. "/" ..
+                    (bar_cfg.band_offset or bar_cfg.margin_v or 0) .. "/" ..
                     (bar_cfg.margin_left or 0) .. "/" ..
                     (bar_cfg.margin_right or 0) .. ")"
             end,
@@ -525,19 +583,32 @@ function Bookends:showBarMarginAdjuster(bar_cfg, bar_idx, touchmenu_instance)
         self.settings:saveSetting(setting_key, bar_cfg)
         self:markDirty()
     end
+    -- Relative to the line text: the vertical row edits band_offset, which can
+    -- go negative (into the band), and margin_v follows it for older versions.
+    local relative = bar_cfg.band_offset ~= nil and not vert
     DialogHelpers.showNudgeGrid{
         title = _("Adjust margins"),
         rows = {
-            { label = vert and _("Edge") or _("Vertical"), field = "margin_v" },
+            { label = vert and _("Edge") or _("Vertical"),
+              field = relative and "band_offset" or "margin_v",
+              min_val = relative and -9999 or nil },
             { label = vert and _("Top") or _("Left"),      field = "margin_left" },
             { label = vert and _("Bottom") or _("Right"),  field = "margin_right" },
         },
         get_value = function(field) return bar_cfg[field] or 0 end,
-        set_value = function(field, value) bar_cfg[field] = value end,
+        set_value = function(field, value)
+            bar_cfg[field] = value
+            if field == "band_offset" then syncMarginV(self, bar_cfg) end
+        end,
         on_row_change = persist,
         on_cancel = persist,                 -- originals already restored; re-persist reverted state
         on_default = function()
-            bar_cfg.margin_v = 0
+            if relative then
+                bar_cfg.band_offset = 0
+                syncMarginV(self, bar_cfg)
+            else
+                bar_cfg.margin_v = 0
+            end
             bar_cfg.margin_left = 0
             bar_cfg.margin_right = 0
             persist()

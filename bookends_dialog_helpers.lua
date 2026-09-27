@@ -94,8 +94,14 @@ function DialogHelpers.showNudgeGrid(opts)
         end
     end
 
+    -- A row may set its own floor (min_val), e.g. an offset that can go
+    -- negative; otherwise the grid's applies.
+    local row_min = {}
+    for _, row in ipairs(opts.rows) do row_min[row.field] = row.min_val end
     local function nudge(field, delta)
-        local new_val = math.max(min_val, (opts.get_value(field) or 0) + delta)
+        local floor = row_min[field]
+        if floor == nil then floor = min_val end
+        local new_val = math.max(floor, (opts.get_value(field) or 0) + delta)
         opts.set_value(field, new_val)
         if opts.on_row_change then opts.on_row_change() end
         rebuild()

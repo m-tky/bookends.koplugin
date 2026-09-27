@@ -1706,7 +1706,7 @@ end
 --
 -- Vertical bars get their top edge pushed down and their height reduced, so a
 -- full-height bar still ends where it did rather than overrunning the bottom.
-local function computeBarRect(bar_cfg, x, y, screen_w, screen_h, top_inset)
+local function computeBarRect(bar_cfg, x, y, screen_w, screen_h, top_inset, band_extents)
     top_inset = top_inset or 0
     local anchor = bar_cfg.v_anchor or "bottom"
     local vertical = anchor == "left" or anchor == "right"
@@ -1734,7 +1734,13 @@ local function computeBarRect(bar_cfg, x, y, screen_w, screen_h, top_inset)
         local bar_w = screen_w - (bar_cfg.margin_left or 0) - (bar_cfg.margin_right or 0)
         local bar_x = x + (bar_cfg.margin_left or 0)
         local bar_y
-        if anchor == "top" then
+        -- Positioned relative to the line text, when set and there is text on
+        -- that side (see OverlayWidget.bandBarY); otherwise margin_v, raw.
+        local band_y = OverlayWidget.bandBarY(anchor, bar_cfg.band_offset,
+            bar_thickness, band_extents, top_inset)
+        if band_y then
+            bar_y = y + band_y
+        elseif anchor == "top" then
             bar_y = y + (bar_cfg.margin_v or 0) + top_inset
         else
             bar_y = y + screen_h - bar_thickness - (bar_cfg.margin_v or 0)
@@ -1784,7 +1790,7 @@ function Bookends:_renderProgressBars(bb, x, y, screen_w, screen_h)
     for _bar_idx, bar_cfg in ipairs(self.progress_bars or {}) do
         if bar_cfg.enabled then
             local bar_x, bar_y, bar_w, bar_h, vertical = computeBarRect(
-                bar_cfg, x, y, screen_w, screen_h, self._bs_strip_h or 0)
+                bar_cfg, x, y, screen_w, screen_h, self._bs_strip_h or 0, self._band_extents)
             if bar_w > 0 and bar_h > 0 then
                 local pageno_local = Tokens.getCurrentPageNumber(self.ui) or 0
                 local pct, ticks = self:_computeBarProgress(bar_cfg, pageno_local)
@@ -2095,6 +2101,15 @@ function Bookends:_paintToInner(bb, x, y)
     -- Phase 0/2 (which paint bars and widgets on top), so the fill height
     -- excludes parity-filtered and empty-conditional lines.
     --
+    -- The text band's edges for this paint: where the fill starts and ends,
+    -- and what a bar positioned relative to the line text is measured from
+    -- (OverlayWidget.bandBarY). Computed every paint, not only when a fill or a
+    -- relative bar needs it: it is arithmetic over six positions, and the bar
+    -- menu reads the last value to convert a bar's position without it jumping.
+    local band_extents = OverlayWidget.computeEndFillExtents(
+        self:_assembleFillPositionsData(active_line_indices), screen_h)
+    self._band_extents = band_extents
+
     -- Each section has its own colour (#102). Colour.backgroundFor resolves
     -- one: its own key, else the original shared background_color, so an older
     -- preset still fills both sections alike. Either may be nil (no fill).
@@ -2106,8 +2121,7 @@ function Bookends:_paintToInner(bb, x, y)
         local top_color = top_bg and Colour.parseColorValue(top_bg, is_colour)
         local bottom_color = bottom_bg and Colour.parseColorValue(bottom_bg, is_colour)
         if top_color or bottom_color then
-            local positions_data = self:_assembleFillPositionsData(active_line_indices)
-            local extents = OverlayWidget.computeEndFillExtents(positions_data, screen_h)
+            local extents = band_extents
             if top_color and extents.top_any_enabled and extents.top_y > 0 then
                 -- Start BELOW bookshelf's strip and extend by however far
                 -- the top row moved down for it. Two reasons, both real:
