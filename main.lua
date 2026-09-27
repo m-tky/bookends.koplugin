@@ -1086,6 +1086,25 @@ end
 --   2. Smaller dirty area = smaller nightmode flash and less battery.
 -- Falls back to the full markDirty path until the first paint has populated
 -- the region cache (chicken-and-egg: we don't know the dimen pre-paint).
+-- Refresh, without repainting, the overlay bands the last paint populated.
+-- For the #114 catch-up, where the framebuffer is already current and only the
+-- e-ink refresh may be missing. UIManager:setDirty(nil, ...) is KOReader's
+-- documented refresh-without-repaint: no widget is flagged, nothing is written
+-- to the framebuffer, so unlike a repaint it is safe even if something has
+-- covered the reader again by the time this runs. With no band painted yet
+-- there is nothing to refresh regionally, so it falls back to the full path.
+function Bookends:_refreshOverlayBands()
+    if not self._top_paint_rect and not self._bottom_paint_rect then
+        return self:markOverlayDirty()
+    end
+    if self._top_paint_rect then
+        UIManager:setDirty(nil, "ui", self._top_paint_rect)
+    end
+    if self._bottom_paint_rect then
+        UIManager:setDirty(nil, "ui", self._bottom_paint_rect)
+    end
+end
+
 function Bookends:markOverlayDirty()
     -- #114: while a menu or dialog covers the reader the overlay is not
     -- visible, so repainting buys nothing except a full-page write to the
@@ -1111,6 +1130,18 @@ function Bookends:markOverlayDirty()
     -- getTopmostVisibleWidget skips `invisible` widgets, so our own flipping
     -- halo (and any other toast overlay of that shape) does not count as
     -- covering us.
+    --
+    -- Deliberately ANY visible widget on top, not only one overlapping our
+    -- bands. It reads as too broad and a review flagged it; it is not.
+    -- UIManager:_repaint calls paintTo on the WHOLE of ReaderUI whenever it is
+    -- dirty - the region passed to setDirty only scopes the e-ink refresh - so
+    -- a band-limited repaint still writes the full page into the framebuffer
+    -- under whatever is on top, which is the #114 race exactly. Narrowing
+    -- this to widgets that overlap our bands would bring the bug back for
+    -- every dialog that sits clear of them. The cost of the broad check is
+    -- that a value tick waits until nothing is on top; a toast holds it for
+    -- seconds, and a third-party plugin that parked a non-invisible widget
+    -- permanently would hold it until that widget went.
     local top = UIManager:getTopmostVisibleWidget()
     if top and top ~= self.ui then
         self.dirty = true
@@ -1541,11 +1572,18 @@ function Bookends:paintTo(bb, x, y)
     -- clearing the deferral there would reinstate the repaint exactly where it
     -- was skipped. Scheduling rather than calling setDirty inline keeps the
     -- no-second-refresh-during-paint rule above intact.
+    --
+    -- A REFRESH, not a repaint (see _refreshOverlayBands). This paint is the
+    -- one drawing current content - the deferred tick left self.dirty set - so
+    -- only the e-ink refresh of our bands can still be missing. Routing it
+    -- back through markOverlayDirty re-flagged dirty and marked ReaderUI dirty
+    -- again: a second expansion, rebuild and full ReaderUI repaint for pixels
+    -- that were already right.
     if self._deferred_overlay_repaint then
         local top = UIManager:getTopmostVisibleWidget()
         if not top or top == self.ui then
             self._deferred_overlay_repaint = nil
-            UIManager:nextTick(function() self:markOverlayDirty() end)
+            UIManager:nextTick(function() self:_refreshOverlayBands() end)
         end
     end
 
@@ -2056,36 +2094,42 @@ function Bookends:_paintToInner(bb, x, y)
     -- Sits between Phase 1 (which determines which lines actually render) and
     -- Phase 0/2 (which paint bars and widgets on top), so the fill height
     -- excludes parity-filtered and empty-conditional lines.
+    --
+    -- Each section has its own colour (#102). Colour.backgroundFor resolves
+    -- one: its own key, else the original shared background_color, so an older
+    -- preset still fills both sections alike. Either may be nil (no fill).
     do
-        local bg = self.settings:readSetting("background_color")
-        if bg then
-            local bg_color = Colour.parseColorValue(bg, Screen:isColorEnabled())
-            if bg_color then
-                local positions_data = self:_assembleFillPositionsData(active_line_indices)
-                local extents = OverlayWidget.computeEndFillExtents(positions_data, screen_h)
-                if extents.top_any_enabled and extents.top_y > 0 then
-                    -- Start BELOW bookshelf's strip and extend by however far
-                    -- the top row moved down for it. Two reasons, both real:
-                    -- ReaderView paints its view modules in pairs() order, so
-                    -- we cannot count on drawing before bookshelf does and a
-                    -- fill starting at y would sometimes erase the strip; and
-                    -- the extents come from the STORED v_offsets, which know
-                    -- nothing about the shift, so an unextended fill left the
-                    -- bottom of the row sitting on unfilled page.
-                    -- Content moved down by exactly strip_h, so the region
-                    -- to fill is the same height as before and simply starts
-                    -- lower. (This used to be top_y + shift - strip_h, back
-                    -- when shift and strip_h were two different numbers.)
-                    local strip_h = self._bs_strip_h or 0
-                    local fill_h = extents.top_y
-                    if fill_h > 0 then
-                        OverlayWidget.bbPaintRect(bb, x, y + strip_h, screen_w, fill_h, bg_color)
-                    end
+        local read = function(k) return self.settings:readSetting(k) end
+        local is_colour = Screen:isColorEnabled()
+        local top_bg = Colour.backgroundFor(read, "top")
+        local bottom_bg = Colour.backgroundFor(read, "bottom")
+        local top_color = top_bg and Colour.parseColorValue(top_bg, is_colour)
+        local bottom_color = bottom_bg and Colour.parseColorValue(bottom_bg, is_colour)
+        if top_color or bottom_color then
+            local positions_data = self:_assembleFillPositionsData(active_line_indices)
+            local extents = OverlayWidget.computeEndFillExtents(positions_data, screen_h)
+            if top_color and extents.top_any_enabled and extents.top_y > 0 then
+                -- Start BELOW bookshelf's strip and extend by however far
+                -- the top row moved down for it. Two reasons, both real:
+                -- ReaderView paints its view modules in pairs() order, so
+                -- we cannot count on drawing before bookshelf does and a
+                -- fill starting at y would sometimes erase the strip; and
+                -- the extents come from the STORED v_offsets, which know
+                -- nothing about the shift, so an unextended fill left the
+                -- bottom of the row sitting on unfilled page.
+                -- Content moved down by exactly strip_h, so the region
+                -- to fill is the same height as before and simply starts
+                -- lower. (This used to be top_y + shift - strip_h, back
+                -- when shift and strip_h were two different numbers.)
+                local strip_h = self._bs_strip_h or 0
+                local fill_h = extents.top_y
+                if fill_h > 0 then
+                    OverlayWidget.bbPaintRect(bb, x, y + strip_h, screen_w, fill_h, top_color)
                 end
-                if extents.bottom_any_enabled and extents.bottom_y < screen_h then
-                    local h = screen_h - extents.bottom_y
-                    OverlayWidget.bbPaintRect(bb, x, y + extents.bottom_y, screen_w, h, bg_color)
-                end
+            end
+            if bottom_color and extents.bottom_any_enabled and extents.bottom_y < screen_h then
+                local h = screen_h - extents.bottom_y
+                OverlayWidget.bbPaintRect(bb, x, y + extents.bottom_y, screen_w, h, bottom_color)
             end
         end
     end

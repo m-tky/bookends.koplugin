@@ -3,15 +3,15 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-24 09:56+0100\n"
+"POT-Creation-Date: 2026-09-27 14:31+0100\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: bookends_colour_palette.lua:400 bookends_dialog_helpers.lua:117
-#: bookends_line_editor.lua:792 bookends_line_editor.lua:1058 main.lua:2624
-#: main.lua:3323 menu/main_menu.lua:55 menu/main_menu.lua:95
+#: bookends_line_editor.lua:792 bookends_line_editor.lua:1058 main.lua:2668
+#: main.lua:3367 menu/main_menu.lua:55 menu/main_menu.lua:95
 #: menu/main_menu.lua:133 menu/main_menu.lua:590
 #: menu/preset_manager_modal.lua:1405 menu/preset_manager_modal.lua:1527
 #: menu/preset_manager_modal.lua:1568 menu/preset_manager_modal.lua:1669
@@ -23,19 +23,19 @@ msgid "Cancel"
 msgstr "Abbrechen"
 
 #: bookends_colour_palette.lua:402 bookends_dialog_helpers.lua:125
-#: bookends_line_editor.lua:505 bookends_line_editor.lua:632 main.lua:2634
-#: main.lua:2866 menu/colours_menu.lua:73 menu/colours_menu.lua:269
+#: bookends_line_editor.lua:505 bookends_line_editor.lua:632 main.lua:2678
+#: main.lua:2910 menu/colours_menu.lua:73 menu/colours_menu.lua:277
 #: menu/progress_bar_menu.lua:270 menu/progress_bar_menu.lua:503
 #: menu/progress_bar_menu.lua:545
 msgid "Default"
 msgstr "Standard"
 
 #: bookends_colour_palette.lua:404 bookends_dialog_helpers.lua:132
-#: main.lua:2663 menu/preset_manager_modal.lua:691
+#: main.lua:2707 menu/preset_manager_modal.lua:691
 msgid "Apply"
 msgstr "Übernehmen"
 
-#: bookends_colour_palette.lua:406 menu/colours_menu.lua:257
+#: bookends_colour_palette.lua:406 menu/colours_menu.lua:265
 msgid "White"
 msgstr "Weiß"
 
@@ -47,7 +47,7 @@ msgstr "Wähle eine Farbe"
 msgid "Invalid hex colour (use #RGB or #RRGGBB)"
 msgstr "Ungültige Hex-Farbe (verwende #RGB oder #RRGGBB)"
 
-#: bookends_line_editor.lua:115 main.lua:1146
+#: bookends_line_editor.lua:115 main.lua:1177
 msgid "Regular"
 msgstr "Normal"
 
@@ -283,7 +283,7 @@ msgstr "Ungelesen"
 msgid "Custom colours"
 msgstr "Benutzerdefinierte Farben"
 
-#: bookends_line_editor.lua:661 bookends_updater.lua:349 main.lua:3161
+#: bookends_line_editor.lua:661 bookends_updater.lua:349 main.lua:3205
 #: menu/icons_library.lua:453 menu/preset_manager_modal.lua:665
 #: menu/tokens_library.lua:463
 msgid "Close"
@@ -313,7 +313,7 @@ msgstr "Symbole"
 msgid "Tokens"
 msgstr "Token"
 
-#: bookends_line_editor.lua:826 main.lua:3325 menu/main_menu.lua:57
+#: bookends_line_editor.lua:826 main.lua:3369 menu/main_menu.lua:57
 #: menu/preset_manager_modal.lua:1409 menu/preset_manager_modal.lua:1569
 #: menu/preset_manager_modal.lua:1670
 msgid "Save"
@@ -540,8 +540,8 @@ msgstr "Bookends: Sichtbarkeit festlegen"
 msgid "on"
 msgstr "ein"
 
-#: main.lua:343 menu/colours_menu.lua:302 menu/colours_menu.lua:309
-#: menu/colours_menu.lua:349
+#: main.lua:343 menu/colours_menu.lua:335 menu/colours_menu.lua:342
+#: menu/colours_menu.lua:382 menu/colours_menu.lua:397
 msgid "off"
 msgstr "aus"
 
@@ -565,51 +565,51 @@ msgstr "Preset-Fehler: %1"
 msgid "Preset: %1"
 msgstr "Preset: %1"
 
-#: main.lua:1147
+#: main.lua:1178
 msgid "Bold"
 msgstr "Fett"
 
-#: main.lua:1148
+#: main.lua:1179
 msgid "Italic"
 msgstr "Kursiv"
 
-#: main.lua:1149
+#: main.lua:1180
 msgid "Bold italic"
 msgstr "Fett Kursiv"
 
-#: main.lua:2882
+#: main.lua:2926
 msgid "Select font"
 msgstr "Schrift auswählen"
 
-#: main.lua:2923
+#: main.lua:2967
 msgid "Font-family fonts"
 msgstr "Schriftfamilien-Schriften"
 
-#: main.lua:2988
+#: main.lua:3032
 msgid "Fonts"
 msgstr "Schriftarten"
 
-#: main.lua:3082 menu/library_modal.lua:937
+#: main.lua:3126 menu/library_modal.lua:937
 msgid "Page %1 of %2"
 msgstr "Seite %1 von %2"
 
-#: main.lua:3171 main.lua:3345
+#: main.lua:3215 main.lua:3389
 msgid "Reset"
 msgstr "Zurücksetzen"
 
-#: main.lua:3180
+#: main.lua:3224
 msgid "Set font"
 msgstr "Schriftart festlegen"
 
-#: main.lua:3319 menu/main_menu.lua:502 menu/main_menu.lua:504
+#: main.lua:3363 menu/main_menu.lua:502 menu/main_menu.lua:504
 msgid "Development branch"
 msgstr "Entwicklungs-Branch"
 
-#: main.lua:3321
+#: main.lua:3365
 msgid "Branch name (leave empty for stable)"
 msgstr "Branch-Name (leer lassen für stabile Version)"
 
-#: main.lua:3344
+#: main.lua:3388
 msgid ""
 "This will clear the development branch setting and install the latest stable "
 "release of Bookends, then restart KOReader. Continue?"
@@ -618,28 +618,28 @@ msgstr ""
 "aktuellste stabile Release von Bookends installiert, dann wird KOReader neu "
 "gestartet. Fortfahren?"
 
-#: main.lua:3363
+#: main.lua:3407
 msgid "Bookends update available: v"
 msgstr "Bookends-Update verfügbar: v"
 
-#: main.lua:3371 menu/main_menu.lua:667 menu/progress_bar_menu.lua:277
+#: main.lua:3415 menu/main_menu.lua:667 menu/progress_bar_menu.lua:277
 #: menu/progress_bar_menu.lua:529
 msgid "Adjust margins"
 msgstr "Ränder anpassen"
 
-#: main.lua:3373 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
+#: main.lua:3417 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
 msgid "Top"
 msgstr "Oben"
 
-#: main.lua:3374 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
+#: main.lua:3418 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
 msgid "Bottom"
 msgstr "Unten"
 
-#: main.lua:3375 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
+#: main.lua:3419 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
 msgid "Left"
 msgstr "Links"
 
-#: main.lua:3376 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
+#: main.lua:3420 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
 msgid "Right"
 msgstr "Rechts"
 
@@ -663,9 +663,9 @@ msgstr "pro Stil"
 msgid "Transparent"
 msgstr "Transparent"
 
-#: menu/colours_menu.lua:90 menu/colours_menu.lua:104 menu/colours_menu.lua:276
-#: menu/colours_menu.lua:283 menu/colours_menu.lua:289
-#: menu/colours_menu.lua:296 menu/progress_bar_menu.lua:360
+#: menu/colours_menu.lua:90 menu/colours_menu.lua:104 menu/colours_menu.lua:284
+#: menu/colours_menu.lua:291 menu/colours_menu.lua:297
+#: menu/colours_menu.lua:304 menu/progress_bar_menu.lua:360
 msgid "default"
 msgstr "Standard"
 
@@ -722,29 +722,29 @@ msgstr "Farbe der invertierten Markierung"
 msgid "Tick inversion color (% black)"
 msgstr "Farbe der invertierten Markierung (% Schwarz)"
 
-#: menu/colours_menu.lua:225
+#: menu/colours_menu.lua:233
 msgid "No background"
 msgstr "Kein Hintergrund"
 
-#: menu/colours_menu.lua:276 menu/colours_menu.lua:283
-#: menu/colours_menu.lua:319 menu/progress_bar_menu.lua:34
+#: menu/colours_menu.lua:284 menu/colours_menu.lua:291
+#: menu/colours_menu.lua:352 menu/progress_bar_menu.lua:34
 msgid "book"
 msgstr "buch"
 
-#: menu/colours_menu.lua:289 menu/colours_menu.lua:296
-#: menu/colours_menu.lua:334
+#: menu/colours_menu.lua:297 menu/colours_menu.lua:304
+#: menu/colours_menu.lua:367
 msgid "text"
 msgstr "Text"
 
-#: menu/colours_menu.lua:315 menu/colours_menu.lua:319
+#: menu/colours_menu.lua:348 menu/colours_menu.lua:352
 msgid "Text color"
 msgstr "Textfarbe"
 
-#: menu/colours_menu.lua:329 menu/colours_menu.lua:334
+#: menu/colours_menu.lua:362 menu/colours_menu.lua:367
 msgid "Icon color"
 msgstr "Symbol-Farbe"
 
-#: menu/colours_menu.lua:331
+#: menu/colours_menu.lua:364
 msgid ""
 "Applies to Nerd Font and FontAwesome icon glyphs (the Private Use Area "
 "range, e.g. %W, %B, %k). Unicode symbols in the regular text ranges (like "
@@ -766,19 +766,23 @@ msgstr ""
 "Ein Inline-[c=#RRGGBB]…[/c]-Tag in einer Zeile überschreibt die Symbol-Farbe "
 "für alle darin enthaltenen Glyphen."
 
-#: menu/colours_menu.lua:344 menu/colours_menu.lua:349
-msgid "Background colour"
-msgstr "Hintergrundfarbe"
+#: menu/colours_menu.lua:377 menu/colours_menu.lua:382
+msgid "Top background"
+msgstr "Oberer Hintergrund"
 
-#: menu/colours_menu.lua:346
+#: menu/colours_menu.lua:379 menu/colours_menu.lua:394
 msgid ""
-"Solid fill drawn behind the top and bottom overlay regions, edge to edge "
-"across the screen. Choose a colour to enable, hold this row or tap Default "
-"in the picker to turn off."
+"Solid fill drawn behind this overlay region, edge to edge across the screen. "
+"Choose a colour to enable, hold this row or tap Default in the picker to "
+"turn off."
 msgstr ""
-"Einfarbige Füllung hinter den oberen und unteren Overlay-Bereichen, randlos "
-"über den gesamten Bildschirm. Farbe wählen zum Aktivieren, diese Zeile "
-"gedrückt halten oder im Farbwähler auf Standard tippen zum Deaktivieren."
+"Einfarbige Füllung hinter diesem Overlay-Bereich, randlos über den gesamten "
+"Bildschirm. Farbe wählen zum Aktivieren, diese Zeile gedrückt halten oder im "
+"Farbwähler auf Standard tippen zum Deaktivieren."
+
+#: menu/colours_menu.lua:392 menu/colours_menu.lua:397
+msgid "Bottom background"
+msgstr "Unterer Hintergrund"
 
 #: menu/icons_catalogue.lua:24 menu/tokens_catalogue.lua:20
 msgid "All"
@@ -2776,6 +2780,9 @@ msgstr ""
 #: menu/tokens_library.lua:466
 msgid "Help"
 msgstr "Hilfe"
+
+#~ msgid "Background colour"
+#~ msgstr "Hintergrundfarbe"
 
 #~ msgid "Wi-Fi is not enabled."
 #~ msgstr "WLAN ist nicht aktiviert."

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bookends\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-24 09:56+0100\n"
+"POT-Creation-Date: 2026-09-27 14:31+0100\n"
 "PO-Revision-Date: 2026-07-15 09:59+0800\n"
 "Last-Translator: \n"
 "Language-Team: Chinese (Simplified)\n"
@@ -16,8 +16,8 @@ msgstr ""
 "X-Generator: Poedit 3.9\n"
 
 #: bookends_colour_palette.lua:400 bookends_dialog_helpers.lua:117
-#: bookends_line_editor.lua:792 bookends_line_editor.lua:1058 main.lua:2624
-#: main.lua:3323 menu/main_menu.lua:55 menu/main_menu.lua:95
+#: bookends_line_editor.lua:792 bookends_line_editor.lua:1058 main.lua:2668
+#: main.lua:3367 menu/main_menu.lua:55 menu/main_menu.lua:95
 #: menu/main_menu.lua:133 menu/main_menu.lua:590
 #: menu/preset_manager_modal.lua:1405 menu/preset_manager_modal.lua:1527
 #: menu/preset_manager_modal.lua:1568 menu/preset_manager_modal.lua:1669
@@ -29,19 +29,19 @@ msgid "Cancel"
 msgstr "取消"
 
 #: bookends_colour_palette.lua:402 bookends_dialog_helpers.lua:125
-#: bookends_line_editor.lua:505 bookends_line_editor.lua:632 main.lua:2634
-#: main.lua:2866 menu/colours_menu.lua:73 menu/colours_menu.lua:269
+#: bookends_line_editor.lua:505 bookends_line_editor.lua:632 main.lua:2678
+#: main.lua:2910 menu/colours_menu.lua:73 menu/colours_menu.lua:277
 #: menu/progress_bar_menu.lua:270 menu/progress_bar_menu.lua:503
 #: menu/progress_bar_menu.lua:545
 msgid "Default"
 msgstr "默认"
 
 #: bookends_colour_palette.lua:404 bookends_dialog_helpers.lua:132
-#: main.lua:2663 menu/preset_manager_modal.lua:691
+#: main.lua:2707 menu/preset_manager_modal.lua:691
 msgid "Apply"
 msgstr "应用"
 
-#: bookends_colour_palette.lua:406 menu/colours_menu.lua:257
+#: bookends_colour_palette.lua:406 menu/colours_menu.lua:265
 msgid "White"
 msgstr "白色"
 
@@ -53,7 +53,7 @@ msgstr "选择颜色"
 msgid "Invalid hex colour (use #RGB or #RRGGBB)"
 msgstr "无效的十六进制颜色（请使用 #RGB 或 #RRGGBB）"
 
-#: bookends_line_editor.lua:115 main.lua:1146
+#: bookends_line_editor.lua:115 main.lua:1177
 msgid "Regular"
 msgstr "常规"
 
@@ -289,7 +289,7 @@ msgstr "未读"
 msgid "Custom colours"
 msgstr "自定义颜色"
 
-#: bookends_line_editor.lua:661 bookends_updater.lua:349 main.lua:3161
+#: bookends_line_editor.lua:661 bookends_updater.lua:349 main.lua:3205
 #: menu/icons_library.lua:453 menu/preset_manager_modal.lua:665
 #: menu/tokens_library.lua:463
 msgid "Close"
@@ -319,7 +319,7 @@ msgstr "图标"
 msgid "Tokens"
 msgstr "标记"
 
-#: bookends_line_editor.lua:826 main.lua:3325 menu/main_menu.lua:57
+#: bookends_line_editor.lua:826 main.lua:3369 menu/main_menu.lua:57
 #: menu/preset_manager_modal.lua:1409 menu/preset_manager_modal.lua:1569
 #: menu/preset_manager_modal.lua:1670
 msgid "Save"
@@ -546,8 +546,8 @@ msgstr "阅读信息栏：设置显示状态"
 msgid "on"
 msgstr "开启"
 
-#: main.lua:343 menu/colours_menu.lua:302 menu/colours_menu.lua:309
-#: menu/colours_menu.lua:349
+#: main.lua:343 menu/colours_menu.lua:335 menu/colours_menu.lua:342
+#: menu/colours_menu.lua:382 menu/colours_menu.lua:397
 msgid "off"
 msgstr "关闭"
 
@@ -571,79 +571,79 @@ msgstr "预设错误：%1"
 msgid "Preset: %1"
 msgstr "预设：%1"
 
-#: main.lua:1147
+#: main.lua:1178
 msgid "Bold"
 msgstr "粗体"
 
-#: main.lua:1148
+#: main.lua:1179
 msgid "Italic"
 msgstr "斜体"
 
-#: main.lua:1149
+#: main.lua:1180
 msgid "Bold italic"
 msgstr "粗斜体"
 
-#: main.lua:2882
+#: main.lua:2926
 msgid "Select font"
 msgstr "选择字体"
 
-#: main.lua:2923
+#: main.lua:2967
 msgid "Font-family fonts"
 msgstr "字体族"
 
-#: main.lua:2988
+#: main.lua:3032
 msgid "Fonts"
 msgstr "字体"
 
-#: main.lua:3082 menu/library_modal.lua:937
+#: main.lua:3126 menu/library_modal.lua:937
 msgid "Page %1 of %2"
 msgstr "第 %1 / %2 页"
 
-#: main.lua:3171 main.lua:3345
+#: main.lua:3215 main.lua:3389
 msgid "Reset"
 msgstr "重置"
 
-#: main.lua:3180
+#: main.lua:3224
 msgid "Set font"
 msgstr "设置字体"
 
-#: main.lua:3319 menu/main_menu.lua:502 menu/main_menu.lua:504
+#: main.lua:3363 menu/main_menu.lua:502 menu/main_menu.lua:504
 msgid "Development branch"
 msgstr "开发分支"
 
-#: main.lua:3321
+#: main.lua:3365
 msgid "Branch name (leave empty for stable)"
 msgstr "分支名称（留空则使用稳定版）"
 
-#: main.lua:3344
+#: main.lua:3388
 msgid ""
 "This will clear the development branch setting and install the latest stable "
 "release of Bookends, then restart KOReader. Continue?"
 msgstr ""
 "此操作将清除开发分支设置，并安装最新的稳定版，然后将重启阅读器，是否继续？"
 
-#: main.lua:3363
+#: main.lua:3407
 msgid "Bookends update available: v"
 msgstr "插件有可用更新：v"
 
-#: main.lua:3371 menu/main_menu.lua:667 menu/progress_bar_menu.lua:277
+#: main.lua:3415 menu/main_menu.lua:667 menu/progress_bar_menu.lua:277
 #: menu/progress_bar_menu.lua:529
 msgid "Adjust margins"
 msgstr "调整边距"
 
-#: main.lua:3373 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
+#: main.lua:3417 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
 msgid "Top"
 msgstr "上"
 
-#: main.lua:3374 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
+#: main.lua:3418 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
 msgid "Bottom"
 msgstr "下"
 
-#: main.lua:3375 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
+#: main.lua:3419 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:532
 msgid "Left"
 msgstr "左"
 
-#: main.lua:3376 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
+#: main.lua:3420 menu/progress_bar_menu.lua:158 menu/progress_bar_menu.lua:533
 msgid "Right"
 msgstr "右"
 
@@ -666,9 +666,9 @@ msgstr "按样式"
 msgid "Transparent"
 msgstr "透明"
 
-#: menu/colours_menu.lua:90 menu/colours_menu.lua:104 menu/colours_menu.lua:276
-#: menu/colours_menu.lua:283 menu/colours_menu.lua:289
-#: menu/colours_menu.lua:296 menu/progress_bar_menu.lua:360
+#: menu/colours_menu.lua:90 menu/colours_menu.lua:104 menu/colours_menu.lua:284
+#: menu/colours_menu.lua:291 menu/colours_menu.lua:297
+#: menu/colours_menu.lua:304 menu/progress_bar_menu.lua:360
 msgid "default"
 msgstr "默认"
 
@@ -725,29 +725,29 @@ msgstr "刻度反转颜色"
 msgid "Tick inversion color (% black)"
 msgstr "刻度反转颜色（% 黑色）"
 
-#: menu/colours_menu.lua:225
+#: menu/colours_menu.lua:233
 msgid "No background"
 msgstr "无背景"
 
-#: menu/colours_menu.lua:276 menu/colours_menu.lua:283
-#: menu/colours_menu.lua:319 menu/progress_bar_menu.lua:34
+#: menu/colours_menu.lua:284 menu/colours_menu.lua:291
+#: menu/colours_menu.lua:352 menu/progress_bar_menu.lua:34
 msgid "book"
 msgstr "书籍"
 
-#: menu/colours_menu.lua:289 menu/colours_menu.lua:296
-#: menu/colours_menu.lua:334
+#: menu/colours_menu.lua:297 menu/colours_menu.lua:304
+#: menu/colours_menu.lua:367
 msgid "text"
 msgstr "文字"
 
-#: menu/colours_menu.lua:315 menu/colours_menu.lua:319
+#: menu/colours_menu.lua:348 menu/colours_menu.lua:352
 msgid "Text color"
 msgstr "文字颜色"
 
-#: menu/colours_menu.lua:329 menu/colours_menu.lua:334
+#: menu/colours_menu.lua:362 menu/colours_menu.lua:367
 msgid "Icon color"
 msgstr "图标颜色"
 
-#: menu/colours_menu.lua:331
+#: menu/colours_menu.lua:364
 msgid ""
 "Applies to Nerd Font and FontAwesome icon glyphs (the Private Use Area "
 "range, e.g. %W, %B, %k). Unicode symbols in the regular text ranges (like "
@@ -761,18 +761,22 @@ msgstr ""
 "\n"
 "行内的 [c=#RRGGBB]…[/c] 标签会覆盖其中所有字形的图标颜色。"
 
-#: menu/colours_menu.lua:344 menu/colours_menu.lua:349
-msgid "Background colour"
-msgstr "背景颜色"
+#: menu/colours_menu.lua:377 menu/colours_menu.lua:382
+msgid "Top background"
+msgstr "顶部背景"
 
-#: menu/colours_menu.lua:346
+#: menu/colours_menu.lua:379 menu/colours_menu.lua:394
 msgid ""
-"Solid fill drawn behind the top and bottom overlay regions, edge to edge "
-"across the screen. Choose a colour to enable, hold this row or tap Default "
-"in the picker to turn off."
+"Solid fill drawn behind this overlay region, edge to edge across the screen. "
+"Choose a colour to enable, hold this row or tap Default in the picker to "
+"turn off."
 msgstr ""
-"在顶部和底部覆盖区域后方绘制全宽实心填充色，并延伸至屏幕边缘，该颜色将贯穿整"
-"个屏幕。选择一种颜色以启用此模式，长按该行或点击取色器中的「默认」即可关闭。"
+"在此覆盖区域后方绘制全宽实心填充色，并延伸至屏幕边缘。选择一种颜色以启用此模"
+"式，长按该行或点击取色器中的「默认」即可关闭。"
+
+#: menu/colours_menu.lua:392 menu/colours_menu.lua:397
+msgid "Bottom background"
+msgstr "底部背景"
 
 #: menu/icons_catalogue.lua:24 menu/tokens_catalogue.lua:20
 msgid "All"
@@ -2734,3 +2738,6 @@ msgstr "暂无收藏，点击任意标记旁的 ☆ 即可添加。"
 #: menu/tokens_library.lua:466
 msgid "Help"
 msgstr "帮助"
+
+#~ msgid "Background colour"
+#~ msgstr "背景颜色"

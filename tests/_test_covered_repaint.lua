@@ -137,12 +137,66 @@ test("paintTo once uncovered clears the deferral and schedules the catch-up", fu
     self._deferred_overlay_repaint = true
     self:paintTo({}, 0, 0)
     eq(self._deferred_overlay_repaint, nil, "deferral cleared")
-    eq(#ticks, 1, "catch-up scheduled")
-    ticks[1]()
-    -- That catch-up is markOverlayDirty, which defers its own dispatch again.
-    eq(#ticks, 2, "markOverlayDirty scheduled its dispatcher")
-    ticks[2]()
-    eq(#dirtied, 2, "both bands refreshed once uncovered")
+    eq(#ticks, 1, "catch-up scheduled, not run inline during the paint")
+end)
+
+-- The catch-up is a REFRESH, not a repaint. The paint that found the deferral
+-- has just drawn current content: the covered tick left self.dirty set, so it
+-- re-expanded. What may still be missing is only the e-ink refresh of our two
+-- bands, because the closing widget's refresh covers its own rect. Going back
+-- through markOverlayDirty re-flagged dirty and marked ReaderUI dirty again,
+-- which is a second token expansion, a second widget rebuild and a second full
+-- ReaderUI repaint - identical pixels, paid for on every menu close that
+-- followed a deferred tick. UIManager:setDirty(nil, ...) is KOReader's
+-- documented refresh-without-repaint.
+
+test("the catch-up refreshes both bands without repainting ReaderUI", function()
+    covering = reader_ui
+    local self = newInstance()
+    self._deferred_overlay_repaint = true
+    self:paintTo({}, 0, 0)
+    drainTicks()
+    eq(#dirtied, 2, "one refresh per band")
+    for i, d in ipairs(dirtied) do
+        eq(d.widget, nil, "band " .. i .. " must be refresh-only (widget nil), not a ReaderUI repaint")
+        eq(d.mode, "ui", "band " .. i .. " refresh mode")
+    end
+    eq(dirtied[1].region, self._top_paint_rect, "top band region")
+    eq(dirtied[2].region, self._bottom_paint_rect, "bottom band region")
+end)
+
+test("the catch-up does not flag the overlay for another rebuild", function()
+    covering = reader_ui
+    local self = newInstance()
+    self._deferred_overlay_repaint = true
+    self.dirty = false            -- as the paint just left it
+    self:paintTo({}, 0, 0)
+    drainTicks()
+    assert(self.dirty ~= true, "the catch-up re-flagged dirty, so the overlay rebuilds twice")
+end)
+
+test("with no band painted yet the catch-up falls back to a full repaint", function()
+    -- Nothing to refresh regionally without a paint rect, so it keeps today's
+    -- markOverlayDirty fallback (which goes to markDirty).
+    covering = reader_ui
+    local self = newInstance()
+    self._top_paint_rect, self._bottom_paint_rect = nil, nil
+    self._deferred_overlay_repaint = true
+    self:paintTo({}, 0, 0)
+    drainTicks()
+    eq(#dirtied, 1, "one full repaint")
+    eq(dirtied[1].widget, reader_ui, "the fallback repaints ReaderUI")
+end)
+
+test("only the band that was painted is refreshed", function()
+    covering = reader_ui
+    local self = newInstance()
+    self._bottom_paint_rect = nil   -- a preset with no bottom lines
+    self._deferred_overlay_repaint = true
+    self:paintTo({}, 0, 0)
+    drainTicks()
+    eq(#dirtied, 1, "top band only")
+    eq(dirtied[1].widget, nil); eq(dirtied[1].region, self._top_paint_rect)
 end)
 
 test("paintTo with no deferral pending schedules nothing", function()

@@ -58,6 +58,9 @@ Config.DEFAULTS_KEYS = {
 --- `font_face` — the user's default font is never overridden by a preset.
 Config.PRESET_OPTIONAL_KEYS = {
     "text_color", "symbol_color", "background_color",
+    -- Per-section fill (#102); see Colour.storeBackground for how the three
+    -- background keys relate. Only present when top and bottom differ.
+    "background_color_top", "background_color_bottom",
 }
 
 --- Legacy G_reader_settings keys migrated into the plugin's own settings

@@ -188,4 +188,49 @@ function Colour.resolveBarColors(bc, is_color_enabled)
     }
 end
 
+-- ── Background fill, per section (#102) ─────────────────────────────────────
+--
+-- The fill behind the overlay is set separately for the top and bottom
+-- sections. It used to be one colour, `background_color`, drawn behind both,
+-- and that key is still read: a section's colour is its own key, and failing
+-- that background_color. So a preset that only ever had background_color fills
+-- both sections in it, as it always did, with no migration.
+--
+-- Saving goes the other way. Equal colours (both off included) are stored as
+-- plain background_color, the one key every version understands; different
+-- colours as the two section keys with background_color removed, so a section
+-- that is off has nothing to fall back to. A preset therefore needs this
+-- version only if it genuinely uses two colours, and an older bookends shows
+-- such a preset with no fill rather than failing.
+--
+-- Values are the stored shapes, {grey=N} or {hex="#RRGGBB"}, or nil for none.
+Colour.BACKGROUND_KEYS = { top = "background_color_top", bottom = "background_color_bottom" }
+
+local function sameStored(a, b)
+    if a == nil or b == nil then return a == b end
+    return a.grey == b.grey and a.hex == b.hex
+end
+
+--- The stored fill colour for one section ("top" or "bottom"), or nil.
+--- `read(key)` returns a stored setting.
+function Colour.backgroundFor(read, section)
+    local own = read(Colour.BACKGROUND_KEYS[section])
+    if own ~= nil then return own end
+    return read("background_color")
+end
+
+--- Store a top and bottom fill colour. `write(key, value)` saves a setting,
+--- or deletes it when value is nil.
+function Colour.storeBackground(write, top, bottom)
+    if sameStored(top, bottom) then
+        write("background_color", top)
+        write(Colour.BACKGROUND_KEYS.top, nil)
+        write(Colour.BACKGROUND_KEYS.bottom, nil)
+    else
+        write("background_color", nil)
+        write(Colour.BACKGROUND_KEYS.top, top)
+        write(Colour.BACKGROUND_KEYS.bottom, bottom)
+    end
+end
+
 return Colour

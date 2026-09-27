@@ -210,8 +210,16 @@ end
 
 
 function Bookends:buildTextColourMenu()
-    local function textColorNudge(field, title, default_label_suffix, touchmenu_instance)
-        local stored = self.settings:readSetting(field)
+    -- `access` is optional: {read(), save(value), clear()} for a colour that is
+    -- not a single settings key. The background rows use it (#102), because a
+    -- section's colour is resolved from up to two keys and saved as a pair.
+    local function textColorNudge(field, title, default_label_suffix, touchmenu_instance, access)
+        access = access or {
+            read  = function() return self.settings:readSetting(field) end,
+            save  = function(v) self.settings:saveSetting(field, v) end,
+            clear = function() self.settings:delSetting(field) end,
+        }
+        local stored = access.read()
         if Screen:isColorEnabled() then
             local original = stored  -- capture verbatim for revert
             local current_hex
@@ -226,18 +234,18 @@ function Bookends:buildTextColourMenu()
             local white_hex = is_bg and "#FFFFFF" or nil
             self:showColourPicker(title, current_hex, Colour.defaultHexFor(field),
                 function(new_hex)
-                    self.settings:saveSetting(field, Colour.toStorageShape(new_hex))
+                    access.save(Colour.toStorageShape(new_hex))
                     self:markDirty()
                 end,
                 function()
-                    self.settings:delSetting(field)
+                    access.clear()
                     self:markDirty()
                 end,
                 function()
                     if original == nil then
-                        self.settings:delSetting(field)
+                        access.clear()
                     else
-                        self.settings:saveSetting(field, original)
+                        access.save(original)
                     end
                     self:markDirty()
                 end,
@@ -258,12 +266,12 @@ function Bookends:buildTextColourMenu()
         end
         self:showNudgeDialog(title, current, 0, 100, 100, "%",
             function(val)
-                self.settings:saveSetting(field, { grey = 0xFF - math.floor(val * 0xFF / 100 + 0.5) })
+                access.save({ grey = 0xFF - math.floor(val * 0xFF / 100 + 0.5) })
                 self:markDirty()
             end,
             nil, nil, nil, touchmenu_instance,
             function()
-                self.settings:delSetting(field)
+                access.clear()
                 self:markDirty()
             end,
             _("Default") .. " (" .. default_label_suffix .. ")",
@@ -296,8 +304,33 @@ function Bookends:buildTextColourMenu()
         return _("default") .. " (" .. _("text") .. ")"
     end
 
-    local function bgPctLabel()
-        local bg = self.settings:readSetting("background_color")
+    -- One background section's colour, read and written through the rules in
+    -- Colour.backgroundFor / storeBackground: editing one section keeps the
+    -- other's current colour, and a matching pair collapses to the single
+    -- background_color older versions understand.
+    local function bgAccess(section)
+        local other = (section == "top") and "bottom" or "top"
+        local function read(k) return self.settings:readSetting(k) end
+        local function write(k, v)
+            if v == nil then self.settings:delSetting(k) else self.settings:saveSetting(k, v) end
+        end
+        local function set(v)
+            local o = Colour.backgroundFor(read, other)
+            if section == "top" then
+                Colour.storeBackground(write, v, o)
+            else
+                Colour.storeBackground(write, o, v)
+            end
+        end
+        return {
+            read  = function() return Colour.backgroundFor(read, section) end,
+            save  = set,
+            clear = function() set(nil) end,
+        }
+    end
+
+    local function bgPctLabel(section)
+        local bg = bgAccess(section).read()
         if not bg then
             return _("off")
         end
@@ -341,15 +374,30 @@ function Bookends:buildTextColourMenu()
         },
         {
             text_func = function()
-                return _("Background colour") .. ": " .. bgPctLabel()
+                return _("Top background") .. ": " .. bgPctLabel("top")
             end,
-            help_text = _("Solid fill drawn behind the top and bottom overlay regions, edge to edge across the screen. Choose a colour to enable, hold this row or tap Default in the picker to turn off."),
+            help_text = _("Solid fill drawn behind this overlay region, edge to edge across the screen. Choose a colour to enable, hold this row or tap Default in the picker to turn off."),
             keep_menu_open = true,
             callback = function(touchmenu_instance)
-                textColorNudge("background_color", _("Background colour"), _("off"), touchmenu_instance)
+                textColorNudge("background_color", _("Top background"), _("off"), touchmenu_instance, bgAccess("top"))
             end,
             hold_callback = function(touchmenu_instance)
-                self.settings:delSetting("background_color")
+                bgAccess("top").clear()
+                self:markDirty()
+                if touchmenu_instance then touchmenu_instance:updateItems() end
+            end,
+        },
+        {
+            text_func = function()
+                return _("Bottom background") .. ": " .. bgPctLabel("bottom")
+            end,
+            help_text = _("Solid fill drawn behind this overlay region, edge to edge across the screen. Choose a colour to enable, hold this row or tap Default in the picker to turn off."),
+            keep_menu_open = true,
+            callback = function(touchmenu_instance)
+                textColorNudge("background_color", _("Bottom background"), _("off"), touchmenu_instance, bgAccess("bottom"))
+            end,
+            hold_callback = function(touchmenu_instance)
+                bgAccess("bottom").clear()
                 self:markDirty()
                 if touchmenu_instance then touchmenu_instance:updateItems() end
             end,
