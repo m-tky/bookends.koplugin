@@ -1787,14 +1787,29 @@ local function submitToGalleryImpl(self, entry)
     local data = entry.preset
     local function needsField(f) return not data[f] or data[f] == "" end
 
-    if needsField("author") then
+    -- Always confirm the author and description, pre-filled, not only when
+    -- they're empty. A preset installed from the gallery keeps its original
+    -- author and description, so a reworked copy would otherwise go out under
+    -- someone else's name and words without asking (Sparkle K.I.S.S went out
+    -- credited to Solitude's author, with Solitude's description).
+    -- The _confirmed flags carry the answers through the re-entries below. They
+    -- live on the entry, which _openOverflow builds fresh each time the Manage
+    -- menu opens, so every submission asks again, including a retry after one
+    -- cancelled part-way.
+    if not entry._author_confirmed or needsField("author") then
         editMetadataField(self, entry, "author", _("Who should we credit as the author?"),
-            function() PresetManagerModal._submitToGallery(self, entry) end)
+            function()
+                entry._author_confirmed = true
+                PresetManagerModal._submitToGallery(self, entry)
+            end)
         return
     end
-    if needsField("description") then
+    if not entry._description_confirmed or needsField("description") then
         editMetadataField(self, entry, "description", _("One-line description of this preset"),
-            function() PresetManagerModal._submitToGallery(self, entry) end)
+            function()
+                entry._description_confirmed = true
+                PresetManagerModal._submitToGallery(self, entry)
+            end)
         return
     end
 
