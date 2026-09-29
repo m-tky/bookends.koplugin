@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: bookends\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 20:48+0100\n"
+"POT-Creation-Date: 2026-09-28 23:26+0100\n"
 "PO-Revision-Date: 2026-04-21 14:00+0000\n"
 "Language-Team: Bulgarian\n"
 "Language: bg_BG\n"
@@ -17,11 +17,11 @@ msgstr ""
 #: bookends_line_editor.lua:792 bookends_line_editor.lua:1058 main.lua:2682
 #: main.lua:3381 menu/main_menu.lua:55 menu/main_menu.lua:95
 #: menu/main_menu.lua:133 menu/main_menu.lua:590
-#: menu/preset_manager_modal.lua:1405 menu/preset_manager_modal.lua:1527
-#: menu/preset_manager_modal.lua:1568 menu/preset_manager_modal.lua:1669
-#: menu/preset_manager_modal.lua:1713 menu/preset_manager_modal.lua:1815
-#: menu/preset_manager_modal.lua:1889 menu/preset_manager_modal.lua:1984
-#: menu/preset_manager_modal.lua:2008 menu/preset_manager_modal.lua:2032
+#: menu/preset_manager_modal.lua:1436 menu/preset_manager_modal.lua:1558
+#: menu/preset_manager_modal.lua:1599 menu/preset_manager_modal.lua:1700
+#: menu/preset_manager_modal.lua:1744 menu/preset_manager_modal.lua:1846
+#: menu/preset_manager_modal.lua:1920 menu/preset_manager_modal.lua:2015
+#: menu/preset_manager_modal.lua:2039 menu/preset_manager_modal.lua:2063
 #: menu/progress_bar_menu.lua:100
 msgid "Cancel"
 msgstr "Отказ"
@@ -35,7 +35,7 @@ msgid "Default"
 msgstr "По подразбиране"
 
 #: bookends_colour_palette.lua:404 bookends_dialog_helpers.lua:138
-#: main.lua:2721 menu/preset_manager_modal.lua:691
+#: main.lua:2721 menu/preset_manager_modal.lua:683
 msgid "Apply"
 msgstr "Прилагане"
 
@@ -288,7 +288,7 @@ msgid "Custom colours"
 msgstr "Персонализирани цветове"
 
 #: bookends_line_editor.lua:661 bookends_updater.lua:349 main.lua:3219
-#: menu/icons_library.lua:453 menu/preset_manager_modal.lua:665
+#: menu/icons_library.lua:453 menu/preset_manager_modal.lua:657
 #: menu/tokens_library.lua:463
 msgid "Close"
 msgstr "Затваряне"
@@ -318,8 +318,8 @@ msgid "Tokens"
 msgstr "Токени"
 
 #: bookends_line_editor.lua:826 main.lua:3383 menu/main_menu.lua:57
-#: menu/preset_manager_modal.lua:1409 menu/preset_manager_modal.lua:1569
-#: menu/preset_manager_modal.lua:1670
+#: menu/preset_manager_modal.lua:1440 menu/preset_manager_modal.lua:1600
+#: menu/preset_manager_modal.lua:1701
 msgid "Save"
 msgstr "Запазване"
 
@@ -343,8 +343,8 @@ msgstr "Преместване в"
 msgid "Line %1: %2"
 msgstr "Ред %1: %2"
 
-#: bookends_line_editor.lua:1054 menu/preset_manager_modal.lua:1512
-#: menu/preset_manager_modal.lua:1908
+#: bookends_line_editor.lua:1054 menu/preset_manager_modal.lua:1543
+#: menu/preset_manager_modal.lua:1939
 msgid "Delete"
 msgstr "Изтриване"
 
@@ -553,11 +553,11 @@ msgstr "изкл."
 msgid "Bookends: open preset library"
 msgstr "Bookends: отваряне на библиотека с настройки"
 
-#: main.lua:437 main.lua:475 menu/preset_manager_modal.lua:1776
+#: main.lua:437 main.lua:475 menu/preset_manager_modal.lua:1807
 msgid "My setup"
 msgstr "Моята конфигурация"
 
-#: main.lua:438 main.lua:476 menu/preset_manager_modal.lua:1780
+#: main.lua:438 main.lua:476 menu/preset_manager_modal.lua:1811
 msgid "Imported from your earlier Bookends settings"
 msgstr "Импортирано от предишните ви настройки на Bookends"
 
@@ -1261,11 +1261,11 @@ msgstr "Търсене…"
 msgid "Search"
 msgstr "Търсене"
 
-#: menu/main_menu.lua:51 menu/preset_manager_modal.lua:1401
+#: menu/main_menu.lua:51 menu/preset_manager_modal.lua:1432
 msgid "Save preset"
 msgstr "Запазване на настройката"
 
-#: menu/main_menu.lua:53 menu/preset_manager_modal.lua:1403
+#: menu/main_menu.lua:53 menu/preset_manager_modal.lua:1434
 msgid "Preset name"
 msgstr "Име на настройката"
 
@@ -1273,12 +1273,12 @@ msgstr "Име на настройката"
 msgid "Saved preset:"
 msgstr "Запазена настройка:"
 
-#: menu/main_menu.lua:92 menu/preset_manager_modal.lua:1524
+#: menu/main_menu.lua:92 menu/preset_manager_modal.lua:1555
 msgid "Rename preset"
 msgstr "Преименуване на настройката"
 
 #: menu/main_menu.lua:97 menu/main_menu.lua:635
-#: menu/preset_manager_modal.lua:1528 menu/preset_manager_modal.lua:1715
+#: menu/preset_manager_modal.lua:1559 menu/preset_manager_modal.lua:1746
 msgid "Rename"
 msgstr "Преименуване"
 
@@ -1342,7 +1342,7 @@ msgstr ""
 "на Bookends."
 
 #: menu/main_menu.lua:306 menu/main_menu.lua:316
-#: menu/preset_manager_modal.lua:1607
+#: menu/preset_manager_modal.lua:1638
 msgid "Default font"
 msgstr "Шрифт по подразбиране"
 
@@ -1534,15 +1534,15 @@ msgstr "Допълнително ляво поле"
 msgid "Extra right margin"
 msgstr "Допълнително дясно поле"
 
-#: menu/preset_manager_modal.lua:306
+#: menu/preset_manager_modal.lua:294
 msgid "+ New blank preset"
 msgstr "+ Нова празна настройка"
 
-#: menu/preset_manager_modal.lua:322
+#: menu/preset_manager_modal.lua:310
 msgid "Discover more presets"
 msgstr "Открийте още настройки"
 
-#: menu/preset_manager_modal.lua:328
+#: menu/preset_manager_modal.lua:316
 msgid ""
 "Browse presets others have shared, preview them on your own status bar, and "
 "install the ones you like. Once installed, you can edit each preset freely "
@@ -1553,7 +1553,7 @@ msgstr ""
 "След инсталиране можете да редактирате всяка настройка свободно в раздела "
 "„Моите настройки“."
 
-#: menu/preset_manager_modal.lua:335
+#: menu/preset_manager_modal.lua:323
 msgid ""
 "Made something worth sharing? Submit it with the Manage button while viewing "
 "one of your own presets."
@@ -1561,133 +1561,141 @@ msgstr ""
 "Направили сте нещо, което си струва да споделите? Изпратете го с бутона "
 "„Управление“ при преглед на ваша предварителна настройка."
 
-#: menu/preset_manager_modal.lua:342
+#: menu/preset_manager_modal.lua:330
 msgid "Tap Latest or Popular above to load the gallery."
 msgstr ""
 "Докоснете „Последни“ или „Популярни“ по-горе, за да заредите галерията."
 
-#: menu/preset_manager_modal.lua:492
+#: menu/preset_manager_modal.lua:480
 msgid "Hidden (no overlay)"
 msgstr "Скрито (без слой)"
 
-#: menu/preset_manager_modal.lua:544
+#: menu/preset_manager_modal.lua:532
 msgid "Preset for this file type"
 msgstr "Настройка за този тип файлове"
 
-#: menu/preset_manager_modal.lua:545 menu/preset_manager_modal.lua:626
+#: menu/preset_manager_modal.lua:533 menu/preset_manager_modal.lua:618
 msgid "Search my presets by name or author…"
 msgstr "Търсене в моите настройки по име или автор…"
 
-#: menu/preset_manager_modal.lua:562
+#: menu/preset_manager_modal.lua:550
 msgid "Done"
 msgstr "Готово"
 
-#: menu/preset_manager_modal.lua:574
+#: menu/preset_manager_modal.lua:562
 msgid "Preset library"
 msgstr "Библиотека с настройки"
 
-#: menu/preset_manager_modal.lua:576
+#: menu/preset_manager_modal.lua:564
 msgid "My presets"
 msgstr "Моите настройки"
 
-#: menu/preset_manager_modal.lua:577
+#: menu/preset_manager_modal.lua:565
 msgid "Gallery"
 msgstr "Галерия"
 
-#: menu/preset_manager_modal.lua:587 menu/preset_manager_modal.lua:599
+#: menu/preset_manager_modal.lua:575 menu/preset_manager_modal.lua:587
 msgid "Latest"
 msgstr "Последни"
 
-#: menu/preset_manager_modal.lua:588
+#: menu/preset_manager_modal.lua:576
 msgid "Starred"
 msgstr "Отбелязани със звезда"
 
-#: menu/preset_manager_modal.lua:601
+#: menu/preset_manager_modal.lua:589
 msgid "Popular"
 msgstr "Популярни"
 
-#: menu/preset_manager_modal.lua:613
+#: menu/preset_manager_modal.lua:591
+msgid "This week"
+msgstr "Тази седмица"
+
+#: menu/preset_manager_modal.lua:593
+msgid "This month"
+msgstr "Този месец"
+
+#: menu/preset_manager_modal.lua:605
 msgid "Loading gallery…"
 msgstr "Зареждане на галерията…"
 
-#: menu/preset_manager_modal.lua:628
+#: menu/preset_manager_modal.lua:620
 msgid "Search gallery presets by name or author…"
 msgstr "Търсене в настройките от галерията по име или автор…"
 
-#: menu/preset_manager_modal.lua:670
+#: menu/preset_manager_modal.lua:662
 msgid "Manage…"
 msgstr "Управление…"
 
-#: menu/preset_manager_modal.lua:688 menu/preset_manager_modal.lua:691
-#: menu/preset_manager_modal.lua:2010
+#: menu/preset_manager_modal.lua:680 menu/preset_manager_modal.lua:683
+#: menu/preset_manager_modal.lua:2041
 msgid "Install"
 msgstr "Инсталиране"
 
-#: menu/preset_manager_modal.lua:1067 menu/preset_manager_modal.lua:1968
+#: menu/preset_manager_modal.lua:1098 menu/preset_manager_modal.lua:1999
 msgid "Could not preview preset"
 msgstr "Предварителната настройка не може да бъде прегледана"
 
-#: menu/preset_manager_modal.lua:1182
+#: menu/preset_manager_modal.lua:1213
 msgid "by"
 msgstr "от"
 
-#: menu/preset_manager_modal.lua:1462 menu/preset_manager_modal.lua:1777
+#: menu/preset_manager_modal.lua:1493 menu/preset_manager_modal.lua:1808
 msgid "Untitled"
 msgstr "Без заглавие"
 
-#: menu/preset_manager_modal.lua:1492
+#: menu/preset_manager_modal.lua:1523
 msgid "Rename…"
 msgstr "Преименуване…"
 
-#: menu/preset_manager_modal.lua:1496
+#: menu/preset_manager_modal.lua:1527
 msgid "Edit description…"
 msgstr "Редактиране на описанието…"
 
-#: menu/preset_manager_modal.lua:1500
+#: menu/preset_manager_modal.lua:1531
 msgid "Edit author…"
 msgstr "Редактиране на автора…"
 
-#: menu/preset_manager_modal.lua:1504
+#: menu/preset_manager_modal.lua:1535
 msgid "Duplicate"
 msgstr "Дублиране"
 
-#: menu/preset_manager_modal.lua:1508
+#: menu/preset_manager_modal.lua:1539
 msgid "Submit to gallery…"
 msgstr "Изпращане в галерията…"
 
-#: menu/preset_manager_modal.lua:1618
+#: menu/preset_manager_modal.lua:1649
 msgid "%1, line %2"
 msgstr "%1, ред %2"
 
-#: menu/preset_manager_modal.lua:1655
+#: menu/preset_manager_modal.lua:1686
 msgid "Edit description"
 msgstr "Редактиране на описанието"
 
-#: menu/preset_manager_modal.lua:1659
+#: menu/preset_manager_modal.lua:1690
 msgid "Edit author"
 msgstr "Редактиране на автора"
 
-#: menu/preset_manager_modal.lua:1663
+#: menu/preset_manager_modal.lua:1694
 msgid "copy"
 msgstr "копиране"
 
-#: menu/preset_manager_modal.lua:1666
+#: menu/preset_manager_modal.lua:1697
 msgid "Duplicate preset"
 msgstr "Дублиране на настройката"
 
-#: menu/preset_manager_modal.lua:1709
+#: menu/preset_manager_modal.lua:1740
 msgid "Rename before sharing"
 msgstr "Преименуване преди споделяне"
 
-#: menu/preset_manager_modal.lua:1760
+#: menu/preset_manager_modal.lua:1791
 msgid "Who should we credit as the author?"
 msgstr "Кого да посочим като автор?"
 
-#: menu/preset_manager_modal.lua:1765
+#: menu/preset_manager_modal.lua:1796
 msgid "One-line description of this preset"
 msgstr "Едноредово описание на тази настройка"
 
-#: menu/preset_manager_modal.lua:1784
+#: menu/preset_manager_modal.lua:1815
 msgid ""
 "'%1' is one of Bookends' default placeholder names. Give your preset "
 "something distinctive — that's how it'll appear in the gallery."
@@ -1695,24 +1703,24 @@ msgstr ""
 "„%1“ е едно от стандартните примерни имена на Bookends. Дайте на настройката "
 "си нещо отличително — така ще се показва в галерията."
 
-#: menu/preset_manager_modal.lua:1790
+#: menu/preset_manager_modal.lua:1821
 msgid ""
 "Write a short description that tells gallery users what your preset shows"
 msgstr ""
 "Напишете кратко описание, което казва на потребителите от галерията какво "
 "показва вашата настройка"
 
-#: menu/preset_manager_modal.lua:1812
+#: menu/preset_manager_modal.lua:1843
 msgid ""
 "Submit '%1' by %2 to the gallery? A pull request will be opened for review."
 msgstr ""
 "Изпращане на „%1“ от %2 в галерията? Ще бъде отворена заявка за преглед."
 
-#: menu/preset_manager_modal.lua:1814
+#: menu/preset_manager_modal.lua:1845
 msgid "Submit"
 msgstr "Изпращане"
 
-#: menu/preset_manager_modal.lua:1824
+#: menu/preset_manager_modal.lua:1855
 msgid ""
 "A preset called '%1' is already in the gallery. Rename your preset (Manage… "
 "→ Rename…) before submitting, so it doesn't collide with the existing entry."
@@ -1721,11 +1729,11 @@ msgstr ""
 "Преименувайте я (Управление… → Преименуване…) преди да я изпратите, за да не "
 "се застъпва с вече съществуващата."
 
-#: menu/preset_manager_modal.lua:1837
+#: menu/preset_manager_modal.lua:1868
 msgid "Submitting to gallery…"
 msgstr "Изпращане в галерията…"
 
-#: menu/preset_manager_modal.lua:1849
+#: menu/preset_manager_modal.lua:1880
 msgid ""
 "Thanks! Your submission is PR #%1.\n"
 "\n"
@@ -1735,7 +1743,7 @@ msgstr ""
 "\n"
 "Поддържащият ще я прегледа, преди да се появи в Галерията."
 
-#: menu/preset_manager_modal.lua:1858
+#: menu/preset_manager_modal.lua:1889
 msgid ""
 "A preset called '%1' is already in the gallery. Rename your preset (Manage… "
 "→ Rename…) before submitting."
@@ -1743,7 +1751,7 @@ msgstr ""
 "Предварителна настройка с името „%1“ вече съществува в галерията. "
 "Преименувайте я (Управление… → Преименуване…) преди да я изпратите."
 
-#: menu/preset_manager_modal.lua:1861
+#: menu/preset_manager_modal.lua:1892
 msgid ""
 "A submission for '%1' is already awaiting review. Wait for that one to be "
 "reviewed, or rename your preset to submit under a different name."
@@ -1751,11 +1759,11 @@ msgstr ""
 "Заявка за „%1“ вече очаква преглед. Изчакайте тя да бъде прегледана или "
 "преименувайте настройката си, за да я изпратите под различно име."
 
-#: menu/preset_manager_modal.lua:1864
+#: menu/preset_manager_modal.lua:1895
 msgid "Submission failed: %1"
 msgstr "Изпращането е неуспешно: %1"
 
-#: menu/preset_manager_modal.lua:1877
+#: menu/preset_manager_modal.lua:1908
 msgid ""
 "This preset uses specific fonts that won't exist on other devices. These "
 "overrides will be stripped from your submission so other users see their own "
@@ -1765,11 +1773,11 @@ msgstr ""
 "други устройства. Тези презаписвания ще бъдат премахнати от вашата заявка, "
 "така че другите потребители да виждат собствения си шрифт по подразбиране."
 
-#: menu/preset_manager_modal.lua:1879
+#: menu/preset_manager_modal.lua:1910
 msgid "Custom fonts in this preset:"
 msgstr "Персонализирани шрифтове в тази настройка:"
 
-#: menu/preset_manager_modal.lua:1885
+#: menu/preset_manager_modal.lua:1916
 msgid ""
 "Tip: for portable presets, pick a Font-family font (Serif, Sans-serif, etc.) "
 "instead of a specific one — those adapt to each user's font settings."
@@ -1778,31 +1786,31 @@ msgstr ""
 "и др.) вместо конкретен — те се адаптират към шрифтовите настройки на всеки "
 "потребител."
 
-#: menu/preset_manager_modal.lua:1888
+#: menu/preset_manager_modal.lua:1919
 msgid "Submit anyway"
 msgstr "Изпращане въпреки това"
 
-#: menu/preset_manager_modal.lua:1901
+#: menu/preset_manager_modal.lua:1932
 msgid "Submission failed — details in the KOReader log."
 msgstr "Изпращането е неуспешно — подробности в журнала на KOReader."
 
-#: menu/preset_manager_modal.lua:1907
+#: menu/preset_manager_modal.lua:1938
 msgid "Delete preset '%1'?"
 msgstr "Изтриване на настройката „%1“?"
 
-#: menu/preset_manager_modal.lua:1950
+#: menu/preset_manager_modal.lua:1981
 msgid "Offline — connect to preview this preset."
 msgstr "Офлайн — свържете се, за да прегледате тази настройка."
 
-#: menu/preset_manager_modal.lua:1952
+#: menu/preset_manager_modal.lua:1983
 msgid "Couldn't download '%1'."
 msgstr "„%1“ не можа да бъде изтеглен."
 
-#: menu/preset_manager_modal.lua:1958
+#: menu/preset_manager_modal.lua:1989
 msgid "This preset appears invalid; skipping."
 msgstr "Тази настройка изглежда невалидна; пропускане."
 
-#: menu/preset_manager_modal.lua:1981
+#: menu/preset_manager_modal.lua:2012
 msgid ""
 "'%1' already exists in your library.\n"
 "\n"
@@ -1818,15 +1826,15 @@ msgstr ""
 "\n"
 "Инсталирайте под ново име, за да запазите и двете."
 
-#: menu/preset_manager_modal.lua:1987
+#: menu/preset_manager_modal.lua:2018
 msgid "Replace"
 msgstr "Замяна"
 
-#: menu/preset_manager_modal.lua:2001
+#: menu/preset_manager_modal.lua:2032
 msgid "Install as new name…"
 msgstr "Инсталиране под ново име…"
 
-#: menu/preset_manager_modal.lua:2005
+#: menu/preset_manager_modal.lua:2036
 msgid "Install as"
 msgstr "Инсталиране като"
 

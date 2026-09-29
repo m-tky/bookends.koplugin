@@ -213,7 +213,9 @@ local function galleryIsStale(self)
     if not self.gallery_index then return true end
     if self.gallery_error then return true end
     if not self.gallery_last_refresh_time then return true end
-    if self.gallery_sort == "popular" and type(self.gallery_counts) ~= "table" then
+    local by_installs = self.gallery_sort == "popular"
+        or require("preset_gallery").TRENDING_WINDOWS[self.gallery_sort] ~= nil
+    if by_installs and type(self.gallery_counts) ~= "table" then
         return true
     end
     return (os.time() - self.gallery_last_refresh_time) >= GALLERY_STALE_SECONDS
@@ -230,6 +232,7 @@ local function _cacheKey(self)
         tostring(self.gallery_error),
         self.gallery_index and "idx" or "no",
         self.gallery_counts and "ctn" or "noctn",
+        self.gallery_trending and "trn" or "notrn",
     }, "|")
 end
 
@@ -261,23 +264,8 @@ local function currentItemList(self)
         end
         entries = {}
         for _i, e in ipairs(self.gallery_index.presets) do entries[#entries + 1] = e end
-        if self.gallery_sort == "popular" and type(self.gallery_counts) == "table" then
-            local counts = self.gallery_counts
-            table.sort(entries, function(a, b)
-                local ca = counts[a.slug or ""] or 0
-                local cb = counts[b.slug or ""] or 0
-                if ca ~= cb then return ca > cb end
-                local da, db = a.added or "", b.added or ""
-                if da ~= db then return da > db end
-                return (a.name or "") < (b.name or "")
-            end)
-        else
-            table.sort(entries, function(a, b)
-                local da, db = a.added or "", b.added or ""
-                if da ~= db then return da > db end
-                return (a.name or "") < (b.name or "")
-            end)
-        end
+        require("preset_gallery").sortEntries(entries, self.gallery_sort,
+            self.gallery_counts, self.gallery_trending)
         -- Annotate installed-state once per call so per-card render doesn't
         -- re-read the preset directory on every paint.
         local local_names = {}
@@ -600,6 +588,10 @@ local function buildPresetLibraryConfig(self)
                       is_active = engaged and self.gallery_sort == "latest" or false },
                     { key = "popular", label = _("Popular"),
                       is_active = engaged and self.gallery_sort == "popular" or false },
+                    { key = "week",    label = _("This week"),
+                      is_active = engaged and self.gallery_sort == "week" or false },
+                    { key = "month",   label = _("This month"),
+                      is_active = engaged and self.gallery_sort == "month" or false },
                 }
             end
         end,
@@ -717,9 +709,12 @@ function PresetManagerModal.show(bookends)
         -- Sort mode for the Gallery tab. "latest" is the historical behaviour
         -- (by `added` descending). "popular" orders by install-popularity
         -- counts fetched from the submit worker; falls back to latest when
-        -- counts haven't loaded yet.
+        -- counts haven't loaded yet. "week" / "month" order by installs in
+        -- that window (gallery_trending, fetched only once one of them is
+        -- picked), falling back to all-time counts until it arrives.
         gallery_sort = "latest",
         gallery_counts = nil,
+        gallery_trending = nil,
         -- Used for tap-to-refresh staleness: a sort-mode tap only triggers a
         -- network fetch when the cached data is older than this threshold,
         -- absent, or flagged as failed. Otherwise it just re-sorts locally.
@@ -807,8 +802,18 @@ function PresetManagerModal.show(bookends)
                 -- failure just hides the popularity ordering until the next refresh.
                 Gallery.fetchCounts("KOReader-Bookends", function(counts)
                     if counts then self.gallery_counts = counts end
-                    self.gallery_loading = false
-                    self.rebuild()
+                    -- Windowed counts only once someone has asked for them,
+                    -- then kept in step on later refreshes.
+                    if not (Gallery.TRENDING_WINDOWS[self.gallery_sort] or self.gallery_trending) then
+                        self.gallery_loading = false
+                        self.rebuild()
+                        return
+                    end
+                    Gallery.fetchTrending("KOReader-Bookends", function(trending)
+                        if trending then self.gallery_trending = trending end
+                        self.gallery_loading = false
+                        self.rebuild()
+                    end)
                 end)
             end)
         end)
@@ -823,9 +828,35 @@ function PresetManagerModal.show(bookends)
         -- LibraryModal._onChipTap already refreshes after this returns; we only
         -- trigger an explicit rebuild for the async-fetch case (refreshGallery
         -- updates state from a network callback that LibraryModal can't see).
-        if not self.gallery_loading and galleryIsStale(self) then
+        if self.gallery_loading then return end
+        if galleryIsStale(self) then
             self.refreshGallery()
+        elseif require("preset_gallery").TRENDING_WINDOWS[mode]
+                and type(self.gallery_trending) ~= "table" then
+            -- Index and counts are fresh; only the windowed counts are new.
+            self.refreshTrending()
         end
+    end
+    -- Fetch just /trending, for the first This week / This month tap on an
+    -- otherwise fresh gallery, rather than re-downloading the whole index.
+    -- Same deferred-paint pattern as refreshGallery so "Loading gallery…"
+    -- shows before the synchronous request blocks. On failure the sort falls
+    -- back to all-time counts.
+    self.refreshTrending = function()
+        if self.gallery_loading then return end
+        local NetworkMgr = require("ui/network/manager")
+        NetworkMgr:runWhenConnected(function()
+            local Gallery = require("preset_gallery")
+            self.gallery_loading = true
+            self.rebuild()
+            UIManager:scheduleIn(0.1, function()
+                Gallery.fetchTrending("KOReader-Bookends", function(trending)
+                    if trending then self.gallery_trending = trending end
+                    self.gallery_loading = false
+                    self.rebuild()
+                end)
+            end)
+        end)
     end
     -- Keep LibraryModal's internal page counter in step with the domain page
     -- whenever a sort/tab change recomputes it. The widget's _onTabSelect /

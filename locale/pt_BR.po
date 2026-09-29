@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-27 20:48+0100\n"
+"POT-Creation-Date: 2026-09-28 23:26+0100\n"
 "Language: pt_BR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -13,11 +13,11 @@ msgstr ""
 #: bookends_line_editor.lua:792 bookends_line_editor.lua:1058 main.lua:2682
 #: main.lua:3381 menu/main_menu.lua:55 menu/main_menu.lua:95
 #: menu/main_menu.lua:133 menu/main_menu.lua:590
-#: menu/preset_manager_modal.lua:1405 menu/preset_manager_modal.lua:1527
-#: menu/preset_manager_modal.lua:1568 menu/preset_manager_modal.lua:1669
-#: menu/preset_manager_modal.lua:1713 menu/preset_manager_modal.lua:1815
-#: menu/preset_manager_modal.lua:1889 menu/preset_manager_modal.lua:1984
-#: menu/preset_manager_modal.lua:2008 menu/preset_manager_modal.lua:2032
+#: menu/preset_manager_modal.lua:1436 menu/preset_manager_modal.lua:1558
+#: menu/preset_manager_modal.lua:1599 menu/preset_manager_modal.lua:1700
+#: menu/preset_manager_modal.lua:1744 menu/preset_manager_modal.lua:1846
+#: menu/preset_manager_modal.lua:1920 menu/preset_manager_modal.lua:2015
+#: menu/preset_manager_modal.lua:2039 menu/preset_manager_modal.lua:2063
 #: menu/progress_bar_menu.lua:100
 msgid "Cancel"
 msgstr "Cancelar"
@@ -31,7 +31,7 @@ msgid "Default"
 msgstr "Padrão"
 
 #: bookends_colour_palette.lua:404 bookends_dialog_helpers.lua:138
-#: main.lua:2721 menu/preset_manager_modal.lua:691
+#: main.lua:2721 menu/preset_manager_modal.lua:683
 msgid "Apply"
 msgstr "Aplicar"
 
@@ -284,7 +284,7 @@ msgid "Custom colours"
 msgstr "Cores personalizadas"
 
 #: bookends_line_editor.lua:661 bookends_updater.lua:349 main.lua:3219
-#: menu/icons_library.lua:453 menu/preset_manager_modal.lua:665
+#: menu/icons_library.lua:453 menu/preset_manager_modal.lua:657
 #: menu/tokens_library.lua:463
 msgid "Close"
 msgstr "Fechar"
@@ -314,8 +314,8 @@ msgid "Tokens"
 msgstr "Tokens"
 
 #: bookends_line_editor.lua:826 main.lua:3383 menu/main_menu.lua:57
-#: menu/preset_manager_modal.lua:1409 menu/preset_manager_modal.lua:1569
-#: menu/preset_manager_modal.lua:1670
+#: menu/preset_manager_modal.lua:1440 menu/preset_manager_modal.lua:1600
+#: menu/preset_manager_modal.lua:1701
 msgid "Save"
 msgstr "Salvar"
 
@@ -339,8 +339,8 @@ msgstr "Mover para"
 msgid "Line %1: %2"
 msgstr "Linha %1: %2"
 
-#: bookends_line_editor.lua:1054 menu/preset_manager_modal.lua:1512
-#: menu/preset_manager_modal.lua:1908
+#: bookends_line_editor.lua:1054 menu/preset_manager_modal.lua:1543
+#: menu/preset_manager_modal.lua:1939
 msgid "Delete"
 msgstr "Excluir"
 
@@ -549,11 +549,11 @@ msgstr "desligado"
 msgid "Bookends: open preset library"
 msgstr "Bookends: abrir biblioteca de presets"
 
-#: main.lua:437 main.lua:475 menu/preset_manager_modal.lua:1776
+#: main.lua:437 main.lua:475 menu/preset_manager_modal.lua:1807
 msgid "My setup"
 msgstr "Minha configuração"
 
-#: main.lua:438 main.lua:476 menu/preset_manager_modal.lua:1780
+#: main.lua:438 main.lua:476 menu/preset_manager_modal.lua:1811
 msgid "Imported from your earlier Bookends settings"
 msgstr "Importado das suas configurações anteriores do Bookends"
 
@@ -1258,11 +1258,11 @@ msgstr "Buscar…"
 msgid "Search"
 msgstr "Buscar"
 
-#: menu/main_menu.lua:51 menu/preset_manager_modal.lua:1401
+#: menu/main_menu.lua:51 menu/preset_manager_modal.lua:1432
 msgid "Save preset"
 msgstr "Salvar preset"
 
-#: menu/main_menu.lua:53 menu/preset_manager_modal.lua:1403
+#: menu/main_menu.lua:53 menu/preset_manager_modal.lua:1434
 msgid "Preset name"
 msgstr "Nome do preset"
 
@@ -1270,12 +1270,12 @@ msgstr "Nome do preset"
 msgid "Saved preset:"
 msgstr "Preset salvo:"
 
-#: menu/main_menu.lua:92 menu/preset_manager_modal.lua:1524
+#: menu/main_menu.lua:92 menu/preset_manager_modal.lua:1555
 msgid "Rename preset"
 msgstr "Renomear preset"
 
 #: menu/main_menu.lua:97 menu/main_menu.lua:635
-#: menu/preset_manager_modal.lua:1528 menu/preset_manager_modal.lua:1715
+#: menu/preset_manager_modal.lua:1559 menu/preset_manager_modal.lua:1746
 msgid "Rename"
 msgstr "Renomear"
 
@@ -1339,7 +1339,7 @@ msgstr ""
 "Bookends."
 
 #: menu/main_menu.lua:306 menu/main_menu.lua:316
-#: menu/preset_manager_modal.lua:1607
+#: menu/preset_manager_modal.lua:1638
 msgid "Default font"
 msgstr "Fonte padrão"
 
@@ -1529,15 +1529,15 @@ msgstr "Margem esquerda extra"
 msgid "Extra right margin"
 msgstr "Margem direita extra"
 
-#: menu/preset_manager_modal.lua:306
+#: menu/preset_manager_modal.lua:294
 msgid "+ New blank preset"
 msgstr "+ Novo preset em branco"
 
-#: menu/preset_manager_modal.lua:322
+#: menu/preset_manager_modal.lua:310
 msgid "Discover more presets"
 msgstr "Descobrir mais presets"
 
-#: menu/preset_manager_modal.lua:328
+#: menu/preset_manager_modal.lua:316
 msgid ""
 "Browse presets others have shared, preview them on your own status bar, and "
 "install the ones you like. Once installed, you can edit each preset freely "
@@ -1547,7 +1547,7 @@ msgstr ""
 "própria barra de status e instale os que você gostar. Após instalar, você "
 "pode editar cada preset livremente na aba Meus presets."
 
-#: menu/preset_manager_modal.lua:335
+#: menu/preset_manager_modal.lua:323
 msgid ""
 "Made something worth sharing? Submit it with the Manage button while viewing "
 "one of your own presets."
@@ -1555,132 +1555,140 @@ msgstr ""
 "Criou algo que vale a pena compartilhar? Envie pelo botão Gerenciar ao "
 "visualizar um dos seus próprios presets."
 
-#: menu/preset_manager_modal.lua:342
+#: menu/preset_manager_modal.lua:330
 msgid "Tap Latest or Popular above to load the gallery."
 msgstr "Toque em Mais recentes ou Populares acima para carregar a galeria."
 
-#: menu/preset_manager_modal.lua:492
+#: menu/preset_manager_modal.lua:480
 msgid "Hidden (no overlay)"
 msgstr "Oculto (sem sobreposição)"
 
-#: menu/preset_manager_modal.lua:544
+#: menu/preset_manager_modal.lua:532
 msgid "Preset for this file type"
 msgstr "Preset para este tipo de arquivo"
 
-#: menu/preset_manager_modal.lua:545 menu/preset_manager_modal.lua:626
+#: menu/preset_manager_modal.lua:533 menu/preset_manager_modal.lua:618
 msgid "Search my presets by name or author…"
 msgstr "Buscar meus presets por nome ou autor…"
 
-#: menu/preset_manager_modal.lua:562
+#: menu/preset_manager_modal.lua:550
 msgid "Done"
 msgstr "Concluído"
 
-#: menu/preset_manager_modal.lua:574
+#: menu/preset_manager_modal.lua:562
 msgid "Preset library"
 msgstr "Biblioteca de presets"
 
-#: menu/preset_manager_modal.lua:576
+#: menu/preset_manager_modal.lua:564
 msgid "My presets"
 msgstr "Meus presets"
 
-#: menu/preset_manager_modal.lua:577
+#: menu/preset_manager_modal.lua:565
 msgid "Gallery"
 msgstr "Galeria"
 
-#: menu/preset_manager_modal.lua:587 menu/preset_manager_modal.lua:599
+#: menu/preset_manager_modal.lua:575 menu/preset_manager_modal.lua:587
 msgid "Latest"
 msgstr "Mais recentes"
 
-#: menu/preset_manager_modal.lua:588
+#: menu/preset_manager_modal.lua:576
 msgid "Starred"
 msgstr "Favoritos"
 
-#: menu/preset_manager_modal.lua:601
+#: menu/preset_manager_modal.lua:589
 msgid "Popular"
 msgstr "Populares"
 
-#: menu/preset_manager_modal.lua:613
+#: menu/preset_manager_modal.lua:591
+msgid "This week"
+msgstr "Esta semana"
+
+#: menu/preset_manager_modal.lua:593
+msgid "This month"
+msgstr "Este mês"
+
+#: menu/preset_manager_modal.lua:605
 msgid "Loading gallery…"
 msgstr "Carregando galeria…"
 
-#: menu/preset_manager_modal.lua:628
+#: menu/preset_manager_modal.lua:620
 msgid "Search gallery presets by name or author…"
 msgstr "Buscar presets da galeria por nome ou autor…"
 
-#: menu/preset_manager_modal.lua:670
+#: menu/preset_manager_modal.lua:662
 msgid "Manage…"
 msgstr "Gerenciar…"
 
-#: menu/preset_manager_modal.lua:688 menu/preset_manager_modal.lua:691
-#: menu/preset_manager_modal.lua:2010
+#: menu/preset_manager_modal.lua:680 menu/preset_manager_modal.lua:683
+#: menu/preset_manager_modal.lua:2041
 msgid "Install"
 msgstr "Instalar"
 
-#: menu/preset_manager_modal.lua:1067 menu/preset_manager_modal.lua:1968
+#: menu/preset_manager_modal.lua:1098 menu/preset_manager_modal.lua:1999
 msgid "Could not preview preset"
 msgstr "Não foi possível visualizar o preset"
 
-#: menu/preset_manager_modal.lua:1182
+#: menu/preset_manager_modal.lua:1213
 msgid "by"
 msgstr "por"
 
-#: menu/preset_manager_modal.lua:1462 menu/preset_manager_modal.lua:1777
+#: menu/preset_manager_modal.lua:1493 menu/preset_manager_modal.lua:1808
 msgid "Untitled"
 msgstr "Sem título"
 
-#: menu/preset_manager_modal.lua:1492
+#: menu/preset_manager_modal.lua:1523
 msgid "Rename…"
 msgstr "Renomear…"
 
-#: menu/preset_manager_modal.lua:1496
+#: menu/preset_manager_modal.lua:1527
 msgid "Edit description…"
 msgstr "Editar descrição…"
 
-#: menu/preset_manager_modal.lua:1500
+#: menu/preset_manager_modal.lua:1531
 msgid "Edit author…"
 msgstr "Editar autor…"
 
-#: menu/preset_manager_modal.lua:1504
+#: menu/preset_manager_modal.lua:1535
 msgid "Duplicate"
 msgstr "Duplicar"
 
-#: menu/preset_manager_modal.lua:1508
+#: menu/preset_manager_modal.lua:1539
 msgid "Submit to gallery…"
 msgstr "Enviar para a galeria…"
 
-#: menu/preset_manager_modal.lua:1618
+#: menu/preset_manager_modal.lua:1649
 msgid "%1, line %2"
 msgstr "%1, linha %2"
 
-#: menu/preset_manager_modal.lua:1655
+#: menu/preset_manager_modal.lua:1686
 msgid "Edit description"
 msgstr "Editar descrição"
 
-#: menu/preset_manager_modal.lua:1659
+#: menu/preset_manager_modal.lua:1690
 msgid "Edit author"
 msgstr "Editar autor"
 
-#: menu/preset_manager_modal.lua:1663
+#: menu/preset_manager_modal.lua:1694
 msgid "copy"
 msgstr "cópia"
 
-#: menu/preset_manager_modal.lua:1666
+#: menu/preset_manager_modal.lua:1697
 msgid "Duplicate preset"
 msgstr "Duplicar preset"
 
-#: menu/preset_manager_modal.lua:1709
+#: menu/preset_manager_modal.lua:1740
 msgid "Rename before sharing"
 msgstr "Renomear antes de compartilhar"
 
-#: menu/preset_manager_modal.lua:1760
+#: menu/preset_manager_modal.lua:1791
 msgid "Who should we credit as the author?"
 msgstr "Quem devemos creditar como autor?"
 
-#: menu/preset_manager_modal.lua:1765
+#: menu/preset_manager_modal.lua:1796
 msgid "One-line description of this preset"
 msgstr "Descrição de uma linha deste preset"
 
-#: menu/preset_manager_modal.lua:1784
+#: menu/preset_manager_modal.lua:1815
 msgid ""
 "'%1' is one of Bookends' default placeholder names. Give your preset "
 "something distinctive — that's how it'll appear in the gallery."
@@ -1688,24 +1696,24 @@ msgstr ""
 "'%1' é um dos nomes padrão de espaço reservado do Bookends. Dê algo "
 "distintivo ao seu preset — é assim que ele aparecerá na galeria."
 
-#: menu/preset_manager_modal.lua:1790
+#: menu/preset_manager_modal.lua:1821
 msgid ""
 "Write a short description that tells gallery users what your preset shows"
 msgstr ""
 "Escreva uma descrição curta que diga aos usuários da galeria o que seu "
 "preset mostra"
 
-#: menu/preset_manager_modal.lua:1812
+#: menu/preset_manager_modal.lua:1843
 msgid ""
 "Submit '%1' by %2 to the gallery? A pull request will be opened for review."
 msgstr ""
 "Enviar '%1' por %2 para a galeria? Um pull request será aberto para revisão."
 
-#: menu/preset_manager_modal.lua:1814
+#: menu/preset_manager_modal.lua:1845
 msgid "Submit"
 msgstr "Enviar"
 
-#: menu/preset_manager_modal.lua:1824
+#: menu/preset_manager_modal.lua:1855
 msgid ""
 "A preset called '%1' is already in the gallery. Rename your preset (Manage… "
 "→ Rename…) before submitting, so it doesn't collide with the existing entry."
@@ -1713,11 +1721,11 @@ msgstr ""
 "Um preset chamado '%1' já está na galeria. Renomeie seu preset (Gerenciar… → "
 "Renomear…) antes de enviar, para que não conflite com a entrada existente."
 
-#: menu/preset_manager_modal.lua:1837
+#: menu/preset_manager_modal.lua:1868
 msgid "Submitting to gallery…"
 msgstr "Enviando para a galeria…"
 
-#: menu/preset_manager_modal.lua:1849
+#: menu/preset_manager_modal.lua:1880
 msgid ""
 "Thanks! Your submission is PR #%1.\n"
 "\n"
@@ -1727,7 +1735,7 @@ msgstr ""
 "\n"
 "O mantenedor irá revisá-lo antes de aparecer na Galeria."
 
-#: menu/preset_manager_modal.lua:1858
+#: menu/preset_manager_modal.lua:1889
 msgid ""
 "A preset called '%1' is already in the gallery. Rename your preset (Manage… "
 "→ Rename…) before submitting."
@@ -1735,7 +1743,7 @@ msgstr ""
 "Um preset chamado '%1' já está na galeria. Renomeie seu preset (Gerenciar… → "
 "Renomear…) antes de enviar."
 
-#: menu/preset_manager_modal.lua:1861
+#: menu/preset_manager_modal.lua:1892
 msgid ""
 "A submission for '%1' is already awaiting review. Wait for that one to be "
 "reviewed, or rename your preset to submit under a different name."
@@ -1743,11 +1751,11 @@ msgstr ""
 "Um envio para '%1' já está aguardando revisão. Aguarde a revisão desse, ou "
 "renomeie seu preset para enviar com um nome diferente."
 
-#: menu/preset_manager_modal.lua:1864
+#: menu/preset_manager_modal.lua:1895
 msgid "Submission failed: %1"
 msgstr "Falha no envio: %1"
 
-#: menu/preset_manager_modal.lua:1877
+#: menu/preset_manager_modal.lua:1908
 msgid ""
 "This preset uses specific fonts that won't exist on other devices. These "
 "overrides will be stripped from your submission so other users see their own "
@@ -1757,11 +1765,11 @@ msgstr ""
 "Essas substituições serão removidas do seu envio para que outros usuários "
 "vejam sua própria fonte padrão."
 
-#: menu/preset_manager_modal.lua:1879
+#: menu/preset_manager_modal.lua:1910
 msgid "Custom fonts in this preset:"
 msgstr "Fontes personalizadas neste preset:"
 
-#: menu/preset_manager_modal.lua:1885
+#: menu/preset_manager_modal.lua:1916
 msgid ""
 "Tip: for portable presets, pick a Font-family font (Serif, Sans-serif, etc.) "
 "instead of a specific one — those adapt to each user's font settings."
@@ -1770,31 +1778,31 @@ msgstr ""
 "serifa, Sem serifa, etc.) em vez de uma específica — essas se adaptam às "
 "configurações de fonte de cada usuário."
 
-#: menu/preset_manager_modal.lua:1888
+#: menu/preset_manager_modal.lua:1919
 msgid "Submit anyway"
 msgstr "Enviar mesmo assim"
 
-#: menu/preset_manager_modal.lua:1901
+#: menu/preset_manager_modal.lua:1932
 msgid "Submission failed — details in the KOReader log."
 msgstr "Falha no envio — detalhes no log do KOReader."
 
-#: menu/preset_manager_modal.lua:1907
+#: menu/preset_manager_modal.lua:1938
 msgid "Delete preset '%1'?"
 msgstr "Excluir o preset '%1'?"
 
-#: menu/preset_manager_modal.lua:1950
+#: menu/preset_manager_modal.lua:1981
 msgid "Offline — connect to preview this preset."
 msgstr "Offline — conecte-se para visualizar este preset."
 
-#: menu/preset_manager_modal.lua:1952
+#: menu/preset_manager_modal.lua:1983
 msgid "Couldn't download '%1'."
 msgstr "Não foi possível baixar '%1'."
 
-#: menu/preset_manager_modal.lua:1958
+#: menu/preset_manager_modal.lua:1989
 msgid "This preset appears invalid; skipping."
 msgstr "Este preset parece inválido; ignorando."
 
-#: menu/preset_manager_modal.lua:1981
+#: menu/preset_manager_modal.lua:2012
 msgid ""
 "'%1' already exists in your library.\n"
 "\n"
@@ -1810,15 +1818,15 @@ msgstr ""
 "\n"
 "Instale com um novo nome para manter ambos."
 
-#: menu/preset_manager_modal.lua:1987
+#: menu/preset_manager_modal.lua:2018
 msgid "Replace"
 msgstr "Substituir"
 
-#: menu/preset_manager_modal.lua:2001
+#: menu/preset_manager_modal.lua:2032
 msgid "Install as new name…"
 msgstr "Instalar com novo nome…"
 
-#: menu/preset_manager_modal.lua:2005
+#: menu/preset_manager_modal.lua:2036
 msgid "Install as"
 msgstr "Instalar como"
 

@@ -10,6 +10,11 @@ local BASE_URL  = "https://raw.githubusercontent.com/AndyHazz/bookends-presets/m
 local SUBMIT_URL = "https://bookends-submit.andy-nmc.workers.dev/submit"
 local INSTALL_URL = "https://bookends-submit.andy-nmc.workers.dev/install"
 local COUNTS_URL  = "https://bookends-submit.andy-nmc.workers.dev/counts"
+local TRENDING_URL = "https://bookends-submit.andy-nmc.workers.dev/trending"
+
+--- Gallery sort modes backed by a /trending window, mapped to the window's
+--- key in the response ("7" and "30" days).
+Gallery.TRENDING_WINDOWS = { week = "7", month = "30" }
 
 local function httpGet(url, user_agent)
     local ok_require, http, ltn12, socket, socketutil = pcall(function()
@@ -192,6 +197,77 @@ function Gallery.fetchCounts(user_agent, callback)
         return
     end
     callback(data.counts, nil)
+end
+
+--- Decode a /trending body into { week = {slug = n}, month = {slug = n} }.
+--- Returns nil for anything malformed. A window that's missing or not a table
+--- comes back as an empty table, so a preset with no installs in the window
+--- simply ranks at 0 rather than breaking the sort.
+function Gallery.parseTrending(body)
+    if type(body) ~= "string" then return nil end
+    local ok_req, json = pcall(require, "json")
+    if not ok_req then return nil end
+    local ok, data = pcall(json.decode, body)
+    if not ok or type(data) ~= "table" or type(data.windows) ~= "table" then
+        return nil
+    end
+    local out = {}
+    for mode, window in pairs(Gallery.TRENDING_WINDOWS) do
+        local w = data.windows[window]
+        out[mode] = type(w) == "table" and w or {}
+    end
+    return out
+end
+
+--- GET /trending: installs per preset over the last 7 and 30 days. Only
+--- fetched when the user picks This week / This month, so the Latest and
+--- Popular paths cost no extra request. Same edge cache and failure handling
+--- as fetchCounts; on failure those sorts fall back to all-time counts.
+function Gallery.fetchTrending(user_agent, callback)
+    if not Gallery.isOnline() then
+        callback(nil, "offline")
+        return
+    end
+    local body = httpGet(TRENDING_URL, user_agent or "KOReader-Bookends")
+    if not body then
+        callback(nil, "fetch failed")
+        return
+    end
+    local trending = Gallery.parseTrending(body)
+    if not trending then
+        callback(nil, "invalid response")
+        return
+    end
+    callback(trending, nil)
+end
+
+--- Sort gallery index entries in place for a sort mode.
+---   "latest"          newest `added` first
+---   "popular"         all-time installs (counts), else latest
+---   "week" / "month"  installs in that window, ties broken by all-time
+---                     installs; without trending data, falls back to popular
+--- Remaining ties go newest first, then by name, so the order is stable.
+function Gallery.sortEntries(entries, mode, counts, trending)
+    local window = Gallery.TRENDING_WINDOWS[mode]
+        and type(trending) == "table" and type(trending[mode]) == "table"
+        and trending[mode] or nil
+    local by_installs = mode == "popular" or Gallery.TRENDING_WINDOWS[mode] ~= nil
+    if not by_installs or type(counts) ~= "table" then counts = nil end
+    local function n(t, slug) return t and tonumber(t[slug or ""]) or 0 end
+    table.sort(entries, function(a, b)
+        if window then
+            local wa, wb = n(window, a.slug), n(window, b.slug)
+            if wa ~= wb then return wa > wb end
+        end
+        if counts then
+            local ca, cb = n(counts, a.slug), n(counts, b.slug)
+            if ca ~= cb then return ca > cb end
+        end
+        local da, db = a.added or "", b.added or ""
+        if da ~= db then return da > db end
+        return (a.name or "") < (b.name or "")
+    end)
+    return entries
 end
 
 --- Repo-relative path to a preset file, from the index entry's own preset_url
