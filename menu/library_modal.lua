@@ -197,7 +197,19 @@ end
 -- covers the modal area. The closing widget gets unmarked again by
 -- UIManager:close itself a few lines later (self._dirty[w] = nil during
 -- removal), so we don't paint a corpse.
+--
+-- Close the keyboard too. InputText:onCloseWidget frees its keyboard but never
+-- takes it off the window stack (stock InputDialog closes it itself), so any
+-- path that closed the modal with the keyboard up - a token card tap or Close
+-- after typing in the search box - left a modal VirtualKeyboard on top. It
+-- swallowed every tap and KOReader looked frozen until restarted. Doing it
+-- here covers every close path at once (card/footer taps, Back, the icons
+-- library and the preset manager).
 function LibraryModal:onCloseWidget()
+    local input = self._search_input
+    if input and input:isKeyboardVisible() then
+        input:onCloseKeyboard()
+    end
     UIManager:setDirty("all", "ui")
 end
 

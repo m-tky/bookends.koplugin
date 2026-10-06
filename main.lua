@@ -1958,7 +1958,7 @@ function Bookends:_topRowOffset(v_offset, v_margin)
 end
 
 function Bookends:_bookshelfStatusReserve()
-    local ok, h = pcall(StatusLine.reservedHeight, G_reader_settings)
+    local ok, h = pcall(StatusLine.reservedHeight, StatusLine.source())
     if not ok or not h or h <= 0 then return 0 end
     return h
 end

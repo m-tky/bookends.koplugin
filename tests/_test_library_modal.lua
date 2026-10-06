@@ -30,7 +30,7 @@ package.loaded["ui/size"] = setmetatable({}, {
         })
     end,
 })
-package.loaded["ui/uimanager"] = stub_meta
+package.loaded["ui/uimanager"] = { setDirty = function() end, close = function() end, show = function() end }
 package.loaded["ui/widget/verticalgroup"] = stub_meta
 package.loaded["ui/widget/verticalspan"] = stub_meta
 package.loaded["ui/widget/horizontalspan"] = stub_meta
@@ -63,6 +63,33 @@ test("multi-term AND match", function()
     eq(matches("nf-mdi-clock-outline", "clock outline"), true, "both terms present")
     eq(matches("nf-mdi-clock-outline", "clock smashed"), false, "second term absent")
     eq(matches("nf-fa-clock-o", "fa clock"), true, "set-prefix + concept")
+end)
+
+-- InputText:onCloseWidget frees its keyboard but never closes it, so a modal
+-- closed with the keyboard up (token card tap, Close) left a modal
+-- VirtualKeyboard on the window stack swallowing every tap.
+local function fakeModal(visible)
+    local input = { closed = 0 }
+    function input:isKeyboardVisible() return visible end
+    function input:onCloseKeyboard() self.closed = self.closed + 1 end
+    return { _search_input = input }, input
+end
+
+test("closing the modal closes a visible keyboard", function()
+    local modal, input = fakeModal(true)
+    LM.onCloseWidget(modal)
+    eq(input.closed, 1, "keyboard closed")
+end)
+
+test("closing the modal leaves a hidden keyboard alone", function()
+    local modal, input = fakeModal(false)
+    LM.onCloseWidget(modal)
+    eq(input.closed, 0, "no close call")
+end)
+
+test("closing the modal without a search input is safe", function()
+    LM.onCloseWidget({})
+    eq(true, true, "no error")
 end)
 
 print(("\n%d passed, %d failed"):format(pass, fail))

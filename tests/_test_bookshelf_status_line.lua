@@ -144,5 +144,31 @@ test("reservedHeight degrades to 0 rather than raising", function()
     eq(v, 0)
 end)
 
+-- Where the three settings are read from (bookshelf 5.3 moved them into its
+-- own settings file): bookshelf's live store when bookshelf is loaded, found in
+-- package.loaded (same Lua state; no require of a sibling plugin, no path),
+-- else KOReader's settings, where bookshelf before 5.3 keeps them.
+test("source: bookshelf's live store when it offers a view", function()
+    local view = fakeSettings(nil, 37, true)
+    package.loaded["lib/bookshelf_settings_store"] = { view = function() return view end }
+    _G.G_reader_settings = fakeSettings(nil, 99, true)
+    eq(StatusLine.source(), view)
+    eq(StatusLine.reservedHeight(StatusLine.source()), 37)
+end)
+
+test("source: KOReader's settings for a bookshelf before 5.3, or none", function()
+    package.loaded["lib/bookshelf_settings_store"] = { read = function() end }   -- 5.2: no view()
+    _G.G_reader_settings = fakeSettings(nil, 12, true)
+    eq(StatusLine.source(), G_reader_settings)
+    package.loaded["lib/bookshelf_settings_store"] = nil
+    eq(StatusLine.source(), G_reader_settings)
+    eq(StatusLine.reservedHeight(StatusLine.source()), 12)
+end)
+
+test("main.lua asks source() for the reserved height", function()
+    local src = io.open("main.lua"):read("*a")
+    assert(src:find("StatusLine.reservedHeight, StatusLine.source()", 1, true), "main.lua still reads KOReader's settings only")
+end)
+
 print(pass .. " passed, " .. fail .. " failed")
 os.exit(fail == 0 and 0 or 1)
